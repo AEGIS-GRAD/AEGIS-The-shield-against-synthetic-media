@@ -1,0 +1,1 @@
+This microservice wraps the SyncNet model for the AEGIS system. It performs audio-visual lip-sync consistency checking on input videos. By analyzing the temporal synchronization between the audio track and the subject's lip movements, it can detect discrepancies common in deepfake videos. This multimodal approach adds a critical layer of verification.

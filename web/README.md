@@ -1,0 +1,1 @@
+The web directory contains the frontend web application for AEGIS. This interface allows users to easily upload media for verification. It provides a live status view of the ongoing detection processes across the various microservices. Finally, it presents the final results and the detailed chain-of-evidence reports in an intuitive user interface.

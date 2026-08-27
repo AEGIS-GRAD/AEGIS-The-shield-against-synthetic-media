@@ -1,0 +1,1 @@
+This folder is dedicated to the evaluation and benchmarking of the AEGIS system. It contains scripts for running automated benchmarks and Jupyter notebooks for detailed evaluation analysis. Additionally, it holds documentation related to the datasets used for testing and training. It also serves as the centralized location for tracking results and performance metrics over time.

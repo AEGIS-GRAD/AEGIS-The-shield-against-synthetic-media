@@ -1,0 +1,1 @@
+This directory wraps the pretrained AASIST model. The AASIST model specializes in audio spoof and deepfake voice detection. It provides a robust defense against voice cloning and synthetic audio attacks. As an independent microservice, it processes audio streams and reports on their likelihood of being artificially generated.

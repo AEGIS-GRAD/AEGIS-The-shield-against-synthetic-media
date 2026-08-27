@@ -1,0 +1,1 @@
+This folder implements a Model Context Protocol (MCP) server for the system. It exposes various AEGIS components, such as the debate and arbitration layer, as reusable tools. This allows external agents and applications to seamlessly integrate with and utilize AEGIS's deepfake detection capabilities. It effectively turns the core AEGIS functionality into an interoperable service.

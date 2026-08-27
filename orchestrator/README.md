@@ -1,0 +1,1 @@
+The orchestrator is the planning agent of the AEGIS system. It decides which specific detectors to invoke for a given input based on modality, risk profile, and available compute budget. Currently, this component starts as a rule-based baseline for straightforward arbitration. In the future, it will be upgraded to an LLM-driven agent for more complex and dynamic decision-making.
