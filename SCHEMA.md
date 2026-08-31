@@ -13,7 +13,8 @@ To protect the Inference Engine from DoS attacks and malicious payloads, the fol
 
 *   **Authentication:** All internal endpoints must require an API key passed via the `X-Internal-Token` header.
 *   **Max Payload Size:** 50 MB hard limit.
-*   **Explicit Allowlist:** Only `.mp4`, `.mov`, `.wav`, `.mp3`, `.jpg`, `.png`, and `.txt` are permitted.
+*   **Explicit Allowlist & Magic Bytes:** Only `.mp4`, `.mov`, `.wav`, `.mp3`, `.jpg`, `.png`, and `.txt` are permitted. The Orchestrator **MUST** verify the file's magic bytes (file signature) to ensure a malicious executable isn't simply renamed to `.mp4`.
+*   **Path Traversal Prevention:** If accepting an internal file path, the Orchestrator **MUST** sanitize the input and ensure the path is strictly confined to the authorized `/shared_volume/` directory to prevent directory traversal (`../../`) attacks.
 
 ---
 
@@ -66,6 +67,10 @@ When a detector finishes its inference, it **must** return a JSON object in this
   "title": "DetectorResponse",
   "type": "object",
   "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "The exact UUID provided in the Request, used by the Orchestrator to correlate asynchronous responses."
+    },
     "confidence": {
       "type": "number",
       "minimum": 0.0,
@@ -80,9 +85,13 @@ When a detector finishes its inference, it **must** return a JSON object in this
       "type": "integer",
       "description": "The exact time in milliseconds the inference took. Used by the Orchestrator for budget planning."
     },
+    "ram_usage_mb": {
+      "type": "number",
+      "description": "The peak system RAM (in Megabytes) consumed. Optional, though critical for Unified Memory architectures like NVIDIA Jetson."
+    },
     "vram_usage_mb": {
       "type": "number",
-      "description": "The peak GPU memory (in Megabytes) consumed during inference. Used by the Orchestrator for memory pressure planning."
+      "description": "The peak GPU memory (in Megabytes) consumed. Optional, as not all detectors utilize a GPU."
     },
     "model_version": {
       "type": "string",
@@ -105,16 +114,18 @@ When a detector finishes its inference, it **must** return a JSON object in this
       "required": ["claim"]
     }
   },
-  "required": ["confidence", "raw_score", "latency_ms", "vram_usage_mb", "model_version", "evidence"]
+  "required": ["job_id", "confidence", "raw_score", "latency_ms", "model_version", "evidence"]
 }
 ```
 
 ### Sample Response:
 ```json
 {
+  "job_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
   "confidence": 0.94,
   "raw_score": 12.84,
   "latency_ms": 145,
+  "ram_usage_mb": 2048.0,
   "vram_usage_mb": 840.5,
   "model_version": "rppg-resnet-v2",
   "evidence": {
