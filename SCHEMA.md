@@ -80,6 +80,10 @@ When a detector finishes its inference, it **must** return a JSON object in this
       "type": "integer",
       "description": "The exact time in milliseconds the inference took. Used by the Orchestrator for budget planning."
     },
+    "vram_usage_mb": {
+      "type": "number",
+      "description": "The peak GPU memory (in Megabytes) consumed during inference. Used by the Orchestrator for memory pressure planning."
+    },
     "model_version": {
       "type": "string",
       "description": "The version of the detector (e.g., 'aasist-v1.2')."
@@ -101,7 +105,7 @@ When a detector finishes its inference, it **must** return a JSON object in this
       "required": ["claim"]
     }
   },
-  "required": ["confidence", "raw_score", "latency_ms", "model_version", "evidence"]
+  "required": ["confidence", "raw_score", "latency_ms", "vram_usage_mb", "model_version", "evidence"]
 }
 ```
 
@@ -111,6 +115,7 @@ When a detector finishes its inference, it **must** return a JSON object in this
   "confidence": 0.94,
   "raw_score": 12.84,
   "latency_ms": 145,
+  "vram_usage_mb": 840.5,
   "model_version": "rppg-resnet-v2",
   "evidence": {
     "claim": "rPPG signal present but highly irregular, suggesting artificial generation of the facial region.",
