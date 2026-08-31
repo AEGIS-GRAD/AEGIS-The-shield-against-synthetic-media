@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DetectorRequest",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Unique UUID for tracing the request across the debate loop."
+    },
+    "modality": {
+      "type": "string",
+      "enum": [
+        "audio",
+        "video",
+        "image",
+        "text"
+      ],
+      "description": "The modality of the media."
+    },
+    "payload": {
+      "type": "string",
+      "description": "The Base64 encoded string of the media file, OR an absolute internal file path (if using shared Docker volumes)."
+    }
+  },
+  "required": [
+    "job_id",
+    "modality",
+    "payload"
+  ]
+}

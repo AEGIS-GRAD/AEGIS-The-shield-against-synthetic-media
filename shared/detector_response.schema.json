@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DetectorResponse",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "The exact UUID provided in the Request, used by the Orchestrator to correlate asynchronous responses."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "The normalized confidence score. 0.0 = Authentic, 1.0 = Synthetic/Deepfake."
+    },
+    "raw_score": {
+      "type": "number",
+      "description": "The unnormalized logit or raw score from the PyTorch model."
+    },
+    "latency_ms": {
+      "type": "integer",
+      "description": "The exact time in milliseconds the inference took. Used by the Orchestrator for budget planning."
+    },
+    "ram_usage_mb": {
+      "type": "number",
+      "description": "The peak system RAM (in Megabytes) consumed. Optional, though critical for Unified Memory architectures like NVIDIA Jetson."
+    },
+    "vram_usage_mb": {
+      "type": "number",
+      "description": "The peak GPU memory (in Megabytes) consumed. Optional, as not all detectors utilize a GPU."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "The version of the detector (e.g., 'aasist-v1.2')."
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Contextual reasoning for the Debate Agent.",
+      "properties": {
+        "claim": {
+          "type": "string",
+          "description": "A human-readable claim (e.g., 'rPPG signal present but highly irregular')."
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific heuristic flags triggered (e.g., ['face_swap_detected', 'compression_mismatch'])."
+        }
+      },
+      "required": [
+        "claim"
+      ]
+    }
+  },
+  "required": [
+    "job_id",
+    "confidence",
+    "raw_score",
+    "latency_ms",
+    "model_version",
+    "evidence"
+  ]
+}
