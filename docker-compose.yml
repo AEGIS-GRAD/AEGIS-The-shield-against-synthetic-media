@@ -1,2 +1,154 @@
 version: '3.8'
-# Services will be added incrementally
+
+services:
+  # ==========================================
+  # SECURITY & INFRASTRUCTURE LAYER
+  # ==========================================
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: aegis_mediamtx
+    restart: always
+    environment:
+      - MTX_PROTOCOLS=tcp
+    ports:
+      - "8554:8554" # RTSP
+      - "1935:1935" # RTMP
+      - "8888:8888" # HLS
+    networks:
+      - aegis_net
+
+  wazuh_agent:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_wazuh_agent
+    volumes:
+      - ./security:/app  # Automatically creates /security for custom Wazuh decoders/rules
+    networks:
+      - aegis_net
+
+  # ==========================================
+  # LAYER A: ORCHESTRATION & WEB
+  # ==========================================
+  orchestrator:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_orchestrator
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./orchestrator:/app  # Automatically creates /orchestrator
+    networks:
+      - aegis_net
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_secure_token}
+    depends_on:
+      - mediamtx
+
+  web:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app  # Automatically creates /web
+    networks:
+      - aegis_net
+    depends_on:
+      - orchestrator
+
+  # ==========================================
+  # LAYER B: INFERENCE ENGINE
+  # ==========================================
+  engine:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_engine
+    volumes:
+      - ./engine:/app  # Automatically creates /engine
+    networks:
+      - aegis_net
+    depends_on:
+      - orchestrator
+
+  # ==========================================
+  # LAYER C: MULTI-AGENT DEBATE (LLMs)
+  # ==========================================
+  debate:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_debate
+    volumes:
+      - ./debate:/app  # Automatically creates /debate
+    networks:
+      - aegis_net
+
+  eval:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_eval
+    volumes:
+      - ./eval:/app  # Automatically creates /eval
+    networks:
+      - aegis_net
+
+  mcp:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_mcp
+    volumes:
+      - ./mcp:/app  # Automatically creates /mcp
+    networks:
+      - aegis_net
+
+  # ==========================================
+  # DETECTOR MICROSERVICES (Stubs)
+  # ==========================================
+  detector_aasist:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_detector_aasist
+    volumes:
+      - ./detectors/aasist:/app
+    networks:
+      - aegis_net
+      
+  detector_rppg:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_detector_rppg
+    volumes:
+      - ./detectors/rppg:/app
+    networks:
+      - aegis_net
+      
+  detector_syncnet:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_detector_syncnet
+    volumes:
+      - ./detectors/syncnet:/app
+    networks:
+      - aegis_net
+
+  detector_dire:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_detector_dire
+    volumes:
+      - ./detectors/dire:/app
+    networks:
+      - aegis_net
+
+  detector_binoculars:
+    image: alpine
+    command: tail -f /dev/null
+    container_name: aegis_detector_binoculars
+    volumes:
+      - ./detectors/binoculars:/app
+    networks:
+      - aegis_net
+
+networks:
+  aegis_net:
+    driver: bridge
