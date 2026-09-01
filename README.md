@@ -20,9 +20,15 @@ This repository is organized as a monorepo, where each main component resides in
 - **`eval/`** - Benchmarking, evaluation, and dataset tools.
 - **`web/`** - Frontend user interface for uploading and viewing reports.
 - **`mcp/`** - Model Context Protocol server exposing AEGIS as tools for external agents.
+- **`security/`** - Wazuh SIEM agent and custom decoders for live monitoring.
+- **`shared/`** - Shared utilities, global configurations, API contracts, and documentation across all microservices.
+- **`.github/workflows/`** - CI/CD pipelines (automated Docker build verification).
 
 ## 🚀 Getting Started
 
-*(More detailed instructions will be added as services are implemented)*
+The infrastructure is currently fully dockerized with placeholder stubs to allow isolated development.
 
-Check the `docker-compose.yml` for orchestrating the microservices, and refer to individual folder `README.md` files for specific component details.
+1. Clone the repository.
+2. Run `docker compose up -d` to spin up the entire `aegis_net` network and stub containers.
+3. Review the API Schemas in `shared/json-api-contracts-schema/` before building your service endpoints.
+4. **Note:** Direct pushes to `main` are blocked. You must open a Pull Request, pass the `validate-docker` CI check, and receive a peer review approval before merging.
