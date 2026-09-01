@@ -40,7 +40,7 @@ services:
     networks:
       - aegis_net
     environment:
-      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_secure_token}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     depends_on:
       - mediamtx
 
