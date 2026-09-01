@@ -112,6 +112,11 @@ services:
       - ./detectors/aasist:/app
     networks:
       - aegis_net
+    # TODO: Placeholder limit. AI team must profile AASIST on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 1G
       
   detector_rppg:
     image: alpine
@@ -121,6 +126,11 @@ services:
       - ./detectors/rppg:/app
     networks:
       - aegis_net
+    # TODO: Placeholder limit. AI team must profile rPPG on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 2G
       
   detector_syncnet:
     image: alpine
@@ -130,6 +140,11 @@ services:
       - ./detectors/syncnet:/app
     networks:
       - aegis_net
+    # TODO: Placeholder limit. AI team must profile SyncNet on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 3G
 
   detector_dire:
     image: alpine
@@ -139,6 +154,11 @@ services:
       - ./detectors/dire:/app
     networks:
       - aegis_net
+    # TODO: Placeholder limit. AI team must profile DIRE on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
   detector_binoculars:
     image: alpine
@@ -148,6 +168,11 @@ services:
       - ./detectors/binoculars:/app
     networks:
       - aegis_net
+    # TODO: Placeholder limit. AI team must profile Binoculars on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 4G
 
 networks:
   aegis_net:
