@@ -1,0 +1,21 @@
+name: CI Docker Check
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: docker compose config
+
+      - name: Test Infrastructure Spin Up
+        run: |
+          docker compose up -d
+          docker compose ps
+          docker compose down
