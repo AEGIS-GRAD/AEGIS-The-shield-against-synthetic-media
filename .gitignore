@@ -9,3 +9,4 @@ data/
 *.pth
 *.onnx
 .DS_Store
+.agents/
