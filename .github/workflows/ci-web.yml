@@ -1,0 +1,36 @@
+name: Web UI CI
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      # TODO: Uncomment once the Web team initializes their Next.js project
+      # - name: Install Dependencies
+      #   run: pnpm install
+      # 
+      # - name: Build Check
+      #   run: pnpm run build
+      
+      - name: Run Impeccable UI Linter
+        run: npx impeccable detect .
