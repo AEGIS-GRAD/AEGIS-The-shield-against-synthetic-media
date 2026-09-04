@@ -10,3 +10,7 @@ data/
 *.onnx
 .DS_Store
 .agents/
+AEGIS_Project_Proposal.pdf
+document-4_260817_135011.pdf
+Grad project-First Document.docx.md
+wandb/
