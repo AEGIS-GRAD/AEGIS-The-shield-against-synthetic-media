@@ -8,12 +8,12 @@
 # 1. Do NOT add microservice-specific libraries here (e.g., torch, fastapi).
 #    Microservices (Orchestrator, Detectors) MUST maintain their own 
 #    isolated requirements.txt inside their respective directories.
-# 2. Pin your versions! Never use just `package_name`. Always use 
-#    `package_name==x.x.x` to prevent CI/CD breakage.
+# 2. Set a minimum version! Never use just `package_name`. Always use 
+#    `package_name>=x.x.x` to prevent downloading older broken versions.
 # 3. Categorize your additions with a comment header.
 
 # MLOps & Experiment Tracking
-wandb==0.17.0
+wandb>=0.29.0
 
 # API Contract Validation
-jsonschema==4.21.1
+jsonschema>=4.26.0
