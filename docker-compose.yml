@@ -26,6 +26,18 @@ services:
     networks:
       - aegis_net
 
+  api_gateway:
+    image: nginx:alpine
+    container_name: aegis_api_gateway
+    ports:
+      - "8081:80"
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    volumes:
+      - ./security/gateway/nginx.conf.template:/etc/nginx/templates/default.conf.template
+    networks:
+      - aegis_net
+
   # ==========================================
   # LAYER A: ORCHESTRATION & WEB
   # ==========================================
@@ -105,7 +117,7 @@ services:
   # DETECTOR MICROSERVICES (Stubs)
   # ==========================================
   detector_aasist:
-    image: alpine
+    image: python:3.10-slim
     command: tail -f /dev/null
     container_name: aegis_detector_aasist
     volumes:
@@ -119,7 +131,7 @@ services:
           memory: 1G
       
   detector_rppg:
-    image: alpine
+    image: python:3.10-slim
     command: tail -f /dev/null
     container_name: aegis_detector_rppg
     volumes:
@@ -133,7 +145,7 @@ services:
           memory: 2G
       
   detector_syncnet:
-    image: alpine
+    image: python:3.10-slim
     command: tail -f /dev/null
     container_name: aegis_detector_syncnet
     volumes:
@@ -147,7 +159,7 @@ services:
           memory: 3G
 
   detector_dire:
-    image: alpine
+    image: python:3.10-slim
     command: tail -f /dev/null
     container_name: aegis_detector_dire
     volumes:
@@ -161,7 +173,7 @@ services:
           memory: 2G
 
   detector_binoculars:
-    image: alpine
+    image: python:3.10-slim
     command: tail -f /dev/null
     container_name: aegis_detector_binoculars
     volumes:
@@ -169,6 +181,20 @@ services:
     networks:
       - aegis_net
     # TODO: Placeholder limit. AI team must profile Binoculars on Jetson and adjust.
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  detector_video_classifier:
+    image: python:3.10-slim
+    command: tail -f /dev/null
+    container_name: aegis_detector_video_classifier
+    volumes:
+      - ./detectors/video_classifier:/app
+    networks:
+      - aegis_net
+    # TODO: Placeholder limit. AI team must profile Video Classifier on Jetson and adjust.
     deploy:
       resources:
         limits:
