@@ -1,0 +1,37 @@
+# Custom log format for auditability (Timestamp, Source IP, Endpoint, Response Code)
+log_format aegis_audit '[$time_iso8601] [$remote_addr] "$request" $status';
+access_log /dev/stdout aegis_audit;
+error_log /dev/stderr info;
+
+# Define rate limiting zone: 10 requests per second per IP
+limit_req_zone $binary_remote_addr zone=aegis_limit:10m rate=10r/s;
+
+# Auth check: Compare the X-Internal-Token header against the environment variable
+map $http_x_internal_token $is_valid_token {
+    default 0;
+    "${INTERNAL_API_KEY}" 1;
+}
+
+server {
+    listen 80;
+
+    # Apply rate limiting (allow bursts up to 20 requests without delay)
+    limit_req zone=aegis_limit burst=20 nodelay;
+
+    # Enforce the API key on every request
+    if ($is_valid_token = 0) {
+        return 401 '{"error": "Unauthorized. Missing or invalid X-Internal-Token."}';
+    }
+
+    # Route to Video Classifier Detector
+    location /api/video {
+        proxy_pass http://aegis_detector_video_classifier:8000/detect;
+        proxy_set_header Host $host;
+    }
+
+    # Route to AASIST Audio Detector
+    location /api/audio {
+        proxy_pass http://aegis_detector_aasist:8000/detect;
+        proxy_set_header Host $host;
+    }
+}
