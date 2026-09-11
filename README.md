@@ -24,6 +24,10 @@ This repository is organized as a monorepo, where each main component resides in
 - **`shared/`** - Shared utilities, global configurations, API contracts, and documentation across all microservices.
 - **`.github/workflows/`** - CI/CD pipelines (automated Docker build verification).
 
+## 🎯 Model Scope
+
+For details on the 6 finalized detector models (covering video frame-level, video physiological, audio-visual sync, audio voice spoofing, text, and image), see [Model Scope Document](shared/docs/model_scope.md).
+
 ## 🚀 Getting Started
 
 The infrastructure is currently fully dockerized with placeholder stubs to allow isolated development.
@@ -32,3 +36,4 @@ The infrastructure is currently fully dockerized with placeholder stubs to allow
 2. Run `docker compose up -d` to spin up the entire `aegis_net` network and stub containers.
 3. Review the API Schemas in `shared/json-api-contracts-schema/` before building your service endpoints.
 4. **Note:** Direct pushes to `main` are blocked. You must open a Pull Request, pass the `validate-docker` CI check, and receive a peer review approval before merging.
+
