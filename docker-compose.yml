@@ -121,6 +121,9 @@ services:
       context: ./detectors/aasist
       dockerfile: Dockerfile
     container_name: aegis_detector_aasist
+    # [DEVSECOPS EXCEPTION] Exposing port 8002 directly to the host bypasses the API Gateway 
+    # (auth, rate-limiting, logging). This is kept for local AI team testing convenience. 
+    # MUST BE REMOVED IN PRODUCTION to enforce routing through Nginx.
     ports:
       - "8002:8000"
     volumes:
