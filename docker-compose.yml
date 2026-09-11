@@ -206,6 +206,9 @@ services:
       context: ./detectors/video-classifier
       dockerfile: Dockerfile
     container_name: aegis_detector_video_classifier
+    # Exposing port 8001 directly to the host bypasses the API Gateway 
+    # (auth, rate-limiting, logging). This is kept for local AI team testing convenience. 
+    # MUST BE REMOVED IN PRODUCTION to enforce routing through Nginx.
     ports:
       - "8001:8000"
     volumes:
