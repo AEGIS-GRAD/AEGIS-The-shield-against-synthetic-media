@@ -202,13 +202,25 @@ services:
           memory: 4G
 
   detector_video_classifier:
-    image: python:3.10-slim
-    command: tail -f /dev/null
+    build:
+      context: ./detectors/video-classifier
+      dockerfile: Dockerfile
     container_name: aegis_detector_video_classifier
+    ports:
+      - "8001:8000"
     volumes:
-      - ./detectors/video_classifier:/app
+      - ./detectors/video-classifier:/app
+      - ./detectors/video-classifier/models:/app/models
     networks:
       - aegis_net
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     # TODO: Placeholder limit. AI team must profile Video Classifier on Jetson and adjust.
     deploy:
       resources:

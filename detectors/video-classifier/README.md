@@ -1,0 +1,1 @@
+This microservice wraps a pretrained Xception or EfficientNet-based frame classifier. It is designed specifically for detecting deepfakes within video frames. The service exposes a standardized endpoint to receive frame data and return authenticity scores. It serves as one of the primary visual detection components within the broader AEGIS ecosystem.
