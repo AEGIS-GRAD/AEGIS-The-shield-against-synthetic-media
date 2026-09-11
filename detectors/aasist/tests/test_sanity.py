@@ -18,9 +18,10 @@ LABELS_FILE = os.path.join(FIXTURES_DIR, "labels.csv")
 
 @pytest.fixture(scope="session", autouse=True)
 def initialize_model():
-    weights_path = os.path.abspath(
+    default_weights = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../weights/AASIST.pth")
     )
+    weights_path = os.getenv("MODEL_WEIGHTS_PATH", default_weights)
     load_model(weights_path)
 
 

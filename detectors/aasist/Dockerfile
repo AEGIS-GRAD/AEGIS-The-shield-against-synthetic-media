@@ -20,8 +20,8 @@ RUN grep -v "^torch" requirements.txt > /tmp/reqs.txt && \
     rm /tmp/reqs.txt
 
 # Download pretrained AASIST weights if not bundled
-RUN mkdir -p /app/weights && \
-    curl -L -o /app/weights/AASIST.pth \
+RUN mkdir -p /model_weights && \
+    curl -L -o /model_weights/AASIST.pth \
     https://github.com/clovaai/aasist/raw/main/models/weights/AASIST.pth
 
 # Copy application source

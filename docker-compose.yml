@@ -133,6 +133,7 @@ services:
       - aegis_net
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - MODEL_WEIGHTS_PATH=/model_weights/AASIST.pth
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
