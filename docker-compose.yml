@@ -117,14 +117,25 @@ services:
   # DETECTOR MICROSERVICES (Stubs)
   # ==========================================
   detector_aasist:
-    image: python:3.10-slim
-    command: tail -f /dev/null
+    build:
+      context: ./detectors/aasist
+      dockerfile: Dockerfile
     container_name: aegis_detector_aasist
+    ports:
+      - "8002:8000"
     volumes:
       - ./detectors/aasist:/app
+      - ./shared:/shared:ro
     networks:
       - aegis_net
-    # TODO: Placeholder limit. AI team must profile AASIST on Jetson and adjust.
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

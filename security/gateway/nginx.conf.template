@@ -7,6 +7,7 @@ error_log /dev/stderr info;
 limit_req_zone $binary_remote_addr zone=aegis_limit:10m rate=10r/s;
 
 # Auth check: Compare the X-Internal-Token header against the environment variable
+map_hash_bucket_size 128;
 map $http_x_internal_token $is_valid_token {
     default 0;
     "${INTERNAL_API_KEY}" 1;
