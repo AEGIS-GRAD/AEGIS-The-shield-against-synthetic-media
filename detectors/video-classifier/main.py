@@ -7,7 +7,7 @@ from typing import Dict, Any
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from infer import aggregate_scores, predict_frame
+from infer import aggregate_scores, load_model, predict_frame
 from preprocess import VideoPreprocessor
 
 logging.basicConfig(level=logging.INFO)
@@ -15,20 +15,29 @@ logger = logging.getLogger("video-classifier")
 
 app = FastAPI(
     title="AEGIS Video Classifier Detector",
-    description="Xception / FaceForensics++ video frame classification microservice",
+    description="EfficientNet-B0 / FaceForensics++ video frame classification microservice",
     version="0.1.0",
 )
 
-preprocessor = VideoPreprocessor(target_size=(299, 299))
+preprocessor = VideoPreprocessor(target_size=(224, 224))
+model_instance = None
 
 
-# TODO: Reconcile response schema once official Week 1 schema is finalized.
+def get_model():
+    """Lazily loads and returns the singleton PyTorch model instance."""
+    global model_instance
+    if model_instance is None:
+        logger.info("Initializing EfficientNet-B0 model instance...")
+        model_instance = load_model()
+    return model_instance
+
+
 class DetectionResponse(BaseModel):
     modality: str = Field("video", description="Input media modality")
-    score: float = Field(..., description="0-1 authenticity score (1.0 = authentic, 0.0 = synthetic)")
-    verdict: str = Field(..., description="Classification verdict: 'authentic' or 'synthetic'")
+    score: float = Field(..., description="0-1 authenticity score (1.0 = synthetic, 0.0 = authentic)")
+    verdict: str = Field(..., description="Classification verdict: 'synthetic' or 'authentic'")
     confidence: float = Field(..., description="Confidence level in [0.0, 1.0]")
-    model: str = Field("xception-ffpp", description="Model architecture/weights key")
+    model: str = Field("efficientnet-b0-ffpp-c23", description="Model architecture/weights key")
 
 
 class HealthResponse(BaseModel):
@@ -44,7 +53,7 @@ def health_check() -> Dict[str, str]:
 
 @app.post("/detect", response_model=DetectionResponse)
 async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """Detects video deepfake content using Xception frame-level classification.
+    """Detects video deepfake content using EfficientNet-B0 frame-level classification.
 
     Args:
         file: Uploaded video file.
@@ -79,21 +88,27 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
                 detail=f"Failed to process video file: {str(e)}",
             )
 
-        # Step 2: Per-frame stub inference
-        frame_scores = [predict_frame(tensor) for tensor in frame_tensors]
+        if not frame_tensors:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Could not extract any valid frames from video.",
+            )
 
-        # Step 3: Score aggregation
+        # Step 2: Per-frame inference using real model
+        loaded_model = get_model()
+        frame_scores = [predict_frame(loaded_model, tensor) for tensor in frame_tensors]
+
+        # Step 3: Score aggregation & decision contract
         score = aggregate_scores(frame_scores)
-        verdict = "authentic" if score >= 0.5 else "synthetic"
-        confidence = max(score, 1.0 - score)
+        verdict = "synthetic" if score > 0.5 else "authentic"
+        confidence = abs(score - 0.5) * 2.0
 
-        # TODO: Reconcile response schema once official Week 1 schema is finalized.
         return {
             "modality": "video",
             "score": round(score, 4),
             "verdict": verdict,
             "confidence": round(confidence, 4),
-            "model": "xception-ffpp",
+            "model": "efficientnet-b0-ffpp-c23",
         }
     finally:
         if os.path.exists(temp_file.name):

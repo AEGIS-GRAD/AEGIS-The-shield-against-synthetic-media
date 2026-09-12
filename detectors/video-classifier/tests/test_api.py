@@ -39,6 +39,7 @@ def create_dummy_video_file() -> str:
     return temp_path
 
 
+@pytest.mark.slow
 def test_detect_endpoint():
     """Test POST /detect endpoint with a valid video file upload."""
     video_path = create_dummy_video_file()
@@ -59,7 +60,7 @@ def test_detect_endpoint():
         assert data["verdict"] in ["authentic", "synthetic"]
         assert isinstance(data["confidence"], float)
         assert 0.0 <= data["confidence"] <= 1.0
-        assert data["model"] == "xception-ffpp"
+        assert data["model"] == "efficientnet-b0-ffpp-c23"
     finally:
         if os.path.exists(video_path):
             os.remove(video_path)

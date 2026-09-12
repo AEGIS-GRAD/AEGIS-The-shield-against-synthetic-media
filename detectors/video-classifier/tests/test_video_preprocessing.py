@@ -8,11 +8,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from preprocess import VideoPreprocessor
 
-EXPECTED_TENSOR_SHAPE = (3, 299, 299)  # PyTorch format: (Channels, Height, Width)
+EXPECTED_TENSOR_SHAPE = (3, 224, 224)  # PyTorch format: (Channels, Height, Width)
 
 @pytest.fixture
 def preprocessor():
-    return VideoPreprocessor(target_size=(299, 299))
+    return VideoPreprocessor(target_size=(224, 224))
 
 
 def test_extract_frames_returns_nonempty_list(preprocessor, clean_video):
@@ -37,7 +37,7 @@ def test_normalized_frame_value_range(preprocessor, clean_video):
     frames = preprocessor.extract_frames(clean_video)
     face_crop = preprocessor.crop_face(frames[0])
     normalized = preprocessor.normalize_frame(face_crop)
-    
+
     # Check bounds for ImageNet normalized tensors
     if isinstance(normalized, torch.Tensor):
         normalized = normalized.numpy()

@@ -1,0 +1,12 @@
+raw_data_root: "D:/archive/FaceForensics++_C23"
+
+categories:
+  real:
+    - original
+  fake:
+    - Deepfakes
+    - Face2Face
+    - FaceShifter
+    - FaceSwap
+    - NeuralTextures
+    - DeepFakeDetection

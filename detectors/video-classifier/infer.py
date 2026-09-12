@@ -1,57 +1,108 @@
 from __future__ import annotations
 
 import logging
-import random
+import os
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-
-try:
-    import torch
-    HAS_TORCH = True
-except Exception:
-    torch = None
-    HAS_TORCH = False
-
+import torch
+import torch.nn as nn
+import torchvision.models as models
+from huggingface_hub import hf_hub_download
 
 logger = logging.getLogger(__name__)
 
-
-def load_model(checkpoint_path: Optional[Union[str, Path]] = None) -> Any:
-    """Loads Xception pretrained weights from checkpoint file.
-
-    TODO: Download and load actual Xception .pth checkpoint weights once available.
-
-    Args:
-        checkpoint_path: Optional file path to .pth model weights.
-
-    Raises:
-        NotImplementedError: Model weight loading is stubbed until checkpoint is provided.
-    """
-    # TODO: Implement Xception model loading when .pth checkpoint is provided
-    raise NotImplementedError(
-        "load_model is not yet implemented. Model weights checkpoint is not loaded."
-    )
+DEFAULT_REPO_ID = os.getenv("MODEL_CHECKPOINT_REPO", "Xicor9/efficientnet-b0-ffpp-c23")
+DEFAULT_FILENAME = "efficientnet_b0_ffpp_c23.pth"
 
 
-def predict_frame(frame_tensor: Any) -> float:
-    """Predicts frame authenticity score using model forward pass.
-
-    TODO: Replace random placeholder score with actual model inference forward pass.
+def load_model(
+    checkpoint_repo: Optional[str] = None,
+    filename: str = DEFAULT_FILENAME,
+    device: Optional[str] = None,
+) -> Any:
+    """Loads EfficientNet-B0 fine-tuned checkpoint from HuggingFace Hub.
 
     Args:
-        frame_tensor: Preprocessed frame tensor of shape (3, 299, 299) or (1, 3, 299, 299).
+        checkpoint_repo: HuggingFace repository ID (defaults to MODEL_CHECKPOINT_REPO env var or 'Xicor9/efficientnet-b0-ffpp-c23').
+        filename: Checkpoint filename in repo (default 'efficientnet_b0_ffpp_c23.pth').
+        device: Device to place the model on ('cpu', 'cuda', etc.).
 
     Returns:
-        Authenticity score float in range [0.0, 1.0].
+        Loaded PyTorch model in eval mode.
     """
-    # TODO: Perform forward pass through Xception model:
-    # with torch.no_grad():
-    #     output = model(frame_tensor.unsqueeze(0))
-    #     score = torch.sigmoid(output).item()
-    
-    # Returning random score placeholder in [0.0, 1.0] for initial pipeline execution
-    return random.random()
+    repo_id = checkpoint_repo or os.getenv("MODEL_CHECKPOINT_REPO", DEFAULT_REPO_ID)
+    target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+    logger.info(f"Fetching model checkpoint '{filename}' from HuggingFace repo '{repo_id}'...")
+    checkpoint_path = hf_hub_download(repo_id=repo_id, filename=filename)
+    logger.info(f"Loaded checkpoint file path: {checkpoint_path}")
+
+    # Build EfficientNet-B0 architecture
+    try:
+        model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+    except AttributeError:
+        model = models.efficientnet_b0(pretrained=True)
+
+    # Replace final classification layer with 2 outputs (0=Real, 1=Fake)
+    in_features = model.classifier[1].in_features
+    model.classifier[1] = nn.Linear(in_features, 2)
+
+    # Load state dict
+    state_dict = torch.load(checkpoint_path, map_location=target_device)
+
+    # Handle state dict wrapped under keys like "state_dict" or "model"
+    if isinstance(state_dict, dict):
+        if "state_dict" in state_dict:
+            state_dict = state_dict["state_dict"]
+        elif "model" in state_dict:
+            state_dict = state_dict["model"]
+
+    try:
+        model.load_state_dict(state_dict)
+    except RuntimeError:
+        # Try stripping 'module.' prefix if saved with DataParallel
+        new_state_dict = {}
+        for k, v in state_dict.items():
+            name = k[7:] if k.startswith("module.") else k
+            new_state_dict[name] = v
+        model.load_state_dict(new_state_dict)
+
+    model.to(target_device)
+    model.eval()
+    logger.info("Successfully initialized EfficientNet-B0 model in eval mode.")
+    return model
+
+
+def predict_frame(model: Any, frame_tensor: Any, device: Optional[str] = None) -> float:
+    """Predicts frame authenticity score using model forward pass.
+
+    Args:
+        model: Pre-loaded PyTorch model in eval mode.
+        frame_tensor: Preprocessed frame tensor of shape (3, 224, 224) or (1, 3, 224, 224).
+        device: Device to perform inference on.
+
+    Returns:
+        Authenticity score float in range [0.0, 1.0] (probability of class 1 = Fake).
+    """
+    if model is None:
+        raise ValueError("Model must be loaded before calling predict_frame.")
+
+    if not isinstance(frame_tensor, torch.Tensor):
+        frame_tensor = torch.tensor(frame_tensor, dtype=torch.float32)
+
+    if frame_tensor.ndim == 3:
+        frame_tensor = frame_tensor.unsqueeze(0)
+
+    target_device = device or next(model.parameters()).device
+    frame_tensor = frame_tensor.to(target_device)
+
+    with torch.no_grad():
+        logits = model(frame_tensor)
+        probs = torch.softmax(logits, dim=1)
+        fake_prob = probs[0, 1].item()
+
+    return float(fake_prob)
 
 
 def aggregate_scores(frame_scores: List[float]) -> float:

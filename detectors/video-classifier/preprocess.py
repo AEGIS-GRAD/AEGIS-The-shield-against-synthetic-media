@@ -27,9 +27,9 @@ except ImportError:
 
 
 class VideoPreprocessor:
-    """Preprocesses video files for Xception/FaceForensics++ frame classification."""
+    """Preprocesses video files for EfficientNet / FaceForensics++ frame classification."""
 
-    def __init__(self, target_size: tuple[int, int] = (299, 299), device: Optional[str] = None):
+    def __init__(self, target_size: tuple[int, int] = (224, 224), device: Optional[str] = None):
         self.target_size = target_size
         if HAS_TORCH:
             self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -118,13 +118,13 @@ class VideoPreprocessor:
         return frame[start_y : start_y + crop_dim, start_x : start_x + crop_dim]
 
     def normalize_frame(self, crop_img: np.ndarray) -> Union[torch.Tensor, np.ndarray]:
-        """Resizes frame to target size (299x299) and applies ImageNet normalization.
+        """Resizes frame to target size (224x224) and applies ImageNet normalization.
 
         Args:
             crop_img: RGB image numpy array.
 
         Returns:
-            Normalized PyTorch tensor or NumPy array of shape (3, 299, 299).
+            Normalized PyTorch tensor or NumPy array of shape (3, 224, 224).
         """
         resized = cv2.resize(crop_img, self.target_size, interpolation=cv2.INTER_LINEAR)
         if HAS_TORCH:
@@ -148,7 +148,7 @@ class VideoPreprocessor:
             sample_n: Frame sampling interval. Default 10.
 
         Returns:
-            List of normalized frame tensors of shape (3, 299, 299).
+            List of normalized frame tensors of shape (3, 224, 224).
         """
         raw_frames = self.extract_frames(video_path, sample_n=sample_n)
         processed_tensors: List[torch.Tensor] = []

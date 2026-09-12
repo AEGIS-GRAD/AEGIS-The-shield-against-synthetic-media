@@ -4,7 +4,7 @@ This document details the 6 detector models finalized for the AEGIS project. It 
 
 | Modality | Model | Repo/Checkpoint | Reported Metric | Source Dataset |
 |---|---|---|---|---|
-| Video (frame-level) | Xception (FF++ baseline) | ondyari/FaceForensics (classification folder) | | FaceForensics++ |
+| Video (frame-level) | EfficientNet-B0 (FF++ c23) | Xicor9/efficientnet-b0-ffpp-c23 | | FaceForensics++ (c23) |
 | Video (physiological) | rPPG (PhysNet/DeepPhys) | ubicomplab/rPPG-Toolbox | | |
 | Audio-visual sync | SyncNet | joonson/syncnet_python | | |
 | Audio (voice spoofing) | AASIST | clovaai/aasist | | ASVspoof 2019 LA |

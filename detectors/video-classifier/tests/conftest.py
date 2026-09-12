@@ -3,6 +3,10 @@ import pytest
 import cv2
 import numpy as np
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow (model download/inference)")
+
+
 @pytest.fixture(scope="session")
 def fixtures_dir(tmp_path_factory):
     """Creates a temporary directory with valid synthetic MP4 files for testing."""

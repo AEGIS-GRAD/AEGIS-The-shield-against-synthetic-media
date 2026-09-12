@@ -1,5 +1,6 @@
 import pytest
-from infer import aggregate_scores, predict_frame, load_model
+import torch
+from infer import aggregate_scores, load_model, predict_frame
 
 
 def test_aggregate_scores_mean_pooling():
@@ -28,15 +29,11 @@ def test_aggregate_scores_clamping():
     assert aggregate_scores([0.0, 0.0]) == 0.0
 
 
-def test_predict_frame_placeholder():
-    """Test that predict_frame stub returns a float in [0.0, 1.0]."""
-    dummy_tensor = "dummy_tensor_placeholder"
-    score = predict_frame(dummy_tensor)
+@pytest.mark.slow
+def test_real_model_predict_frame():
+    """Smoke test: loads real pretrained model and verifies predict_frame returns a float in [0.0, 1.0]."""
+    model = load_model()
+    dummy_tensor = torch.randn(1, 3, 224, 224)
+    score = predict_frame(model, dummy_tensor)
     assert isinstance(score, float)
     assert 0.0 <= score <= 1.0
-
-
-def test_load_model_raises_not_implemented():
-    """Test that load_model stub raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        load_model()
