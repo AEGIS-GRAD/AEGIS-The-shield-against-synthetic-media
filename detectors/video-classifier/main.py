@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 
 from infer import aggregate_scores, load_model, predict_frame
 from preprocess import VideoPreprocessor
+from telemetry import track_inference
+from prometheus_client import make_asgi_app
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("video-classifier")
@@ -18,6 +20,10 @@ app = FastAPI(
     description="EfficientNet-B0 / FaceForensics++ video frame classification microservice",
     version="0.1.0",
 )
+
+# Expose Prometheus Metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 preprocessor = VideoPreprocessor(target_size=(224, 224))
 model_instance = None
@@ -52,6 +58,7 @@ def health_check() -> Dict[str, str]:
 
 
 @app.post("/detect", response_model=DetectionResponse)
+@track_inference("video-classifier")
 async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
     """Detects video deepfake content using EfficientNet-B0 frame-level classification.
 
