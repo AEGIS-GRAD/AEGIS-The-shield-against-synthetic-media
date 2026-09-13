@@ -1,0 +1,26 @@
+name: Gateway Validator CI
+
+on:
+  pull_request:
+    paths:
+      - 'security/gateway/**'
+
+jobs:
+  test-validator:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./security/gateway/validator
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run validator test suite
+        run: pytest tests/ -v

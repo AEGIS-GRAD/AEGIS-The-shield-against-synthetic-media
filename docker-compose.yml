@@ -37,6 +37,33 @@ services:
       - ./security/gateway/nginx.conf.template:/etc/nginx/templates/default.conf.template
     networks:
       - aegis_net
+    depends_on:
+      - gateway_validator
+
+  # Deep upload inspection (magic bytes, extension allowlist, path
+  # confinement) that plain nginx config can't do. Internal-only - no
+  # `ports:` mapping, reachable solely from api_gateway on aegis_net.
+  gateway_validator:
+    build:
+      context: ./security/gateway/validator
+      dockerfile: Dockerfile
+    container_name: aegis_gateway_validator
+    volumes:
+      - ./security/gateway/validator:/app
+    networks:
+      - aegis_net
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # ==========================================
   # LAYER A: ORCHESTRATION & WEB

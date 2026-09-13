@@ -3,8 +3,17 @@ log_format aegis_audit '[$time_iso8601] [$remote_addr] "$request" $status';
 access_log /dev/stdout aegis_audit;
 error_log /dev/stderr info;
 
-# Define rate limiting zone: 10 requests per second per IP
-limit_req_zone $binary_remote_addr zone=aegis_limit:10m rate=10r/s;
+# Rate limiting is keyed on the caller's API key, not source IP: multiple
+# internal callers can share one NAT/IP, and per-key is what lets each
+# credential get its own budget once more than one key exists.
+# $http_x_internal_token is empty for unauthenticated requests, so they all
+# share one small bucket - harmless, since the auth check below rejects them
+# anyway (with a 401, before they can consume a legitimate key's quota).
+limit_req_zone $http_x_internal_token zone=aegis_limit:10m rate=10r/s;
+
+# SCHEMA.md Section 1: "Max Payload Size: 50 MB hard limit." Enforced here
+# at the edge so oversized bodies are rejected before nginx buffers them.
+client_max_body_size 50m;
 
 # Auth check: Compare the X-Internal-Token header against the environment variable
 map_hash_bucket_size 128;
@@ -18,21 +27,41 @@ server {
 
     # Apply rate limiting (allow bursts up to 20 requests without delay)
     limit_req zone=aegis_limit burst=20 nodelay;
+    limit_req_status 429;
+
+    # 413/429 are generated internally by nginx (client_max_body_size /
+    # limit_req) before any location block runs, so they need error_page
+    # redirection to get a JSON body. 401 is returned directly below since
+    # we generate it ourselves with `return`.
+    error_page 413 = @payload_too_large;
+    error_page 429 = @rate_limited;
 
     # Enforce the API key on every request
     if ($is_valid_token = 0) {
         return 401 '{"error": "Unauthorized. Missing or invalid X-Internal-Token."}';
     }
 
-    # Route to Video Classifier Detector
+    # Route to the upload validator, which checks magic bytes, the file-type
+    # allowlist, and path confinement before forwarding to the real detector.
+    # See security/gateway/validator/ - detectors are never reached directly
+    # from here so a spoofed/oversized upload never reaches inference code.
     location /api/video {
-        proxy_pass http://aegis_detector_video_classifier:8000/detect;
+        proxy_pass http://aegis_gateway_validator:8080/validate/video;
         proxy_set_header Host $host;
     }
 
-    # Route to AASIST Audio Detector
     location /api/audio {
-        proxy_pass http://aegis_detector_aasist:8000/detect;
+        proxy_pass http://aegis_gateway_validator:8080/validate/audio;
         proxy_set_header Host $host;
+    }
+
+    location @payload_too_large {
+        default_type application/json;
+        return 413 '{"error": "Payload exceeds the 50 MB upload limit."}';
+    }
+
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"error": "Rate limit exceeded for this API key."}';
     }
 }
