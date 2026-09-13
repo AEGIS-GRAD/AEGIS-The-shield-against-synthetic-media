@@ -18,6 +18,8 @@ from fastapi.responses import JSONResponse
 from models.AASIST import Model
 from preprocessing import preprocess_audio
 from schemas import DetectorRequest, DetectorResponse, Evidence, HealthResponse
+from telemetry import track_inference
+from prometheus_client import make_asgi_app
 
 # Logging configuration
 logging.basicConfig(
@@ -89,6 +91,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Expose Prometheus Metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
@@ -102,6 +108,7 @@ async def health_check():
 
 
 @app.post("/detect", response_model=DetectorResponse, response_model_exclude_none=True)
+@track_inference("aasist")
 async def detect(
     req: DetectorRequest,
     x_internal_token: Optional[str] = Header(default=None)

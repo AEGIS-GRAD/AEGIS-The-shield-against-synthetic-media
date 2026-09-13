@@ -11,6 +11,7 @@ pydantic>=2.0.0
 
 # Telemetry
 psutil>=5.9.0
+prometheus-client==0.20.0
 
 # Testing & Validation
 pytest>=7.0.0

@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "aegis_detector_aasist"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_aasist:8000"]
+      
+  - job_name: "aegis_detector_video_classifier"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_video_classifier:8000"]
+
+  # TODO: Uncomment these once AI team builds them
+  # - job_name: "aegis_detector_rppg"
+  #   metrics_path: "/metrics"
+  #   static_configs:
+  #     - targets: ["aegis_detector_rppg:8000"]
+  #     
+  # - job_name: "aegis_detector_syncnet"
+  #   metrics_path: "/metrics"
+  #   static_configs:
+  #     - targets: ["aegis_detector_syncnet:8000"]

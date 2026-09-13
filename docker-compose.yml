@@ -22,7 +22,7 @@ services:
     command: tail -f /dev/null
     container_name: aegis_wazuh_agent
     volumes:
-      - ./security:/app  # Automatically creates /security for custom Wazuh decoders/rules
+      - ./security:/app # Automatically creates /security for custom Wazuh decoders/rules
     networks:
       - aegis_net
 
@@ -55,7 +55,7 @@ services:
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -75,7 +75,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./orchestrator:/app  # Automatically creates /orchestrator
+      - ./orchestrator:/app # Automatically creates /orchestrator
     networks:
       - aegis_net
     environment:
@@ -90,7 +90,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./web:/app  # Automatically creates /web
+      - ./web:/app # Automatically creates /web
     networks:
       - aegis_net
     depends_on:
@@ -104,7 +104,7 @@ services:
     command: tail -f /dev/null
     container_name: aegis_engine
     volumes:
-      - ./engine:/app  # Automatically creates /engine
+      - ./engine:/app # Automatically creates /engine
     networks:
       - aegis_net
     depends_on:
@@ -118,7 +118,7 @@ services:
     command: tail -f /dev/null
     container_name: aegis_debate
     volumes:
-      - ./debate:/app  # Automatically creates /debate
+      - ./debate:/app # Automatically creates /debate
     networks:
       - aegis_net
 
@@ -127,7 +127,7 @@ services:
     command: tail -f /dev/null
     container_name: aegis_eval
     volumes:
-      - ./eval:/app  # Automatically creates /eval
+      - ./eval:/app # Automatically creates /eval
     networks:
       - aegis_net
 
@@ -136,7 +136,7 @@ services:
     command: tail -f /dev/null
     container_name: aegis_mcp
     volumes:
-      - ./mcp:/app  # Automatically creates /mcp
+      - ./mcp:/app # Automatically creates /mcp
     networks:
       - aegis_net
 
@@ -162,7 +162,7 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MODEL_WEIGHTS_PATH=/model_weights/AASIST.pth
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -171,7 +171,7 @@ services:
       resources:
         limits:
           memory: 1G
-      
+
   detector_rppg:
     image: python:3.10-slim
     command: tail -f /dev/null
@@ -185,7 +185,7 @@ services:
       resources:
         limits:
           memory: 2G
-      
+
   detector_syncnet:
     image: python:3.10-slim
     command: tail -f /dev/null
@@ -246,7 +246,7 @@ services:
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -256,6 +256,29 @@ services:
       resources:
         limits:
           memory: 4G
+
+  # ==========================================
+  # TELEMETRY
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: aegis_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./security/telemetry/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - aegis_net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aegis_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - aegis_net
 
 networks:
   aegis_net:
