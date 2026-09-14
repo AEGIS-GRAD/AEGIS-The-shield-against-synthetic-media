@@ -10,3 +10,23 @@ categories:
     - FaceSwap
     - NeuralTextures
     - DeepFakeDetection
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Audio Dataset — ASVspoof 2019 Logical Access (LA)
+# Used by the AASIST countermeasure detector.
+# Raw data lives OUTSIDE the repo (manually downloaded from datashare.ed.ac.uk).
+# Only the CM (countermeasure) protocol files are used; ASV protocol/score
+# files serve a different task (speaker verification) and are ignored.
+# ─────────────────────────────────────────────────────────────────────────────
+audio:
+  raw_data_root: "D:/LA/LA"
+  protocol_dir: "ASVspoof2019_LA_cm_protocols"
+  audio_subdir: "flac"
+  splits:
+    train: "ASVspoof2019_LA_train"
+    dev: "ASVspoof2019_LA_dev"
+    eval: "ASVspoof2019_LA_eval"
+  protocol_files:
+    train: "ASVspoof2019.LA.cm.train.trn.txt"
+    dev: "ASVspoof2019.LA.cm.dev.trl.txt"
+    eval: "ASVspoof2019.LA.cm.eval.trl.txt"

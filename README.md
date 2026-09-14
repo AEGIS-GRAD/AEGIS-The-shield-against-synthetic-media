@@ -28,6 +28,10 @@ This repository is organized as a monorepo, where each main component resides in
 
 For details on the 6 finalized detector models (covering video frame-level, video physiological, audio-visual sync, audio voice spoofing, text, and image), see [Model Scope Document](shared/docs/model_scope.md).
 
+## 📝 Failure Notes
+
+See [docs/failure_notes.md](docs/failure_notes.md) for per-detector failure tracking.
+
 ## 🚀 Getting Started
 
 The infrastructure is currently fully dockerized with placeholder stubs to allow isolated development.

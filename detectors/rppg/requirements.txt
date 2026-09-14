@@ -1,0 +1,15 @@
+# rPPG heartbeat-consistency detector — Python dependencies
+#
+# Classical signal processing only — no model checkpoint required.
+# torch / facenet-pytorch are needed solely for MTCNN face detection;
+# they are installed CPU-only in the Dockerfile to keep the image lean.
+
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+opencv-python-headless>=4.8.0.74
+numpy>=1.24.0
+scipy>=1.10.0
+facenet-pytorch>=2.5.3
+torch>=2.0.0
+pytest>=7.4.0

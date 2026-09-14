@@ -7,7 +7,7 @@ This document details the 6 detector models finalized for the AEGIS project. It 
 | Video (frame-level) | EfficientNet-B0 (FF++ c23) | Xicor9/efficientnet-b0-ffpp-c23 | | FaceForensics++ (c23) |
 | Video (physiological) | rPPG (PhysNet/DeepPhys) | ubicomplab/rPPG-Toolbox | | |
 | Audio-visual sync | SyncNet | joonson/syncnet_python | | |
-| Audio (voice spoofing) | AASIST | clovaai/aasist | | ASVspoof 2019 LA |
+| Audio (voice spoofing) | AASIST | clovaai/aasist | | ASVspoof 2019 LA (Logical Access, CM task only) |
 | Text | Binoculars | ahans30/Binoculars | | |
 | Image (GAN/diffusion) | Wang et al. CNN-Detection | peterwang512/CNNDetection | | |
 
@@ -15,10 +15,12 @@ This document details the 6 detector models finalized for the AEGIS project. It 
 
 The original proposal suggested deprioritizing text and image to future work, but the team has since expanded Month 1-2 scope to cover all 6 modalities/models above.
 
-### Score/Verdict Convention
+### Dataset Staging Status
 
-All AEGIS detector microservices must adhere to the following shared response contract:
+Both primary evaluation datasets are now extracted and staged locally:
 
-- **score**: `float` in `[0, 1]`, representing $P(\text{synthetic})$ — higher score = more likely fake.
-- **verdict**: `"synthetic"` if `score > 0.5`, else `"authentic"`.
-- **confidence**: distance from the 0.5 decision threshold, calculated as `abs(score - 0.5) * 2`.
+- **FaceForensics++ (c23)** — raw data at `D:/archive/FaceForensics++_C23/`; eval subset staged at `eval/data/video_subset/{real,fake}/` via `eval/scripts/make_subset.py`.
+- **ASVspoof 2019 LA** — raw data at `D:/LA/LA/`; eval subset staged at `eval/data/audio_subset/{real,fake}/` via `eval/scripts/make_audio_subset.py`. Only the CM (countermeasure) protocol files are used; ASV protocol/score files are a different task and are ignored.
+
+See `eval/DATA.md` for full download, extraction, and subset-generation instructions for both datasets.
+

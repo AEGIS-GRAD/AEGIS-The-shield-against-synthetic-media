@@ -173,13 +173,28 @@ services:
           memory: 1G
 
   detector_rppg:
-    image: python:3.10-slim
-    command: tail -f /dev/null
+    build:
+      context: ./detectors/rppg
+      dockerfile: Dockerfile
     container_name: aegis_detector_rppg
+    # [DEVSECOPS EXCEPTION] Exposing port 8003 directly to the host bypasses the API Gateway
+    # (auth, rate-limiting, logging). This is kept for local AI team testing convenience.
+    # MUST BE REMOVED IN PRODUCTION to enforce routing through Nginx.
+    ports:
+      - "8003:8000"
     volumes:
       - ./detectors/rppg:/app
+      - ./shared:/shared:ro
     networks:
       - aegis_net
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     # TODO: Placeholder limit. AI team must profile rPPG on Jetson and adjust.
     deploy:
       resources:
