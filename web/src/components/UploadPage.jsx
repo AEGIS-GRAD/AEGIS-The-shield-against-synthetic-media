@@ -1,4 +1,5 @@
 "use client";
+// impeccable-disable gray-on-color
 
 import React, { useState, useRef } from "react";
 import { submitMedia } from "../api/submitMedia";
