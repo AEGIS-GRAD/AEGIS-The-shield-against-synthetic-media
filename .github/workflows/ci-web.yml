@@ -1,7 +1,12 @@
 name: Web UI CI
 
 on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'web/**'
   pull_request:
+    branches: [ "main" ]
     paths:
       - 'web/**'
 
@@ -21,12 +26,23 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './web/package-lock.json'
       
-      # TODO: Uncomment once the Web team initializes their Next.js project
-      # - name: Install Dependencies
-      #   run: npm install
-      # 
-      # - name: Build Check
-      #   run: npm run build
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Check
+        run: npm run lint
       
+      - name: Build Check
+        run: npm run build
+
       - name: Run Impeccable UI Linter
         run: npx impeccable@4.1.0 detect .
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Web Docker Image
+        run: docker build -t aegis-web:ci ./web
+
