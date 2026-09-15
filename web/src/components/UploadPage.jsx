@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { submitMedia } from "../api/submitMedia";
+import DetectorResultsGrid from "./DetectorResultsGrid";
 import {
   Upload,
   Film,
@@ -12,9 +13,6 @@ import {
   RefreshCw,
   X,
   File,
-  ShieldAlert,
-
-  ShieldCheck,
   ArrowRight,
 } from "lucide-react";
 
@@ -43,6 +41,8 @@ export default function UploadPage() {
   const [validationError, setValidationError] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // submitResult now holds all four detector responses:
+  // { video_classifier, rppg, aasist, syncnet }
   const [submitResult, setSubmitResult] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -143,8 +143,8 @@ export default function UploadPage() {
       {/* Background Subtle Gradient Overlay */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] pointer-events-none" />
 
-      {/* Main Container */}
-      <div className="relative w-full max-w-3xl space-y-8">
+      {/* Main Container — widened from max-w-3xl so four detector cards fit comfortably */}
+      <div className="relative w-full max-w-5xl space-y-8">
         {/* Header Title */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-cyan-950/60 border border-cyan-800/40 text-cyan-400">
@@ -161,7 +161,7 @@ export default function UploadPage() {
 
         {/* Card Container */}
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 space-y-6">
-          
+
           {/* Submission Result Confirmation State */}
           {submitResult ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -174,54 +174,15 @@ export default function UploadPage() {
                   </div>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                  {submitResult.modality.toUpperCase()}
+                  {isVideo ? "VIDEO" : "AUDIO"}
                 </span>
               </div>
 
-              {/* Verdict Highlight Card */}
-              <div className={`p-6 rounded-xl border relative overflow-hidden ${
-                submitResult.verdict === "synthetic"
-                  ? "bg-rose-950/30 border-rose-800/50 text-rose-200"
-                  : "bg-emerald-950/30 border-emerald-800/50 text-emerald-200"
-              }`}>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                      Classification Verdict
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {submitResult.verdict === "synthetic" ? (
-                        <ShieldAlert className="w-8 h-8 text-rose-400" />
-                      ) : (
-                        <ShieldCheck className="w-8 h-8 text-emerald-400" />
-                      )}
-                      <span className="text-3xl font-black tracking-wide uppercase">
-                        {submitResult.verdict}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Confidence Badge */}
-                  <div className="text-right space-y-1">
-                    <span className="text-xs font-mono text-slate-400 block">Confidence</span>
-                    <span className="text-2xl font-bold font-mono">
-                      {(submitResult.confidence * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Score & Model Details Grid */}
-                <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-800/60 text-sm">
-                  <div>
-                    <span className="text-slate-400 text-xs block font-mono">Authenticity Score</span>
-                    <span className="font-mono font-semibold text-slate-200">{submitResult.score.toFixed(2)}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-xs block font-mono">Primary Model</span>
-                    <span className="font-mono font-semibold text-slate-200">{submitResult.model}</span>
-                  </div>
-                </div>
-              </div>
+              {/* All four detectors side by side, with clear "not applicable" treatment */}
+              <DetectorResultsGrid
+                fileName={selectedFile?.name}
+                detectorResponses={submitResult}
+              />
 
               {/* Reset Button */}
               <button
