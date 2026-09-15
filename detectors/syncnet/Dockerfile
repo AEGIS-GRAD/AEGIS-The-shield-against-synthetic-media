@@ -1,0 +1,32 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies required for OpenCV, ffmpeg audio extraction, and healthchecks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install CPU PyTorch & Torchvision
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Install application requirements
+COPY requirements.txt .
+RUN grep -v "^torch" requirements.txt > /tmp/reqs.txt && \
+    pip install --no-cache-dir -r /tmp/reqs.txt && \
+    rm /tmp/reqs.txt
+
+# Directory for weights
+RUN mkdir -p /app/weights
+
+# Copy microservice source code
+COPY . /app
+
+EXPOSE 8000
+
+# Run microservice using Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
