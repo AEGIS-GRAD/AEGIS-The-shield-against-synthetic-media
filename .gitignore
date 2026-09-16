@@ -27,5 +27,7 @@ node_modules/
 out/
 build/
 *.log
+*.db
+eval/fixtures/
 
 

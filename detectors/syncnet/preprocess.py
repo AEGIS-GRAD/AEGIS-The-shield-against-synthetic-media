@@ -124,7 +124,7 @@ class SyncNetPreprocessor:
 
         return frames, native_fps
 
-    def detect_face_box(self, frame: np.ndarray) -> Optional[Tuple[int, int, int, int]]:
+    def detect_face_box(self, frame: np.ndarray, allow_fallback: bool = True) -> Optional[Tuple[int, int, int, int]]:
         """Detects primary face bounding box (x, y, w, h)."""
         h, w, _ = frame.shape
 
@@ -147,20 +147,21 @@ class SyncNetPreprocessor:
                     gray, scaleFactor=1.1, minNeighbors=3, minSize=(40, 40)
                 )
                 if len(faces) > 0:
-                    # Return largest face
                     faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
                     fx, fy, fw, fh = faces[0]
                     return (int(fx), int(fy), int(fw), int(fh))
             except Exception as exc:
                 logger.debug(f"Haar cascade detection error: {exc}")
 
-        # Fallback: center region
-        side = int(min(h, w) * 0.6)
-        x = (w - side) // 2
-        y = (h - side) // 2
-        return (x, y, side, side)
+        if allow_fallback:
+            side = int(min(h, w) * 0.6)
+            x = (w - side) // 2
+            y = (h - side) // 2
+            return (x, y, side, side)
 
-    def crop_mouth_roi(self, frame: np.ndarray, face_box: Optional[Tuple[int, int, int, int]]) -> np.ndarray:
+        return None
+
+    def crop_mouth_roi(self, frame: np.ndarray, face_box: Optional[Tuple[int, int, int, int]]) -> Optional[np.ndarray]:
         """Crops mouth region from frame based on detected face bounding box.
 
         SyncNet specifies the mouth ROI as the lower half/lower 40% of the face crop,
@@ -168,11 +169,10 @@ class SyncNetPreprocessor:
         """
         h, w, _ = frame.shape
         if face_box is None:
-            face_box = self.detect_face_box(frame)
+            face_box = self.detect_face_box(frame, allow_fallback=True)
 
         if face_box is not None:
             fx, fy, fw, fh = face_box
-            # Mouth is centered in the lower 40% of the face
             my1 = max(0, fy + int(0.55 * fh))
             my2 = min(h, fy + fh)
             mx1 = max(0, fx + int(0.15 * fw))
@@ -193,7 +193,9 @@ class SyncNetPreprocessor:
     def extract_lip_sequences(self, frames: List[np.ndarray]) -> List[torch.Tensor]:
         """Extracts 5-frame concatenated lip sequences for SyncNet's video branch.
 
-        Each sample has shape (15, 112, 112) representing 5 consecutive 3-channel frames.
+        Includes guardrails against:
+        - Videos shorter than 5 frames (returns [])
+        - Severely underexposed / dark frames (skipped)
         """
         if len(frames) < 5:
             return []
@@ -201,21 +203,35 @@ class SyncNetPreprocessor:
         # Find mouth ROIs for all frames
         last_box = None
         mouth_crops: List[np.ndarray] = []
+
         for i, frame in enumerate(frames):
-            # Detect face every 5 frames or reuse last box for speed
+            # Guardrail: Check frame luminance (poorly-lit guardrail)
+            mean_lum = float(np.mean(frame))
+            if mean_lum < 15.0:
+                continue
+
             if i % 5 == 0 or last_box is None:
-                last_box = self.detect_face_box(frame)
+                box = self.detect_face_box(frame, allow_fallback=True)
+                if box is not None:
+                    last_box = box
+
+            if last_box is None:
+                continue
+
             crop = self.crop_mouth_roi(frame, last_box)
-            # Normalize to [0, 1]
+            if crop is None:
+                continue
+
             norm = crop.astype(np.float32) / 255.0
-            # Transpose HWC -> CHW (3, 112, 112)
             norm = np.transpose(norm, (2, 0, 1))
             mouth_crops.append(norm)
+
+        if len(mouth_crops) < 5:
+            return []
 
         # Create 5-frame sliding window sequences
         sequences: List[torch.Tensor] = []
         for i in range(len(mouth_crops) - 4):
-            # Concatenate 5 frames along channel dimension -> (15, 112, 112)
             window = np.concatenate(mouth_crops[i : i + 5], axis=0)
             tensor = torch.from_numpy(window).float()
             sequences.append(tensor)

@@ -245,11 +245,21 @@ def _bandpass_filter(
         return signal_1d.copy()
 
     # Reduce filter order if signal is very short
-    min_len = 3 * _FILTER_ORDER  # sosfiltfilt requires padlen > signal length
+    min_len = 3 * _FILTER_ORDER
     order = _FILTER_ORDER if len(signal_1d) > min_len else max(1, len(signal_1d) // 3)
 
-    sos = sp_signal.butter(order, [low, high], btype="bandpass", output="sos")
-    return sp_signal.sosfiltfilt(sos, signal_1d)
+    try:
+        sos = sp_signal.butter(order, [low, high], btype="bandpass", output="sos")
+        # Ensure padlen does not exceed signal length
+        n_sections = sos.shape[0]
+        default_padlen = 3 * (2 * n_sections + 1)
+        padlen = min(default_padlen, len(signal_1d) - 1) if len(signal_1d) > 2 else 0
+        if padlen <= 0:
+            return signal_1d.copy()
+        return sp_signal.sosfiltfilt(sos, signal_1d, padlen=padlen)
+    except Exception as exc:
+        logger.warning("Bandpass filtering failed on signal of length %d: %s. Returning demeaned raw signal.", len(signal_1d), exc)
+        return signal_1d - np.mean(signal_1d)
 
 
 def _compute_power_spectrum(

@@ -27,7 +27,9 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+import time
+import uuid
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
@@ -55,25 +57,32 @@ preprocessor = RppgPreprocessor()
 # ---------------------------------------------------------------------------
 
 
+class Evidence(BaseModel):
+    claim: str = Field(..., description="A human-readable claim regarding physiological consistency.")
+    flags: Optional[List[str]] = Field(default=None, description="Specific heuristic flags triggered.")
+
+
 class DetectionResponse(BaseModel):
+    job_id: str = Field(..., description="Unique job identifier.")
     modality: str = Field("video", description="Input media modality")
-    score: float = Field(
-        ...,
-        description=(
-            "P(synthetic) in [0, 1].  Computed as 1 − signal_quality_score. "
-            "TODO: placeholder heuristic — not a validated threshold."
-        ),
-    )
-    verdict: str = Field(
-        ..., description="Classification verdict: 'synthetic' or 'authentic'"
-    )
     confidence: float = Field(
-        ..., description="Confidence in [0, 1]: abs(score − 0.5) × 2"
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Confidence score. 0.0 = Authentic, 1.0 = Synthetic, 0.5 = Inconclusive.",
+    )
+    raw_score: float = Field(..., description="Uncalibrated quality or raw difference score.")
+    score: Optional[float] = Field(None, description="P(synthetic) in [0, 1].")
+    verdict: str = Field(
+        ..., description="Classification verdict: 'synthetic', 'authentic', or 'inconclusive'"
     )
     model: str = Field("rppg-chrom", description="Algorithm identifier")
+    model_version: str = Field("rppg-chrom-v1.0", description="Model version")
     estimated_bpm: float = Field(
         ..., description="Estimated heart rate in beats-per-minute (diagnostic)"
     )
+    latency_ms: int = Field(0, description="Processing time in milliseconds.")
+    evidence: Evidence = Field(..., description="Forensic evidence claim and flags.")
 
 
 class HealthResponse(BaseModel):
@@ -96,17 +105,12 @@ def health_check() -> Dict[str, str]:
 async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
     """Detect deepfake content via rPPG heartbeat-consistency analysis.
 
-    Runs the full pipeline:
-      1. Extract per-frame mean face-region RGB at native FPS (MTCNN / fallback).
-      2. Apply CHROM algorithm + 0.7–4 Hz bandpass to get the BVP signal.
-      3. Estimate heart rate (FFT peak-frequency) and signal quality (spectral purity).
-      4. Map signal quality to a synthetic-probability score.
-
-    Args:
-        file: Uploaded video file (any format supported by OpenCV/ffmpeg).
-
-    Returns:
-        JSON detection result matching the AEGIS shared response contract.
+    Runs the full pipeline with edge-case guardrails:
+      1. Preprocess & extract per-frame mean face RGB with duration/illumination/occlusion validation.
+      2. If guardrails triggered (short clip, dark lighting, occluded face), return inconclusive neutral response.
+      3. Apply CHROM algorithm + bandpass filter.
+      4. Estimate heart rate and spectral purity.
+      5. Output schema-conforming response.
     """
     if not file.filename:
         raise HTTPException(
@@ -116,6 +120,8 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
 
     suffix = Path(file.filename).suffix or ".mp4"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    start_time = time.perf_counter()
+    job_id = str(uuid.uuid4())
 
     try:
         content = await file.read()
@@ -127,15 +133,37 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
         tmp.write(content)
         tmp.close()
 
-        # Step 1 — preprocessing: face RGB time-series
+        # Step 1 — preprocessing & guardrails evaluation
         try:
-            rgb_signals, fps = preprocessor.get_face_rgb_signals(tmp.name)
+            rgb_signals, fps, meta = preprocessor.preprocess_video(tmp.name)
         except Exception as exc:
             logger.error("Preprocessing failed: %s", exc)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Failed to extract face signals from video: {exc}",
             ) from exc
+
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+
+        # Guardrail check: if edge cases triggered, return neutral inconclusive result
+        if meta.get("guardrail_triggered", False):
+            logger.info("Guardrail triggered for job %s: flags=%s claim=%s", job_id, meta["flags"], meta["claim"])
+            return {
+                "job_id": job_id,
+                "modality": "video",
+                "confidence": 0.5,
+                "raw_score": 0.0,
+                "score": 0.5,
+                "verdict": "inconclusive",
+                "model": "rppg-chrom",
+                "model_version": "rppg-chrom-v1.0",
+                "estimated_bpm": 0.0,
+                "latency_ms": elapsed_ms,
+                "evidence": {
+                    "claim": meta["claim"],
+                    "flags": meta["flags"],
+                },
+            }
 
         # Step 2 — CHROM pulse extraction
         try:
@@ -156,15 +184,20 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
 
         quality = signal_quality_score(pulse)
 
-        # Step 4 — Score/verdict mapping
-        # TODO: placeholder heuristic — 1 - quality is NOT a calibrated threshold.
-        #       Low rPPG signal quality indicates potential synthetic content, but
-        #       requires empirical threshold selection via labelled data before
-        #       production use.
+        # Step 4 — Score/verdict mapping with sanity check
         score = float(1.0 - quality)
-        score = max(0.0, min(1.0, score))  # clamp to [0, 1]
+        score = max(0.0, min(1.0, score))
         verdict = "synthetic" if score > 0.5 else "authentic"
         confidence = abs(score - 0.5) * 2.0
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+
+        claim = (
+            f"BVP pulse signal extracted via CHROM with estimated heart rate of {bpm:.1f} BPM "
+            f"(spectral purity: {quality:.2f})."
+        )
+        flags = []
+        if bpm < 45.0 or bpm > 180.0:
+            flags.append("atypical_heart_rate")
 
         logger.info(
             "rPPG result: bpm=%.1f quality=%.4f score=%.4f verdict=%s",
@@ -175,12 +208,20 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
         )
 
         return {
+            "job_id": job_id,
             "modality": "video",
+            "confidence": round(confidence, 4),
+            "raw_score": round(score, 4),
             "score": round(score, 4),
             "verdict": verdict,
-            "confidence": round(confidence, 4),
             "model": "rppg-chrom",
+            "model_version": "rppg-chrom-v1.0",
             "estimated_bpm": round(bpm, 2),
+            "latency_ms": elapsed_ms,
+            "evidence": {
+                "claim": claim,
+                "flags": flags,
+            },
         }
 
     finally:

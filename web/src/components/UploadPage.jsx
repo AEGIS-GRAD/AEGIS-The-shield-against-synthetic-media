@@ -2,8 +2,9 @@
 // impeccable-disable gray-on-color
 
 import React, { useState, useRef } from "react";
-import { submitMedia } from "../api/submitMedia";
+import { submitMediaWithProgress } from "../api/submitMedia";
 import DetectorResultsGrid from "./DetectorResultsGrid";
+import LiveStatusScreen from "./LiveStatusScreen";
 import {
   Upload,
   Film,
@@ -42,8 +43,8 @@ export default function UploadPage() {
   const [validationError, setValidationError] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // submitResult now holds all four detector responses:
-  // { video_classifier, rppg, aasist, syncnet }
+  const [liveStatus, setLiveStatus] = useState(null);
+  const [viewMode, setViewMode] = useState("upload"); // "upload" | "status" | "results"
   const [submitResult, setSubmitResult] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -115,6 +116,8 @@ export default function UploadPage() {
     setSelectedFile(null);
     setValidationError(null);
     setSubmitResult(null);
+    setLiveStatus(null);
+    setViewMode("upload");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -125,12 +128,16 @@ export default function UploadPage() {
 
     setIsSubmitting(true);
     setValidationError(null);
+    setViewMode("status");
 
     try {
-      const response = await submitMedia(selectedFile);
+      const response = await submitMediaWithProgress(selectedFile, (progressData) => {
+        setLiveStatus(progressData);
+      });
       setSubmitResult(response);
     } catch (err) {
       setValidationError(err.message || "Failed to submit media file.");
+      setViewMode("upload");
     } finally {
       setIsSubmitting(false);
     }
@@ -163,8 +170,28 @@ export default function UploadPage() {
         {/* Card Container */}
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 space-y-6">
 
-          {/* Submission Result Confirmation State */}
-          {submitResult ? (
+          {/* View Mode 1: Live Status Screen during/after processing */}
+          {viewMode === "status" ? (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <LiveStatusScreen
+                file={selectedFile}
+                statusData={liveStatus}
+                onComplete={() => setViewMode("results")}
+              />
+
+              {/* Abort / Upload Another File */}
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={handleClearFile}
+                  className="text-xs font-mono text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel & Return to Media Ingestion
+                </button>
+              </div>
+            </div>
+          ) : viewMode === "results" && submitResult ? (
+            /* View Mode 2: Results Grid */
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center gap-3">
@@ -174,9 +201,17 @@ export default function UploadPage() {
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedFile?.name}</p>
                   </div>
                 </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                  {isVideo ? "VIDEO" : "AUDIO"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode("status")}
+                    className="text-xs font-mono text-cyan-400 hover:text-cyan-300 px-3 py-1 rounded bg-cyan-950/50 border border-cyan-800/60 transition-colors cursor-pointer"
+                  >
+                    View Processing Logs
+                  </button>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    {isVideo ? "VIDEO" : "AUDIO"}
+                  </span>
+                </div>
               </div>
 
               {/* All four detectors side by side, with clear "not applicable" treatment */}
@@ -195,7 +230,7 @@ export default function UploadPage() {
               </button>
             </div>
           ) : (
-            /* Upload & Ingestion Flow */
+            /* View Mode 3: Upload Dropzone */
             <>
               {/* Drag and Drop Dropzone */}
               <div

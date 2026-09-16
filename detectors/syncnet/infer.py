@@ -155,7 +155,7 @@ class SyncNetInference:
                 0.0,
                 Evidence(
                     claim="No valid face or mouth region detected in video — lip-sync analysis skipped.",
-                    flags=["not_applicable"],
+                    flags=["not_applicable", "insufficient_signal"],
                 ),
             )
 

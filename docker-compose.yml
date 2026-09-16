@@ -69,17 +69,24 @@ services:
   # LAYER A: ORCHESTRATION & WEB
   # ==========================================
   orchestrator:
-    image: alpine
-    command: tail -f /dev/null
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
     container_name: aegis_orchestrator
     ports:
       - "8000:8000"
     volumes:
-      - ./orchestrator:/app # Automatically creates /orchestrator
+      - ./orchestrator:/app
     networks:
       - aegis_net
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     depends_on:
       - mediamtx
 
