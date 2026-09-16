@@ -16,6 +16,10 @@ import {
   X,
   File,
   ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Check,
 } from "lucide-react";
 
 // TODO: Reconcile allowed MIME types and max file size with Cybersecurity's official schema allowlist.
@@ -46,6 +50,8 @@ export default function UploadPage() {
   const [liveStatus, setLiveStatus] = useState(null);
   const [viewMode, setViewMode] = useState("upload"); // "upload" | "status" | "results"
   const [submitResult, setSubmitResult] = useState(null);
+  const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -117,10 +123,20 @@ export default function UploadPage() {
     setValidationError(null);
     setSubmitResult(null);
     setLiveStatus(null);
+    setIsJsonOpen(false);
+    setCopied(false);
     setViewMode("upload");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleCopyJson = () => {
+    if (!submitResult) return;
+    const jsonStr = JSON.stringify(submitResult.raw_response || submitResult, null, 2);
+    navigator.clipboard.writeText(jsonStr);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSubmit = async () => {
@@ -220,19 +236,55 @@ export default function UploadPage() {
                 detectorResponses={submitResult}
               />
 
-              {/* Raw JSON viewer section */}
+              {/* Forensic JSON Inspector (Collapsible) */}
               <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
-                    Raw Gateway & Detector JSON Response
-                  </h3>
-                  <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
-                    HTTP {submitResult.status_code || 200} • {submitResult.endpoint_used || "Gateway Endpoint"}
-                  </span>
+                  <button
+                    onClick={() => setIsJsonOpen(!isJsonOpen)}
+                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-cyan-400 font-mono transition-colors cursor-pointer"
+                  >
+                    {isJsonOpen ? <ChevronDown className="w-4 h-4 text-cyan-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                    <span>Forensic JSON Inspector</span>
+                    <span className="text-[10px] text-slate-500 font-normal normal-case">
+                      ({isJsonOpen ? "Click to collapse" : "Click to view raw payload"})
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+                      HTTP {submitResult.status_code || 200} • {submitResult.endpoint_used || "Gateway Endpoint"}
+                    </span>
+                    {isJsonOpen && (
+                      <button
+                        onClick={handleCopyJson}
+                        className="flex items-center gap-1 text-[11px] font-mono text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2.5 py-0.5 rounded border border-slate-700 transition-colors cursor-pointer"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Copy Payload</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <pre className="font-mono text-xs text-slate-300 bg-slate-950 p-4 rounded-lg border border-slate-800/80 overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
-                  <code>{JSON.stringify(submitResult.raw_response || submitResult, null, 2)}</code>
-                </pre>
+
+                {isJsonOpen && (
+                  <div className="space-y-2 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
+                      <span>AEGIS JSON Contract v1.0 • Verified Schema</span>
+                      <span>UTF-8 JSON Payload</span>
+                    </div>
+                    <pre className="font-mono text-xs text-slate-300 bg-slate-950 p-4 rounded-lg border border-slate-800/80 overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
+                      <code>{JSON.stringify(submitResult.raw_response || submitResult, null, 2)}</code>
+                    </pre>
+                  </div>
+                )}
               </div>
 
               {/* Reset Button */}

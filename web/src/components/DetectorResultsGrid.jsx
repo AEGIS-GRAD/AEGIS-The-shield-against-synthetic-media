@@ -11,42 +11,16 @@ import {
   Film,
   HeartPulse,
   MessageSquareOff,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 
 /**
  * DetectorResultsGrid
  * --------------------
  * Renders all four AEGIS detector results (video_classifier, rPPG, AASIST,
- * SyncNet) side by side for a single submitted file, once the orchestrator
- * has returned them.
- *
- * IMPORTANT — schema note:
- * shared/json-api-contracts-schema/detector_response.schema.json is strict
- * and locked: the orchestrator rejects any response with fields outside the
- * schema. There is no dedicated "status" or "not_applicable" field.
- *
- * Convention used here (confirm with the backend/orchestrator team before
- * relying on it in production): a detector that cannot run on the given
- * media signals this through the existing `evidence.flags` array by
- * including the string "not_applicable", with a human-readable reason in
- * `evidence.claim`. This keeps every response 100% schema-valid.
- *
- * Real DetectorResponse shape (per shared/json-api-contracts-schema):
- * {
- *   job_id: string,
- *   confidence: number,       // 0.0 = Authentic, 1.0 = Synthetic
- *   raw_score: number,
- *   latency_ms: number,
- *   ram_usage_mb?: number,
- *   vram_usage_mb?: number,
- *   model_version: string,
- *   evidence: { claim: string, flags?: string[] }
- * }
- *
- * This component expects an array of { id, label, modality, response }
- * where `response` is either a DetectorResponse object above, `null`
- * (still processing), or a plain Error-like object with `.message` (the
- * detector call itself failed — a real error, distinct from not_applicable).
+ * SyncNet) side by side for a single submitted file, and provides a top-level
+ * Cross-Modal Disagreement / Consensus synthesis banner.
  */
 
 const DETECTOR_META = {
@@ -126,12 +100,12 @@ function DetectorCard({ id, response }) {
   // ---- Real failure: the detector call itself errored (network, crash, etc.) ----
   if (response.error) {
     return (
-      <div className="p-5 rounded-xl border border-orange-900/50 bg-orange-950/20 flex flex-col h-full">
+      <div className="p-5 rounded-xl border border-rose-900/60 bg-rose-950/20 flex flex-col h-full shadow-lg shadow-rose-950/30">
         <CardHeader Icon={Icon} label={meta.label} modality={meta.modality} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 space-y-2">
-          <ShieldQuestion className="w-7 h-7 text-orange-400" />
-          <p className="text-sm font-semibold text-orange-300">Detector Error</p>
-          <p className="text-xs text-orange-400/70 max-w-[22ch]">{response.error}</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-5 space-y-2">
+          <ShieldQuestion className="w-7 h-7 text-rose-400" />
+          <p className="text-xs font-bold uppercase tracking-wider text-rose-300">Detector Execution Error</p>
+          <p className="text-xs text-rose-300/80 max-w-[24ch] font-mono">{response.error}</p>
         </div>
       </div>
     );
@@ -141,12 +115,14 @@ function DetectorCard({ id, response }) {
   const flags = response.evidence?.flags ?? [];
   if (flags.includes(NOT_APPLICABLE_FLAG)) {
     return (
-      <div className="p-5 rounded-xl border border-dashed border-slate-800 bg-slate-900/40 flex flex-col h-full">
+      <div className="p-5 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 opacity-70 flex flex-col h-full">
         <CardHeader Icon={Icon} label={meta.label} modality={meta.modality} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-6 space-y-2">
-          <MinusCircle className="w-7 h-7 text-slate-600" />
-          <p className="text-sm font-semibold text-slate-500">Not Applicable</p>
-          <p className="text-xs text-slate-600 max-w-[22ch]">{response.evidence?.claim}</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-5 space-y-2">
+          <MinusCircle className="w-6 h-6 text-slate-500" />
+          <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
+            NOT APPLICABLE
+          </span>
+          <p className="text-xs text-slate-500 max-w-[22ch]">{response.evidence?.claim}</p>
         </div>
       </div>
     );
@@ -192,8 +168,116 @@ function DetectorCard({ id, response }) {
   );
 }
 
+/**
+ * Top-level Synthesis Banner evaluating cross-modal consensus or disagreement.
+ */
+function CrossModalSynthesisBanner({ detectorResponses }) {
+  if (!detectorResponses) return null;
+
+  const order = ["video_classifier", "rppg", "aasist", "syncnet"];
+  const activeResults = [];
+
+  order.forEach((id) => {
+    const resp = detectorResponses[id];
+    if (resp && !resp.error) {
+      const flags = resp.evidence?.flags || [];
+      if (!flags.includes(NOT_APPLICABLE_FLAG) && typeof resp.confidence === "number") {
+        activeResults.push({
+          id,
+          label: DETECTOR_META[id]?.label || id,
+          verdict: verdictFromConfidence(resp.confidence),
+          confidence: resp.confidence,
+        });
+      }
+    }
+  });
+
+  if (activeResults.length === 0) return null;
+
+  const authenticList = activeResults.filter((r) => r.verdict === "authentic");
+  const syntheticList = activeResults.filter((r) => r.verdict === "synthetic");
+
+  const hasDisagreement = authenticList.length > 0 && syntheticList.length > 0;
+
+  if (hasDisagreement) {
+    return (
+      <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 space-y-2 animate-in fade-in duration-200">
+        <div className="flex items-center gap-2.5 text-amber-300">
+          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          <h3 className="font-bold text-sm uppercase tracking-wider">
+            Cross-Modal Disagreement Detected
+          </h3>
+        </div>
+        <div className="text-xs text-amber-200/90 font-mono space-y-1 pl-7">
+          <p>
+            <strong className="text-emerald-400">Authentic ({authenticList.length}):</strong>{" "}
+            {authenticList.map((r) => r.label).join(", ")}
+          </p>
+          <p>
+            <strong className="text-rose-400">Synthetic ({syntheticList.length}):</strong>{" "}
+            {syntheticList.map((r) => r.label).join(", ")}
+          </p>
+          <p className="text-[11px] text-amber-400/80 pt-1">
+            Note: Disagreeing modalities require Month 2 debate layer & fusion weighting for automated resolution.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (syntheticList.length > 0) {
+    return (
+      <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-500/50 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <ShieldAlert className="w-6 h-6 text-rose-400 flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-sm text-rose-200 uppercase tracking-wider">
+              Cross-Modal Consensus: Synthetic Media Detected
+            </h3>
+            <p className="text-xs text-rose-300/80 font-mono">
+              Agreed across active detectors ({syntheticList.map((r) => r.label).join(", ")})
+            </p>
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-rose-900/60 text-rose-200 border border-rose-700">
+          SYNTHETIC
+        </span>
+      </div>
+    );
+  }
+
+  if (authenticList.length > 0) {
+    return (
+      <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/50 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="w-6 h-6 text-emerald-400 flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-sm text-emerald-200 uppercase tracking-wider">
+              Cross-Modal Consensus: Authentic Media Verified
+            </h3>
+            <p className="text-xs text-emerald-300/80 font-mono">
+              Agreed across active detectors ({authenticList.map((r) => r.label).join(", ")})
+            </p>
+          </div>
+        </div>
+        <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-900/60 text-emerald-200 border border-emerald-700">
+          AUTHENTIC
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-700 flex items-center gap-3">
+      <Info className="w-5 h-5 text-slate-400 flex-shrink-0" />
+      <p className="text-xs text-slate-300 font-mono">
+        Detector output evaluated. Review individual detector evidence cards below.
+      </p>
+    </div>
+  );
+}
+
 export default function DetectorResultsGrid({ detectorResponses, fileName }) {
-  // detectorResponses: { video_classifier: DetectorResponse|null, rppg: ..., aasist: ..., syncnet: ... }
   const order = ["video_classifier", "rppg", "aasist", "syncnet"];
   const completedCount = order.filter((id) => detectorResponses?.[id]).length;
 
@@ -210,6 +294,9 @@ export default function DetectorResultsGrid({ detectorResponses, fileName }) {
           {completedCount}/{order.length} completed
         </span>
       </div>
+
+      {/* Top Cross-Modal Disagreement / Consensus Banner */}
+      <CrossModalSynthesisBanner detectorResponses={detectorResponses} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {order.map((id) => (
