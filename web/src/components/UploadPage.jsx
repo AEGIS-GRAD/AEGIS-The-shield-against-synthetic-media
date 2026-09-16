@@ -220,6 +220,21 @@ export default function UploadPage() {
                 detectorResponses={submitResult}
               />
 
+              {/* Raw JSON viewer section */}
+              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
+                    Raw Gateway & Detector JSON Response
+                  </h3>
+                  <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+                    HTTP {submitResult.status_code || 200} • {submitResult.endpoint_used || "Gateway Endpoint"}
+                  </span>
+                </div>
+                <pre className="font-mono text-xs text-slate-300 bg-slate-950 p-4 rounded-lg border border-slate-800/80 overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
+                  <code>{JSON.stringify(submitResult.raw_response || submitResult, null, 2)}</code>
+                </pre>
+              </div>
+
               {/* Reset Button */}
               <button
                 onClick={handleClearFile}
