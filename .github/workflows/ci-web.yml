@@ -5,10 +5,12 @@ on:
     branches: [ "main" ]
     paths:
       - 'web/**'
+      - '.github/workflows/ci-web.yml'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'web/**'
+      - '.github/workflows/ci-web.yml'
 
 jobs:
   lint-and-build:
