@@ -5,8 +5,17 @@ from typing import List
 import httpx
 from models import DetectorResult, DetectorEvidence
 
+from circuit_breaker import CircuitBreaker, CircuitBreakerOpenException
+
 _DEFAULT_BASE = "http://{service}:8000"
 INTERNAL_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
+
+_breakers = {}
+
+def _get_breaker(detector: str) -> CircuitBreaker:
+    if detector not in _breakers:
+        _breakers[detector] = CircuitBreaker(name=detector, failure_threshold=3, recovery_timeout_sec=5.0)
+    return _breakers[detector]
 
 
 def _service_url(detector_name: str) -> str:
@@ -18,9 +27,10 @@ async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modal
     url = f"{_service_url(detector)}/detect"
     body = {"job_id": job_id, "modality": modality, "payload": file_path}
     headers = {"X-Internal-Token": INTERNAL_TOKEN}
+    breaker = _get_breaker(detector)
 
     try:
-        resp = await client.post(url, json=body, headers=headers, timeout=30.0)
+        resp = await breaker.call_async(client.post, url, json=body, headers=headers, timeout=30.0)
         resp.raise_for_status()
         data = resp.json()
 
@@ -45,6 +55,8 @@ async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modal
             model_version=data["model_version"],
             evidence=DetectorEvidence(claim=evidence_data["claim"], flags=evidence_data.get("flags", [])),
         )
+    except CircuitBreakerOpenException as exc:
+        return DetectorResult(detector=detector, status="failed", job_id=job_id, error=f"Circuit OPEN: {str(exc)}")
     except Exception as exc:
         return DetectorResult(detector=detector, status="failed", job_id=job_id, error=str(exc))
 
