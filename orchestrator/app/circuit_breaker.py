@@ -92,6 +92,31 @@ class CircuitBreaker:
             raise e
             
         # Check Latency (Rolling Average)
+        self._record_latency(start_time)
+
+        # If it was fast and successful
+        self.record_success()
+        return result
+
+    async def call_async(self, func, *args, **kwargs):
+        """Wraps an asynchronous function call with circuit breaker logic."""
+        if not self.can_execute():
+            logger.error(f"[CircuitBreaker:{self.name}] Request instantly skipped. Circuit is OPEN.")
+            raise CircuitBreakerOpenException(f"Service {self.name} is currently unavailable.")
+
+        start_time = time.time()
+        try:
+            # Actually await the detector service
+            result = await func(*args, **kwargs)
+        except Exception as e:
+            self.record_failure()
+            raise e
+            
+        self._record_latency(start_time)
+        self.record_success()
+        return result
+
+    def _record_latency(self, start_time: float):
         latency = time.time() - start_time
         self.recent_latencies.append(latency)
         if len(self.recent_latencies) > self.latency_window_size:
@@ -104,13 +129,6 @@ class CircuitBreaker:
                 f"({avg_latency:.2f}s) exceeded limit ({self.latency_threshold_sec}s)."
             )
             self.record_failure()
-            # We don't necessarily raise here, we just record the slow performance as a failure strike
-            # so the circuit will trip if it stays slow.
-            return result
-
-        # If it was fast and successful
-        self.record_success()
-        return result
 
 # Decorator for easy wrapping of functions
 def with_circuit_breaker(**cb_kwargs):
