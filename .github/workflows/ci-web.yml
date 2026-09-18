@@ -3,17 +3,27 @@ name: Web UI CI
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'web/**'
-      - '.github/workflows/ci-web.yml'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - 'web/**'
-      - '.github/workflows/ci-web.yml'
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.changes.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            web:
+              - 'web/**'
+              - '.github/workflows/ci-web.yml'
+
   lint-and-build:
+    needs: filter
+    if: ${{ needs.filter.outputs.web == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -47,4 +57,3 @@ jobs:
 
       - name: Build Web Docker Image
         run: docker build -t aegis-web:ci ./web
-

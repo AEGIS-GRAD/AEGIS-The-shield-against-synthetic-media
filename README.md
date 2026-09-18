@@ -1,6 +1,6 @@
 # 🛡️ AEGIS
 
-**AEGIS** (Agentic, Edge-optimized, explainable deepfake verIfication System) is a comprehensive framework designed to detect, analyze, and explain synthetic media. 
+**AEGIS** (Agentic, Edge-optimized, explainable deepfake verIfication System) is a comprehensive framework designed to detect, analyze, and explain synthetic media..
 
 ## 🏗️ System Architecture
 
