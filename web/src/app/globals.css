@@ -1,15 +1,48 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --detector-video: #06b6d4;
+    --detector-aasist: #a855f7;
+    --detector-rppg: #f43f5e;
+    --detector-syncnet: #14b8a6;
+  }
+
   body {
     background-color: #0b0f17;
     color: #f8fafc;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Monospace numbers for consistent telemetry & clocks */
+  .font-mono, [data-tabular] {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* ── Skeleton shimmer used by DetectorResultCard ── */
+/* ── Custom Subtle Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f17;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ── Skeleton shimmer animation ── */
 @keyframes aegis-shimmer {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: aegis-shimmer 2s infinite ease-in-out;
 }

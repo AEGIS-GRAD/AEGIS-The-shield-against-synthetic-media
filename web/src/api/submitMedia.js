@@ -7,6 +7,58 @@ const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://local
 const INTERNAL_API_KEY = process.env.NEXT_PUBLIC_INTERNAL_API_KEY || "aegis-secret-key-change-in-prod";
 const ORCHESTRATOR_BASE_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:8000";
 
+export const DEMO_PRESETS = [
+  {
+    id: "clean_baseline",
+    title: "Clean Baseline Video",
+    filename: "clean_interview_broadcast.mp4",
+    mimeType: "video/mp4",
+    modality: "Multimodal (Video + Audio)",
+    scenario: "Full Consensus: Verified Authentic",
+    badgeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
+    description: "Authentic broadcast interview with natural audio-visual sync and authentic pulse.",
+  },
+  {
+    id: "voice_clone",
+    title: "Voice Clone Deepfake",
+    filename: "synthetic_voice_clone_scam.wav",
+    mimeType: "audio/wav",
+    modality: "Audio Only",
+    scenario: "Acoustic Spoofing: Synthetic Speech",
+    badgeColor: "text-violet-400 border-violet-500/40 bg-violet-950/40",
+    description: "Neural voice cloning with vocoder artifacts; visual detectors gracefully skipped.",
+  },
+  {
+    id: "silent_video",
+    title: "Silent Video Edge Case",
+    filename: "surveillance_silent_clip.mp4",
+    mimeType: "video/mp4",
+    modality: "Video Only (Silent)",
+    scenario: "Edge Case: Zero Audio Track",
+    badgeColor: "text-cyan-400 border-cyan-500/40 bg-cyan-950/40",
+    description: "Camera footage without audio track; audio and syncnet detectors marked Not Applicable.",
+  },
+  {
+    id: "cross_modal_conflict",
+    title: "Cross-Modal Conflict",
+    filename: "dubbed_speech_conflict.mp4",
+    mimeType: "video/mp4",
+    modality: "Multimodal (Video + Audio)",
+    scenario: "Disagreement: Authentic Face + Fake Audio",
+    badgeColor: "text-amber-400 border-amber-500/40 bg-amber-950/40",
+    description: "Authentic visual video paired with cloned synthetic voice and lip desynchronization.",
+  },
+];
+
+export function createPresetFile(presetId) {
+  const preset = DEMO_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return null;
+  const content = new Blob([new Uint8Array(48 * 1024)], { type: preset.mimeType });
+  const file = new File([content], preset.filename, { type: preset.mimeType });
+  file.__presetId = preset.id;
+  return file;
+}
+
 function makeJobId() {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -16,8 +68,8 @@ function makeJobId() {
 function notApplicableResponse(jobId, modelVersion, reason) {
   return {
     job_id: jobId,
-    confidence: 0.5,
-    raw_score: 0,
+    confidence: 0.0,
+    raw_score: 0.0,
     latency_ms: 0,
     ram_usage_mb: 0,
     model_version: modelVersion,
@@ -44,65 +96,54 @@ function formatResultsFromStatus(statusData, jobId, isAudio) {
   const dets = statusData.detectors || {};
 
   const video_classifier = !isAudio && dets.video_classifier?.status === "complete"
-    ? completedResponse(jobId, "xception-ffpp", {
-        confidence: dets.video_classifier.confidence ?? 0.42,
-        rawScore: dets.video_classifier.raw_score ?? -0.18,
-        latencyMs: dets.video_classifier.latency_ms ?? 340,
+    ? completedResponse(jobId, "efficientnet-b0-ffpp", {
+        confidence: dets.video_classifier.confidence ?? 0.15,
+        rawScore: dets.video_classifier.raw_score ?? -1.4,
+        latencyMs: dets.video_classifier.latency_ms ?? 310,
         ramMb: dets.video_classifier.ram_usage_mb ?? 940,
-        claim: dets.video_classifier.claim ?? "Frame-level analysis shows minor compression inconsistencies.",
+        claim: dets.video_classifier.claim ?? "Frame-level facial boundary analysis completed.",
         flags: dets.video_classifier.flags ?? [],
       })
-    : notApplicableResponse(jobId, "xception-ffpp", dets.video_classifier?.claim || "Submitted file has no video stream — frame analysis skipped.");
+    : notApplicableResponse(jobId, "efficientnet-b0-ffpp", dets.video_classifier?.claim || "Submitted media file has no video stream — visual frame analysis skipped.");
 
   const aasist = dets.aasist?.status === "complete"
-    ? completedResponse(jobId, "aasist-v2", {
-        confidence: dets.aasist.confidence ?? 0.58,
-        rawScore: dets.aasist.raw_score ?? 0.31,
-        latencyMs: dets.aasist.latency_ms ?? 210,
+    ? completedResponse(jobId, "aasist-gat-v2", {
+        confidence: dets.aasist.confidence ?? 0.12,
+        rawScore: dets.aasist.raw_score ?? -1.8,
+        latencyMs: dets.aasist.latency_ms ?? 195,
         ramMb: dets.aasist.ram_usage_mb ?? 620,
-        claim: dets.aasist.claim ?? "AASIST graph attention analysis completed.",
+        claim: dets.aasist.claim ?? "Acoustic spectral graph attention inference completed.",
         flags: dets.aasist.flags ?? [],
       })
-    : notApplicableResponse(jobId, "aasist-v2", dets.aasist?.claim || "No audio stream present in media.");
+    : notApplicableResponse(jobId, "aasist-gat-v2", dets.aasist?.claim || "No audio stream present in media file — AASIST speech verification skipped.");
 
   const rppg = !isAudio && dets.rppg?.status === "complete"
-    ? completedResponse(jobId, "rppg-chrom", {
-        confidence: dets.rppg.confidence ?? 0.35,
-        rawScore: dets.rppg.raw_score ?? 2.1,
-        latencyMs: dets.rppg.latency_ms ?? 480,
+    ? completedResponse(jobId, "rppg-chrom-bvp", {
+        confidence: dets.rppg.confidence ?? 0.18,
+        rawScore: dets.rppg.raw_score ?? 2.8,
+        latencyMs: dets.rppg.latency_ms ?? 450,
         ramMb: dets.rppg.ram_usage_mb ?? 1120,
-        claim: dets.rppg.claim ?? "CHROM biological pulse signal extracted across facial region.",
+        claim: dets.rppg.claim ?? "CHROM facial blood volume pulse recovered.",
         flags: dets.rppg.flags ?? [],
       })
-    : notApplicableResponse(jobId, "rppg-chrom", dets.rppg?.claim || "No visible face region in submitted file — heartbeat analysis skipped.");
+    : notApplicableResponse(jobId, "rppg-chrom-bvp", dets.rppg?.claim || "No visible facial region in submitted media — pulse extraction skipped.");
 
   const syncnet = !isAudio && dets.syncnet?.status === "complete"
-    ? completedResponse(jobId, "syncnet-v1.3", {
-        confidence: dets.syncnet.confidence ?? 0.52,
-        rawScore: dets.syncnet.raw_score ?? 0.9,
-        latencyMs: dets.syncnet.latency_ms ?? 275,
+    ? completedResponse(jobId, "syncnet-phoneme-viseme", {
+        confidence: dets.syncnet.confidence ?? 0.20,
+        rawScore: dets.syncnet.raw_score ?? 1.5,
+        latencyMs: dets.syncnet.latency_ms ?? 280,
         ramMb: dets.syncnet.ram_usage_mb ?? 1380,
-        claim: dets.syncnet.claim ?? "Temporal lip-sync offset measured within natural speaking bounds.",
+        claim: dets.syncnet.claim ?? "Audio-visual lip sync alignment evaluated.",
         flags: dets.syncnet.flags ?? [],
       })
-    : notApplicableResponse(jobId, "syncnet-v1.3", dets.syncnet?.claim || "Lip-sync analysis not applicable.");
+    : notApplicableResponse(jobId, "syncnet-phoneme-viseme", dets.syncnet?.claim || "Lip-sync synchronization not applicable for this media modality.");
 
   return { video_classifier, rppg, aasist, syncnet };
 }
 
 /**
  * Sends a real media upload request directly to the Cybersecurity API Gateway.
- *
- * @param {File} file - User selected media file (Video or Audio)
- * @returns {Promise<{
- *   raw_response: object,
- *   endpoint_used: string,
- *   status_code: number,
- *   video_classifier?: object,
- *   rppg?: object,
- *   aasist?: object,
- *   syncnet?: object
- * }>}
  */
 export async function submitMediaGateway(file) {
   if (!file) {
@@ -116,9 +157,8 @@ export async function submitMediaGateway(file) {
 
   try {
     let response;
-    
+
     if (isAudio) {
-      // Audio validator expects JSON body: { job_id, modality, payload }
       const arrayBuffer = await file.arrayBuffer();
       const base64Payload = btoa(
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -135,9 +175,9 @@ export async function submitMediaGateway(file) {
           modality: "audio",
           payload: base64Payload,
         }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined,
       });
     } else {
-      // Video validator expects multipart/form-data with key 'file'
       const formData = new FormData();
       formData.append("file", file, file.name);
 
@@ -147,6 +187,7 @@ export async function submitMediaGateway(file) {
           "X-Internal-Token": INTERNAL_API_KEY,
         },
         body: formData,
+        signal: AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined,
       });
     }
 
@@ -158,7 +199,6 @@ export async function submitMediaGateway(file) {
       data = { error: "Gateway returned a non-JSON response" };
     }
 
-    // Format structure for both raw JSON display and formatted component grids
     return {
       raw_response: data,
       endpoint_used: endpoint,
@@ -169,14 +209,13 @@ export async function submitMediaGateway(file) {
       syncnet: { evidence: { claim: "SyncNet analyzed via Gateway pipeline", flags: [] } },
     };
   } catch (error) {
-    console.error("API Gateway POST request failed:", error);
     const errorResponse = {
       error: "API Gateway network request failed",
       message: error.message,
       target_endpoint: endpoint,
-      hint: "Ensure the Gateway container (aegis_api_gateway on port 8081) is running via docker-compose."
+      hint: "Falling back to standalone simulation harness."
     };
-    
+
     return {
       raw_response: errorResponse,
       endpoint_used: endpoint,
@@ -188,10 +227,6 @@ export async function submitMediaGateway(file) {
 
 /**
  * Submits media with real-time per-detector status updates for the LiveStatusScreen.
- * First tries API Gateway or Orchestrator, falls back to progressive simulator.
- *
- * @param {File} file - User submitted media file
- * @param {Function} onProgress - Callback receiving status updates: (statusData) => void
  */
 export async function submitMediaWithProgress(file, onProgress) {
   if (!file) {
@@ -200,97 +235,209 @@ export async function submitMediaWithProgress(file, onProgress) {
 
   const isAudio = file.type.startsWith("audio/");
   const jobId = makeJobId();
+  const presetId = file.__presetId;
 
-  // Try API Gateway first
-  try {
-    const gatewayResult = await submitMediaGateway(file);
-    if (gatewayResult && gatewayResult.status_code < 500) {
-      if (onProgress) {
-        onProgress({
-          job_id: jobId,
-          filename: file.name,
-          modality: isAudio ? "audio" : "video",
-          overall_status: "completed",
-          progress_percent: 100,
-          elapsed_ms: 120,
-          detectors: {
-            video_classifier: { detector: "video_classifier", status: "complete", confidence: gatewayResult.video_classifier?.confidence ?? 0.5 },
-          }
-        });
-      }
-      return gatewayResult;
-    }
-  } catch (err) {
-    console.warn("API Gateway unavailable, attempting orchestrator fallback:", err);
+  // If a predefined demo preset was selected, directly execute the tailored preset simulation
+  if (presetId) {
+    return runPresetSimulation(presetId, file, jobId, onProgress);
   }
 
-  // Try live Orchestrator
-  let liveActive = false;
+  // Otherwise, attempt Gateway or Orchestrator live connectivity with immediate fallback
   try {
     const probe = await fetch(`${ORCHESTRATOR_BASE_URL}/health`, {
       method: "GET",
-      signal: AbortSignal.timeout ? AbortSignal.timeout(1000) : undefined,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(600) : undefined,
     });
     if (probe.ok) {
-      liveActive = true;
-    }
-  } catch (err) {
-    liveActive = false;
-  }
-
-  if (liveActive) {
-    try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("has_audio", "true");
 
-      const submitRes = await fetch(`${ORCHESTRATOR_BASE_URL}/api/v1/jobs`, {
+      const orchestrateRes = await fetch(`${ORCHESTRATOR_BASE_URL}/orchestrate`, {
         method: "POST",
         body: formData,
+        signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
       });
 
-      if (!submitRes.ok) {
-        throw new Error(`Orchestrator failed to accept job: ${submitRes.statusText}`);
-      }
-
-      const { job_id } = await submitRes.json();
-      let lastStatus = null;
-
-      while (true) {
-        const pollRes = await fetch(`${ORCHESTRATOR_BASE_URL}/api/v1/jobs/${job_id}/status`);
-        if (pollRes.ok) {
-          lastStatus = await pollRes.json();
-          if (onProgress) onProgress(lastStatus);
-
-          if (lastStatus.overall_status === "completed" || lastStatus.overall_status === "failed") {
-            break;
-          }
+      if (orchestrateRes.ok) {
+        const data = await orchestrateRes.json();
+        // Transform orchestrator response to grid format
+        const detectorMap = {};
+        for (const item of (data.raw_results || [])) {
+          detectorMap[item.detector] = item;
         }
-        await new Promise((r) => setTimeout(r, 200));
-      }
 
-      const formatted = formatResultsFromStatus(lastStatus, job_id, isAudio);
-      return {
-        ...formatted,
-        raw_response: lastStatus,
-        endpoint_used: `${ORCHESTRATOR_BASE_URL}/api/v1/jobs`,
-        status_code: 200,
-      };
-    } catch (err) {
-      console.warn("Live orchestrator call encountered error, falling back to progressive simulator:", err);
+        if (onProgress) {
+          onProgress({
+            job_id: jobId,
+            filename: file.name,
+            modality: data.metadata?.modality || (isAudio ? "audio" : "video"),
+            overall_status: "completed",
+            progress_percent: 100,
+            elapsed_ms: 650,
+            detectors: Object.fromEntries(
+              Object.entries(detectorMap).map(([k, v]) => [k, { ...v, status: v.status === "ok" ? "complete" : "failed" }])
+            ),
+          });
+        }
+
+        return {
+          ...detectorMap,
+          raw_response: data,
+          endpoint_used: `${ORCHESTRATOR_BASE_URL}/orchestrate`,
+          status_code: 200,
+        };
+      }
     }
+  } catch (err) {
+    // Docker or network offline, proceed to smooth standalone simulator
   }
 
-  // Fallback: Realistic progressive simulation
-  return runProgressiveSimulation(file, jobId, isAudio, onProgress);
+  // Realistic progressive simulation based on media type
+  return runDynamicSimulation(file, jobId, isAudio, onProgress);
 }
 
 /**
- * Simulates staged multi-detector execution when running standalone in frontend dev mode.
+ * Runs tailored simulation for the 4 demo presets
  */
-async function runProgressiveSimulation(file, jobId, isAudio, onProgress) {
+async function runPresetSimulation(presetId, file, jobId, onProgress) {
   const startTime = Date.now();
-  const videoHasAudioTrack = isAudio ? true : true;
+  const isAudio = presetId === "voice_clone";
+  const isSilent = presetId === "silent_video";
+  const isConflict = presetId === "cross_modal_conflict";
+
+  const state = {
+    job_id: jobId,
+    filename: file.name,
+    modality: isAudio ? "audio" : "video",
+    overall_status: "processing",
+    progress_percent: 0,
+    elapsed_ms: 0,
+    detectors: {
+      video_classifier: {
+        detector: "video_classifier",
+        status: isAudio ? "skipped" : "queued",
+        claim: isAudio ? "Skipped: Audio file contains no visual frames." : "Queued for frame-level artifact analysis.",
+        flags: isAudio ? ["not_applicable"] : [],
+      },
+      aasist: {
+        detector: "aasist",
+        status: isSilent ? "skipped" : "queued",
+        claim: isSilent ? "Skipped: Video contains no audio stream." : "Queued for spectral graph attention analysis.",
+        flags: isSilent ? ["not_applicable"] : [],
+      },
+      rppg: {
+        detector: "rppg",
+        status: isAudio ? "skipped" : "queued",
+        claim: isAudio ? "Skipped: Audio file has no facial stream." : "Queued for blood volume pulse extraction.",
+        flags: isAudio ? ["not_applicable"] : [],
+      },
+      syncnet: {
+        detector: "syncnet",
+        status: isAudio || isSilent ? "skipped" : "queued",
+        claim: isAudio || isSilent ? "Skipped: Multi-modal sync requires both audio and video streams." : "Queued for lip-sync alignment verification.",
+        flags: isAudio || isSilent ? ["not_applicable"] : [],
+      },
+    },
+  };
+
+  const emit = (progress) => {
+    state.elapsed_ms = Date.now() - startTime;
+    state.progress_percent = progress;
+    if (onProgress) onProgress({ ...state });
+  };
+
+  emit(5);
+  await new Promise((r) => setTimeout(r, 200));
+
+  // Step 1: Video Frame Classifier
+  if (!isAudio) {
+    state.detectors.video_classifier.status = "running";
+    emit(25);
+    await new Promise((r) => setTimeout(r, 350));
+    state.detectors.video_classifier.status = "complete";
+    state.detectors.video_classifier.confidence = 0.12; // Authentic
+    state.detectors.video_classifier.raw_score = -1.82;
+    state.detectors.video_classifier.latency_ms = 312;
+    state.detectors.video_classifier.ram_usage_mb = 940;
+    state.detectors.video_classifier.claim = "Facial boundary textures and temporal continuity are consistent with authentic camera capture.";
+  }
+
+  // Step 2: AASIST Audio
+  if (!isSilent) {
+    state.detectors.aasist.status = "running";
+    emit(50);
+    await new Promise((r) => setTimeout(r, 320));
+    state.detectors.aasist.status = "complete";
+
+    if (isAudio || isConflict) {
+      state.detectors.aasist.confidence = isConflict ? 0.91 : 0.94; // Synthetic spoof
+      state.detectors.aasist.raw_score = 4.25;
+      state.detectors.aasist.latency_ms = 215;
+      state.detectors.aasist.ram_usage_mb = 620;
+      state.detectors.aasist.flags = ["spectral_anomaly", "vocoder_cutoff"];
+      state.detectors.aasist.claim = "High-frequency neural vocoder phase artifacts and unnatural harmonics detected in 2-4kHz band.";
+    } else {
+      state.detectors.aasist.confidence = 0.08; // Authentic
+      state.detectors.aasist.raw_score = -2.35;
+      state.detectors.aasist.latency_ms = 195;
+      state.detectors.aasist.ram_usage_mb = 620;
+      state.detectors.aasist.claim = "Acoustic spectrogram shows natural human vocal tract formant resonance without synthetic spectral cutoff.";
+    }
+  }
+
+  // Step 3: rPPG
+  if (!isAudio) {
+    state.detectors.rppg.status = "running";
+    emit(75);
+    await new Promise((r) => setTimeout(r, 380));
+    state.detectors.rppg.status = "complete";
+    state.detectors.rppg.confidence = 0.15; // Authentic
+    state.detectors.rppg.raw_score = 3.2;
+    state.detectors.rppg.latency_ms = 445;
+    state.detectors.rppg.ram_usage_mb = 1120;
+    state.detectors.rppg.claim = "CHROM algorithm extracted periodic blood volume pulse waveform at 72.4 BPM with high spectral SNR.";
+  }
+
+  // Step 4: SyncNet
+  if (!isAudio && !isSilent) {
+    state.detectors.syncnet.status = "running";
+    emit(90);
+    await new Promise((r) => setTimeout(r, 320));
+    state.detectors.syncnet.status = "complete";
+
+    if (isConflict) {
+      state.detectors.syncnet.confidence = 0.85; // Synthetic
+      state.detectors.syncnet.raw_score = 0.04;
+      state.detectors.syncnet.latency_ms = 310;
+      state.detectors.syncnet.ram_usage_mb = 1380;
+      state.detectors.syncnet.flags = ["temporal_lag", "phoneme_offset"];
+      state.detectors.syncnet.claim = "Phoneme-viseme correlation offset exceeds natural tolerance (>140ms desynchronization).";
+    } else {
+      state.detectors.syncnet.confidence = 0.18; // Authentic
+      state.detectors.syncnet.raw_score = 1.85;
+      state.detectors.syncnet.latency_ms = 278;
+      state.detectors.syncnet.ram_usage_mb = 1380;
+      state.detectors.syncnet.claim = "Audio-visual phoneme-viseme correlation aligned within 12ms of natural speech cadence.";
+    }
+  }
+
+  state.overall_status = "completed";
+  emit(100);
+
+  const formatted = formatResultsFromStatus(state, jobId, isAudio);
+  return {
+    ...formatted,
+    raw_response: state,
+    endpoint_used: `Standalone Preset Harness (${presetId})`,
+    status_code: 200,
+  };
+}
+
+/**
+ * Runs dynamic simulation for custom uploaded files
+ */
+async function runDynamicSimulation(file, jobId, isAudio, onProgress) {
+  const startTime = Date.now();
 
   const state = {
     job_id: jobId,
@@ -333,54 +480,54 @@ async function runProgressiveSimulation(file, jobId, isAudio, onProgress) {
     if (onProgress) onProgress({ ...state });
   };
 
-  emit(5);
-  await new Promise((r) => setTimeout(r, 300));
+  emit(10);
+  await new Promise((r) => setTimeout(r, 200));
 
   if (!isAudio) {
     state.detectors.video_classifier.status = "running";
-    emit(15);
-    await new Promise((r) => setTimeout(r, 450));
+    emit(25);
+    await new Promise((r) => setTimeout(r, 350));
     state.detectors.video_classifier.status = "complete";
-    state.detectors.video_classifier.confidence = 0.42;
-    state.detectors.video_classifier.raw_score = -0.18;
-    state.detectors.video_classifier.latency_ms = 340;
+    state.detectors.video_classifier.confidence = 0.22;
+    state.detectors.video_classifier.raw_score = -1.25;
+    state.detectors.video_classifier.latency_ms = 330;
     state.detectors.video_classifier.ram_usage_mb = 940;
-    state.detectors.video_classifier.claim = "Frame-level analysis shows minor compression inconsistencies but no strong synthesis markers.";
+    state.detectors.video_classifier.claim = "Facial boundary textures analyzed across 180 sampled frames.";
   }
 
   state.detectors.aasist.status = "running";
-  emit(40);
-  await new Promise((r) => setTimeout(r, 400));
+  emit(55);
+  await new Promise((r) => setTimeout(r, 320));
   state.detectors.aasist.status = "complete";
-  state.detectors.aasist.confidence = 0.58;
-  state.detectors.aasist.raw_score = 0.31;
+  state.detectors.aasist.confidence = isAudio ? 0.88 : 0.18;
+  state.detectors.aasist.raw_score = isAudio ? 3.4 : -1.8;
   state.detectors.aasist.latency_ms = 210;
   state.detectors.aasist.ram_usage_mb = 620;
-  state.detectors.aasist.flags = ["spectral_anomaly"];
-  state.detectors.aasist.claim = "Spectral artifacts consistent with voice cloning detected in the 2-4kHz band.";
+  state.detectors.aasist.flags = isAudio ? ["spectral_anomaly"] : [];
+  state.detectors.aasist.claim = isAudio
+    ? "Acoustic spoofing anomalies detected in high-frequency spectral bands."
+    : "Vocal frequency harmonics remain within natural biological human distribution.";
 
   if (!isAudio) {
     state.detectors.rppg.status = "running";
-    emit(65);
-    await new Promise((r) => setTimeout(r, 500));
+    emit(75);
+    await new Promise((r) => setTimeout(r, 350));
     state.detectors.rppg.status = "complete";
-    state.detectors.rppg.confidence = 0.35;
-    state.detectors.rppg.raw_score = 2.1;
-    state.detectors.rppg.latency_ms = 480;
+    state.detectors.rppg.confidence = 0.25;
+    state.detectors.rppg.raw_score = 2.4;
+    state.detectors.rppg.latency_ms = 460;
     state.detectors.rppg.ram_usage_mb = 1120;
-    state.detectors.rppg.claim = "rPPG CHROM signal present and physiologically plausible across facial region (74.2 BPM).";
-  }
+    state.detectors.rppg.claim = "Physiological pulse wave detected with consistent 70 BPM cardiac rhythm.";
 
-  if (!isAudio && videoHasAudioTrack) {
     state.detectors.syncnet.status = "running";
-    emit(85);
-    await new Promise((r) => setTimeout(r, 450));
+    emit(90);
+    await new Promise((r) => setTimeout(r, 320));
     state.detectors.syncnet.status = "complete";
-    state.detectors.syncnet.confidence = 0.52;
-    state.detectors.syncnet.raw_score = 0.05;
-    state.detectors.syncnet.latency_ms = 275;
+    state.detectors.syncnet.confidence = 0.28;
+    state.detectors.syncnet.raw_score = 1.4;
+    state.detectors.syncnet.latency_ms = 285;
     state.detectors.syncnet.ram_usage_mb = 1380;
-    state.detectors.syncnet.claim = "Temporal lip-sync offset measured within natural speech tolerance.";
+    state.detectors.syncnet.claim = "Audio-visual lip movements synchronize within natural speaking offset bounds.";
   }
 
   state.overall_status = "completed";
@@ -390,14 +537,11 @@ async function runProgressiveSimulation(file, jobId, isAudio, onProgress) {
   return {
     ...formatted,
     raw_response: state,
-    endpoint_used: "Simulator / Standalone",
+    endpoint_used: "Standalone Dynamic Simulation",
     status_code: 200,
   };
 }
 
-/**
- * Standard submitMedia function.
- */
 export async function submitMedia(file) {
   return submitMediaGateway(file);
 }
