@@ -1,0 +1,42 @@
+{
+    "detector_name": "rppg",
+    "modality": [
+        "video"
+    ],
+    "version": "rppg-toolbox-physnet-v1",
+    "description": "Detects deepfakes via absence/irregularity of heartbeat-driven skin color signal.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 2.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".mp4",
+            ".mov"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": null,
+        "p95_latency_ms": null,
+        "avg_ram_usage_mb": null,
+        "avg_vram_usage_mb": null,
+        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "low-light footage",
+            "effect": "unreliable pulse signal extraction, high false-negative rate",
+            "source": "docs/failure_notes.md"
+        },
+        {
+            "condition": "clips under 2 seconds",
+            "effect": "insufficient signal for a stable pulse reading",
+            "source": "docs/failure_notes.md, Week 3 edge-case validation"
+        },
+        {
+            "condition": "partially occluded face",
+            "effect": "misleading confident-but-wrong result (e.g. false periodic noise mistaken for a real pulse, incorrect 'authentic' verdict)",
+            "source": "docs/failure_notes.md, Week 3 edge-case validation"
+        }
+    ],
+    "reliability_notes": "Best used as a secondary, explainability-focused signal — not a sole authority, especially in poor lighting, short clips, or when the face is partially occluded."
+}
