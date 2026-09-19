@@ -27,7 +27,7 @@ jobs:
       - name: Run E2E Integration Test
         run: |
           pip install requests
-          python security/tests/test_e2e.py
+          python security/tests/test_orchestrator_e2e.py
 
       - name: Teardown Infrastructure
         if: always()
