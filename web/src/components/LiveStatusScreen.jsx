@@ -19,14 +19,20 @@ import {
 
 /**
  * Metadata configuration for each of the four AEGIS detectors
+ * with distinct signature color identity
  */
 const DETECTOR_META = {
   video_classifier: {
     name: "Video Frame Classifier",
-    subtitle: "Spatial Artifact & Face Boundary Analysis",
+    subtitle: "Spatial Artifact & Facial Boundary Analysis",
     modelBadge: "EfficientNet-B0 • FF++ c23",
-    modality: "Video",
+    modality: "Visual Frame",
     icon: Film,
+    accent: "cyan",
+    runningBorder: "border-cyan-500/60 bg-slate-900/90 shadow-[0_0_20px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/40",
+    iconBg: "bg-cyan-500/15 border-cyan-500/40 text-cyan-300",
+    completeBorder: "border-cyan-500/30 bg-slate-900/70 hover:border-cyan-500/50",
+    completeBadge: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.15)]",
     runningMsg: "Extracting frame slices & evaluating facial boundary artifacts...",
     completeMsg: "Frame-level convolutional pass completed.",
   },
@@ -34,8 +40,13 @@ const DETECTOR_META = {
     name: "AASIST Audio Detector",
     subtitle: "Voice Cloning & Spectral Spoofing Analysis",
     modelBadge: "Graph Attention Network • ASVspoof",
-    modality: "Audio",
+    modality: "Acoustic Spectrum",
     icon: Mic,
+    accent: "violet",
+    runningBorder: "border-violet-500/60 bg-slate-900/90 shadow-[0_0_20px_rgba(168,85,247,0.15)] ring-1 ring-violet-500/40",
+    iconBg: "bg-violet-500/15 border-violet-500/40 text-violet-300",
+    completeBorder: "border-violet-500/30 bg-slate-900/70 hover:border-violet-500/50",
+    completeBadge: "bg-violet-500/10 text-violet-300 border-violet-500/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
     runningMsg: "Analyzing SincNet filterbanks & spectral graph attention...",
     completeMsg: "Acoustic feature extraction & graph inference finished.",
   },
@@ -43,8 +54,13 @@ const DETECTOR_META = {
     name: "rPPG Pulse Consistency",
     subtitle: "Biological Blood Volume Pulse Extraction",
     modelBadge: "CHROM Algorithm • 0.7-4.0 Hz",
-    modality: "Physiological",
+    modality: "Physiological Pulse",
     icon: Activity,
+    accent: "rose",
+    runningBorder: "border-rose-500/60 bg-slate-900/90 shadow-[0_0_20px_rgba(244,63,94,0.15)] ring-1 ring-rose-500/40",
+    iconBg: "bg-rose-500/15 border-rose-500/40 text-rose-300",
+    completeBorder: "border-rose-500/30 bg-slate-900/70 hover:border-rose-500/50",
+    completeBadge: "bg-rose-500/10 text-rose-300 border-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.15)]",
     runningMsg: "Filtering facial skin micro-reflections & estimating BVP spectra...",
     completeMsg: "Cardiac rhythm frequency & spectral purity measured.",
   },
@@ -52,8 +68,13 @@ const DETECTOR_META = {
     name: "SyncNet Audio-Visual",
     subtitle: "Lip-Motion to Speech Phoneme Synchronization",
     modelBadge: "Two-Stream CNN • Temporal Offset",
-    modality: "Multimodal",
+    modality: "Cross-Modal Lip-Sync",
     icon: Video,
+    accent: "teal",
+    runningBorder: "border-teal-500/60 bg-slate-900/90 shadow-[0_0_20px_rgba(20,184,166,0.15)] ring-1 ring-teal-500/40",
+    iconBg: "bg-teal-500/15 border-teal-500/40 text-teal-300",
+    completeBorder: "border-teal-500/30 bg-slate-900/70 hover:border-teal-500/50",
+    completeBadge: "bg-teal-500/10 text-teal-300 border-teal-500/30 shadow-[0_0_8px_rgba(20,184,166,0.15)]",
     runningMsg: "Calculating cross-modal audio-lip distance across temporal offsets...",
     completeMsg: "Temporal alignment & lip-sync offset profile determined.",
   },
@@ -84,9 +105,9 @@ export default function LiveStatusScreen({
   const isAllComplete = statusData?.overall_status === "completed";
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-300">
+    <div className="w-full space-y-6 animate-in fade-in duration-300">
       {/* Active Pipeline Header */}
-      <div className="bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-xl rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
         {/* Subtle top edge highlight */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
 
@@ -94,23 +115,23 @@ export default function LiveStatusScreen({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
               </span>
               <span className="text-xs font-mono font-semibold uppercase tracking-wider text-cyan-400">
-                Layer B • Real-Time Detector Orchestration
+                Layer B • Multi-Detector Parallel Execution
               </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-100 flex items-center gap-2">
               <span className="truncate max-w-md">{file?.name || "Processing Media"}</span>
             </h2>
             <p className="text-xs text-slate-400 font-mono">
-              Job ID: <span className="text-slate-300">{statusData?.job_id?.slice(0, 18)}...</span>
+              Job ID: <span className="text-slate-300">{statusData?.job_id ? statusData.job_id.slice(0, 18) + "..." : "Initial dispatch..."}</span>
             </p>
           </div>
 
           {/* Progress & Live Latency Display */}
-          <div className="flex items-center gap-4 bg-slate-950/60 border border-slate-800/60 rounded-xl px-4 py-2.5">
+          <div className="flex items-center gap-4 bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-2.5">
             <div className="text-right font-mono">
               <div className="text-[10px] uppercase text-slate-400 font-semibold tracking-wider">
                 Total Elapsed
@@ -121,7 +142,7 @@ export default function LiveStatusScreen({
               </div>
             </div>
             <div className="h-8 w-[1px] bg-slate-800" />
-            <div className="text-right font-mono min-w-[60px]">
+            <div className="text-right font-mono min-w-[65px]">
               <div className="text-[10px] uppercase text-slate-400 font-semibold tracking-wider">
                 Progress
               </div>
@@ -136,12 +157,12 @@ export default function LiveStatusScreen({
         <div className="mt-5 space-y-1.5">
           <div className="w-full bg-slate-950/80 rounded-full h-2 overflow-hidden border border-slate-800/80">
             <div
-              className="bg-gradient-to-r from-cyan-500 via-sky-400 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+              className="bg-gradient-to-r from-cyan-500 via-violet-500 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_12px_rgba(6,182,212,0.4)]"
               style={{ width: `${Math.max(5, progressPercent)}%` }}
             />
           </div>
           <div className="flex justify-between text-[11px] font-mono text-slate-400">
-            <span>Dispatched via Rule-Based Policy</span>
+            <span>Dispatched via AEGIS Modality Policy</span>
             <span>
               {isAllComplete
                 ? "All 4 Detectors Concluded"
@@ -164,16 +185,16 @@ export default function LiveStatusScreen({
           let statusMessage;
 
           if (status === "complete") {
-            cardBorder = "border-emerald-500/30 bg-slate-900/70 hover:border-emerald-500/50";
+            cardBorder = meta.completeBorder;
             statusBadge = (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.15)]">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold border ${meta.completeBadge}`}>
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 COMPLETE
               </span>
             );
             statusMessage = detectorState.claim || meta.completeMsg;
           } else if (status === "running") {
-            cardBorder = "border-cyan-500/50 bg-slate-900/90 shadow-[0_0_20px_rgba(6,182,212,0.12)] ring-1 ring-cyan-500/30";
+            cardBorder = meta.runningBorder;
             statusBadge = (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
@@ -182,14 +203,14 @@ export default function LiveStatusScreen({
             );
             statusMessage = meta.runningMsg;
           } else if (status === "skipped") {
-            cardBorder = "border-slate-800/60 bg-slate-950/40 opacity-70";
+            cardBorder = "border-dashed border-slate-800/80 bg-slate-950/30 opacity-65";
             statusBadge = (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-slate-800/60 text-slate-400 border border-slate-700/40">
                 <SkipForward className="w-3.5 h-3.5" />
-                SKIPPED
+                NOT APPLICABLE
               </span>
             );
-            statusMessage = detectorState.claim || "Not applicable for this media modality.";
+            statusMessage = detectorState.claim || "Modality not present in submitted media file.";
           } else {
             // Queued
             cardBorder = "border-slate-800/80 bg-slate-900/40";
@@ -213,17 +234,15 @@ export default function LiveStatusScreen({
                   <div className="flex items-center gap-3">
                     <div
                       className={`p-2.5 rounded-xl border ${
-                        status === "running"
-                          ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300"
-                          : status === "complete"
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        status === "running" || status === "complete"
+                          ? meta.iconBg
                           : "bg-slate-800/60 border-slate-700/50 text-slate-400"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
                         {meta.name}
                       </h3>
                       <p className="text-xs text-slate-400 font-mono">
@@ -234,7 +253,7 @@ export default function LiveStatusScreen({
                   <div>{statusBadge}</div>
                 </div>
 
-                {/* Subtitle */}
+                {/* Subtitle / Modality */}
                 <p className="text-xs text-slate-400 mb-3 font-sans">
                   {meta.subtitle}
                 </p>
@@ -278,19 +297,19 @@ export default function LiveStatusScreen({
         })}
       </div>
 
-      {/* Action Footer: Auto-Transition or Manual Proceed */}
+      {/* Action Footer: Proceed to Results */}
       {isAllComplete && (
-        <div className="bg-gradient-to-r from-cyan-950/40 via-slate-900/80 to-emerald-950/40 border border-cyan-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-in zoom-in-95 duration-300">
+        <div className="bg-gradient-to-r from-cyan-950/40 via-slate-900/90 to-emerald-950/40 border border-cyan-500/40 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-in zoom-in-95 duration-300">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-slate-100">
-                Inference Complete Across All Available Detectors
+                Inference Complete Across All Target Detectors
               </h4>
               <p className="text-xs text-slate-400 font-mono">
-                Evidence extracted and normalized to AEGIS forensic contract.
+                Evidence extracted and normalized to AEGIS JSON Forensic Contract.
               </p>
             </div>
           </div>
@@ -299,7 +318,7 @@ export default function LiveStatusScreen({
             onClick={onComplete}
             className="w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 hover:opacity-95 shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition-all cursor-pointer"
           >
-            <span>View 4-Detector Results Grid</span>
+            <span>View Forensic Results Grid</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
