@@ -18,4 +18,17 @@ jobs:
         run: |
           docker compose up -d
           docker compose ps
-          docker compose down
+
+      - name: Setup Python for E2E Tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Run E2E Integration Test
+        run: |
+          pip install requests
+          python security/tests/test_orchestrator_e2e.py
+
+      - name: Teardown Infrastructure
+        if: always()
+        run: docker compose down

@@ -1,0 +1,35 @@
+# ==============================================================================
+# REQUIRED STATUS CHECKS BYPASS (DUMMY WORKFLOW)
+# ==============================================================================
+# Why does this exist?
+# We enforce strict branch protection requiring `lint-and-build` to pass before merging.
+# However, to save CI minutes, our main `ci-web.yml` skips the web build if no web files were modified.
+# 
+# GitHub Limitation: If a "Required" check is "Skipped", GitHub freezes the PR forever.
+# 
+# Solution: This dummy workflow runs ONLY when web files are NOT modified.
+# It instantly outputs a successful `lint-and-build` job to trick GitHub's required checks
+# into turning green, without actually spinning up the expensive Node.js environment.
+# ==============================================================================
+
+name: Web UI CI Dummy
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'web/**'
+      - '.github/workflows/ci-web.yml'
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Dummy filter passing"
+
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Web files not modified. Skipping safely to satisfy required check."
+
+
