@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # This places app/ at /app/app/, so the uvicorn module path is app.main:app.
 COPY . /app
 
+# Set the working directory to the inner app folder where main.py lives
+WORKDIR /app/app
+
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
