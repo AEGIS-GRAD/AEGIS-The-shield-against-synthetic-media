@@ -44,6 +44,7 @@ async def orchestrate(file: UploadFile = File(...)):
         aggregated_score, aggregated_verdict = aggregate_results(results)
 
         log_decision(
+            job_id=job_id,
             input_file=file.filename or "unknown",
             metadata=metadata.model_dump(),       # Pydantic v2: .model_dump()
             detectors_called=detectors_to_call,
