@@ -2,6 +2,7 @@
 // impeccable-disable gray-on-color
 
 import React, { useEffect, useState } from "react";
+import TelemetryView from "./TelemetryView";
 import {
   Film,
   Activity,
@@ -296,6 +297,9 @@ export default function LiveStatusScreen({
           );
         })}
       </div>
+
+      {/* Cybersecurity Live Telemetry & Grafana Dashboard Panel */}
+      <TelemetryView statusData={statusData} />
 
       {/* Action Footer: Proceed to Results */}
       {isAllComplete && (
