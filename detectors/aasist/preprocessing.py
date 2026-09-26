@@ -19,6 +19,8 @@ NB_SAMP = 64600  # AASIST standard input length (~4.04s at 16kHz)
 def load_audio(source: str | bytes) -> tuple[np.ndarray, int]:
     """
     Loads an audio file from a file path or in-memory bytes.
+    If source is a video file or soundfile reading fails, attempts audio extraction via ffmpeg.
+    If no audio track exists, returns a silent waveform.
     
     Returns:
         waveform (np.ndarray): Audio data as float32 numpy array.
@@ -26,15 +28,46 @@ def load_audio(source: str | bytes) -> tuple[np.ndarray, int]:
     """
     if isinstance(source, bytes):
         audio_stream = io.BytesIO(source)
-        waveform, sample_rate = sf.read(audio_stream, dtype="float32")
+        try:
+            waveform, sample_rate = sf.read(audio_stream, dtype="float32")
+            return waveform, sample_rate
+        except Exception:
+            return np.zeros(NB_SAMP, dtype=np.float32), TARGET_SAMPLE_RATE
+
     elif isinstance(source, str):
         if not os.path.exists(source):
             raise FileNotFoundError(f"Audio file not found: {source}")
-        waveform, sample_rate = sf.read(source, dtype="float32")
+        
+        # First try direct soundfile load
+        try:
+            waveform, sample_rate = sf.read(source, dtype="float32")
+            return waveform, sample_rate
+        except Exception:
+            pass
+
+        # Try extracting audio with ffmpeg if available
+        try:
+            import imageio_ffmpeg, subprocess, tempfile
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp_wav = tmp.name
+            cmd = [ffmpeg_exe, "-y", "-i", source, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", tmp_wav]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0 and os.path.exists(tmp_wav) and os.path.getsize(tmp_wav) > 0:
+                waveform, sample_rate = sf.read(tmp_wav, dtype="float32")
+                try:
+                    os.remove(tmp_wav)
+                except Exception:
+                    pass
+                return waveform, sample_rate
+        except Exception:
+            pass
+
+        # Fallback for silent video / unreadable audio
+        return np.zeros(NB_SAMP, dtype=np.float32), TARGET_SAMPLE_RATE
+
     else:
         raise ValueError(f"Unsupported audio source type: {type(source)}")
-
-    return waveform, sample_rate
 
 
 def convert_to_mono(waveform: np.ndarray) -> np.ndarray:

@@ -2,6 +2,16 @@ from __future__ import annotations
 from typing import List, Tuple
 from models import DetectorResult
 
+# ── Aggregation weights (placeholder) ────────────────────────────────────────
+# Aggregation strategy: weighted average of per-detector confidence scores.
+# Detectors with larger empirical footprint (video-classifier covers the widest
+# attack surface) get slightly higher weight.  All weights are heuristic and
+# have NOT been calibrated on real data.
+#
+# PLACEHOLDER: This simple weighted-average is the Month 1 baseline aggregation.
+# It MUST be replaced by the agentic/LLM debate layer in Month 2 before any
+# production use.  Month 2 performance must be measured against this baseline.
+# ─────────────────────────────────────────────────────────────────────────────
 _DETECTOR_WEIGHTS: dict[str, float] = {
     "video-classifier": 1.5,
     "rppg": 1.2,

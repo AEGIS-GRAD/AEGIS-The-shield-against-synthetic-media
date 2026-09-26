@@ -31,7 +31,7 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, Header, status
 from pydantic import BaseModel, Field
 
 from preprocess import RppgPreprocessor
@@ -101,41 +101,70 @@ def health_check() -> Dict[str, str]:
     return {"status": "healthy", "service": "rppg"}
 
 
+class DetectorRequest(BaseModel):
+    job_id: str
+    modality: str
+    payload: str
+
+
 @app.post("/detect", response_model=DetectionResponse)
-async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """Detect deepfake content via rPPG heartbeat-consistency analysis.
+async def detect(
+    request: Request,
+    x_internal_token: Optional[str] = Header(default=None),
+) -> Dict[str, Any]:
+    """Detect deepfake content via rPPG heartbeat-consistency analysis."""
+    expected_token = os.getenv("INTERNAL_API_KEY")
+    if expected_token and x_internal_token and x_internal_token != expected_token:
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid internal token")
 
-    Runs the full pipeline with edge-case guardrails:
-      1. Preprocess & extract per-frame mean face RGB with duration/illumination/occlusion validation.
-      2. If guardrails triggered (short clip, dark lighting, occluded face), return inconclusive neutral response.
-      3. Apply CHROM algorithm + bandpass filter.
-      4. Estimate heart rate and spectral purity.
-      5. Output schema-conforming response.
-    """
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No video file provided.",
-        )
-
-    suffix = Path(file.filename).suffix or ".mp4"
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
     start_time = time.perf_counter()
     job_id = str(uuid.uuid4())
+    content_type = request.headers.get("content-type", "")
+
+    target_video_path: Optional[str] = None
+    cleanup_path: Optional[str] = None
 
     try:
-        content = await file.read()
-        if not content:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded file is empty.",
-            )
-        tmp.write(content)
-        tmp.close()
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            upload_file = form.get("file")
+            if not upload_file:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No video file provided.")
+            suffix = Path(upload_file.filename).suffix if upload_file.filename else ".mp4"
+            with tempfile.NamedTemporaryFile(suffix=suffix or ".mp4", delete=False) as tmp:
+                content = await upload_file.read()
+                if not content:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+                tmp.write(content)
+                target_video_path = tmp.name
+                cleanup_path = tmp.name
+        else:
+            try:
+                body = await request.json()
+                req = DetectorRequest(**body)
+                job_id = req.job_id
+                payload_str = req.payload.strip()
+            except Exception as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Malformed payload: {exc}")
+
+            if os.path.isabs(payload_str) and os.path.exists(payload_str):
+                target_video_path = payload_str
+            else:
+                import base64
+                if "," in payload_str and "base64" in payload_str.split(",")[0]:
+                    payload_str = payload_str.split(",", 1)[1]
+                try:
+                    decoded = base64.b64decode(payload_str)
+                except Exception as exc:
+                    raise HTTPException(status_code=400, detail=f"Failed to decode base64: {exc}")
+                with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+                    tmp.write(decoded)
+                    target_video_path = tmp.name
+                    cleanup_path = tmp.name
 
         # Step 1 — preprocessing & guardrails evaluation
         try:
-            rgb_signals, fps, meta = preprocessor.preprocess_video(tmp.name)
+            rgb_signals, fps, meta = preprocessor.preprocess_video(target_video_path)
         except Exception as exc:
             logger.error("Preprocessing failed: %s", exc)
             raise HTTPException(
@@ -225,8 +254,8 @@ async def detect_video(file: UploadFile = File(...)) -> Dict[str, Any]:
         }
 
     finally:
-        if os.path.exists(tmp.name):
+        if cleanup_path and os.path.exists(cleanup_path):
             try:
-                os.remove(tmp.name)
+                os.remove(cleanup_path)
             except Exception as exc:
-                logger.warning("Could not delete temporary file %s: %s", tmp.name, exc)
+                logger.warning("Could not delete temporary file %s: %s", cleanup_path, exc)
