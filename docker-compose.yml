@@ -81,6 +81,10 @@ services:
       - aegis_net
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - DETECTOR_VIDEO_CLASSIFIER_URL=http://detector_video_classifier:8000
+      - DETECTOR_RPPG_URL=http://detector_rppg:8000
+      - DETECTOR_AASIST_URL=http://detector_aasist:8000
+      - DETECTOR_SYNCNET_URL=http://detector_syncnet:8000
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
@@ -209,14 +213,25 @@ services:
           memory: 2G
 
   detector_syncnet:
-    image: python:3.10-slim
-    command: tail -f /dev/null
+    build:
+      context: ./detectors/syncnet
+      dockerfile: Dockerfile
     container_name: aegis_detector_syncnet
+    ports:
+      - "8004:8000"
     volumes:
       - ./detectors/syncnet:/app
+      - ./shared:/shared:ro
     networks:
       - aegis_net
-    # TODO: Placeholder limit. AI team must profile SyncNet on Jetson and adjust.
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

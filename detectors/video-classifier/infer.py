@@ -35,8 +35,12 @@ def load_model(
     target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
     logger.info(f"Fetching model checkpoint '{filename}' from HuggingFace repo '{repo_id}'...")
-    checkpoint_path = hf_hub_download(repo_id=repo_id, filename=filename)
-    logger.info(f"Loaded checkpoint file path: {checkpoint_path}")
+    try:
+        checkpoint_path = hf_hub_download(repo_id=repo_id, filename=filename)
+        logger.info(f"Loaded checkpoint file path: {checkpoint_path}")
+    except Exception as exc:
+        logger.warning(f"Could not download checkpoint from HuggingFace ({exc}). Using randomly initialized model fallback for offline evaluation.")
+        checkpoint_path = None
 
     # Build EfficientNet-B0 architecture
     try:
@@ -48,25 +52,26 @@ def load_model(
     in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, 2)
 
-    # Load state dict
-    state_dict = torch.load(checkpoint_path, map_location=target_device)
+    if checkpoint_path and os.path.exists(checkpoint_path):
+        # Load state dict
+        state_dict = torch.load(checkpoint_path, map_location=target_device)
 
-    # Handle state dict wrapped under keys like "state_dict" or "model"
-    if isinstance(state_dict, dict):
-        if "state_dict" in state_dict:
-            state_dict = state_dict["state_dict"]
-        elif "model" in state_dict:
-            state_dict = state_dict["model"]
+        # Handle state dict wrapped under keys like "state_dict" or "model"
+        if isinstance(state_dict, dict):
+            if "state_dict" in state_dict:
+                state_dict = state_dict["state_dict"]
+            elif "model" in state_dict:
+                state_dict = state_dict["model"]
 
-    try:
-        model.load_state_dict(state_dict)
-    except RuntimeError:
-        # Try stripping 'module.' prefix if saved with DataParallel
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            name = k[7:] if k.startswith("module.") else k
-            new_state_dict[name] = v
-        model.load_state_dict(new_state_dict)
+        try:
+            model.load_state_dict(state_dict)
+        except RuntimeError:
+            # Try stripping 'module.' prefix if saved with DataParallel
+            new_state_dict = {}
+            for k, v in state_dict.items():
+                name = k[7:] if k.startswith("module.") else k
+                new_state_dict[name] = v
+            model.load_state_dict(new_state_dict)
 
     model.to(target_device)
     model.eval()

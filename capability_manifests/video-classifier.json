@@ -1,0 +1,35 @@
+{
+    "detector_name": "video-classifier",
+    "modality": [
+        "video",
+        "image"
+    ],
+    "version": "xception-ff++-v1",
+    "description": "Frame-level classifier detecting face-swap and reenactment deepfakes using Xception.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0.1,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".mp4",
+            ".mov",
+            ".jpg",
+            ".png"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": null,
+        "p95_latency_ms": null,
+        "avg_ram_usage_mb": null,
+        "avg_vram_usage_mb": null,
+        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "heavily compressed/re-encoded video",
+            "effect": "reduced accuracy, per project problem statement",
+            "source": "docs/failure_notes.md"
+        }
+    ],
+    "reliability_notes": "Most reliable primary signal; use as default detector for any video/image input."
+}

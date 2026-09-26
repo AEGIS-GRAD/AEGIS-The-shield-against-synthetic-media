@@ -1,0 +1,32 @@
+{
+    "detector_name": "aasist",
+    "modality": [
+        "audio"
+    ],
+    "version": "aasist-v1.2",
+    "description": "Detects synthetic/spoofed speech using spectro-temporal graph attention.",
+    "input_constraints": {
+        "requires_audio": true,
+        "min_duration_seconds": 1.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".wav",
+            ".mp3"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": null,
+        "p95_latency_ms": null,
+        "avg_ram_usage_mb": null,
+        "avg_vram_usage_mb": null,
+        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "very short audio clips (under 1 second)",
+            "effect": "unreliable or misfiring predictions",
+            "source": "docs/failure_notes.md"
+        }
+    ],
+    "reliability_notes": "Trustworthy on clean, longer clips; treat results on sub-1s audio with low confidence."
+}

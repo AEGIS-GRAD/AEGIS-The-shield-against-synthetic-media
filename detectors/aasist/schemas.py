@@ -25,8 +25,8 @@ class DetectorRequest(BaseModel):
     @field_validator("modality")
     @classmethod
     def validate_modality(cls, v: str) -> str:
-        if v != "audio":
-            raise ValueError(f"AASIST detector only processes 'audio' modality, got: {v}")
+        if v not in ("audio", "video"):
+            raise ValueError(f"AASIST detector processes 'audio' and 'video' modalities, got: {v}")
         return v
 
 

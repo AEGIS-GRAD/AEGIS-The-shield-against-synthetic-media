@@ -1,0 +1,47 @@
+{
+    "detector_name": "syncnet",
+    "modality": [
+        "video"
+    ],
+    "version": "syncnet-v1",
+    "description": "Checks lip-movement to audio alignment to detect lip-sync deepfakes and dubbing.",
+    "input_constraints": {
+        "requires_audio": true,
+        "min_duration_seconds": 1.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".mp4",
+            ".mov"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": null,
+        "p95_latency_ms": null,
+        "avg_ram_usage_mb": null,
+        "avg_vram_usage_mb": null,
+        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "silent video (no audio track)",
+            "effect": "not applicable — must be excluded by orchestrator rules, cannot run",
+            "source": "Task #2 spec"
+        },
+        {
+            "condition": "clip shorter than 2 seconds",
+            "effect": "handled gracefully via sliding window guardrail, returns not_applicable rather than an error",
+            "source": "docs/failure_notes.md, Week 3 edge-case validation"
+        },
+        {
+            "condition": "severely underexposed / poorly lit video",
+            "effect": "zero lip sequences extracted, returns not_applicable",
+            "source": "docs/failure_notes.md, Week 3 edge-case validation"
+        },
+        {
+            "condition": "partially occluded face (mouth/lower face covered)",
+            "effect": "lip sync analysis skipped gracefully, returns not_applicable",
+            "source": "docs/failure_notes.md, Week 3 edge-case validation"
+        }
+    ],
+    "reliability_notes": "Only meaningful for video with a clear, unoccluded face and audio track; never call on silent, audio-only, dark, or occluded-face inputs — the detector itself returns not_applicable in these cases rather than a misleading score."
+}

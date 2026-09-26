@@ -20,7 +20,8 @@ def _get_breaker(detector: str) -> CircuitBreaker:
 
 def _service_url(detector_name: str) -> str:
     env_key = f"DETECTOR_{detector_name.upper().replace('-', '_')}_URL"
-    return os.environ.get(env_key, _DEFAULT_BASE.format(service=detector_name))
+    default_service = f"detector_{detector_name.replace('-', '_')}"
+    return os.environ.get(env_key, f"http://{default_service}:8000")
 
 
 async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modality: str, file_path: str) -> DetectorResult:
