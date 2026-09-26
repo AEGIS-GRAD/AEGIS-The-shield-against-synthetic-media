@@ -63,6 +63,13 @@ def find_ffmpeg_path() -> Optional[str]:
     for loc in common_locations:
         if os.path.isfile(loc):
             return loc
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and os.path.isfile(exe):
+            return exe
+    except Exception:
+        pass
     return None
 
 
