@@ -111,8 +111,8 @@ The following 21 scenarios are retained from the expanded STRIDE analysis. Sourc
 | **SR-12** | Incident response | Security alerts shall trigger a defined escalation workflow and preserve sufficient context for investigation. |
 | **SR-13** | Fail-safe behavior | Loss of camera integrity, authentication or telemetry shall not silently produce a trusted 'authentic' state. |
 | **SR-14** | Security logging | Security-relevant actions shall generate auditable logs protected against unauthorized modification or deletion. |
-| **SR-15** | Internal service authentication | Every internal service (orchestrator, engine, detectors, debate, eval, mcp) shall require a shared internal API key on all requests, including service-to-service calls on the internal network — no internal endpoint shall be reachable without it. |
-| **SR-16** | Safe media parsing | All services that parse uploaded or streamed media shall treat it as untrusted input: enforce an explicit allowlist of accepted file types (not a blocklist), enforce a maximum payload size, and avoid parsing paths known to enable arbitrary code execution. |
+| **SR-15** | Internal service authentication | [MITIGATED] Every internal service (orchestrator, engine, detectors, debate, eval, mcp) shall require a shared internal API key on all requests, including service-to-service calls on the internal network — no internal endpoint shall be reachable without it. |
+| **SR-16** | Safe media parsing | [MITIGATED] All services that parse uploaded or streamed media shall treat it as untrusted input: enforce an explicit allowlist of accepted file types (not a blocklist), enforce a maximum payload size, and avoid parsing paths known to enable arbitrary code execution. |
 
 ---
 
