@@ -30,9 +30,11 @@ def run_test():
 
     print(f"[UPLOAD] Uploading {DUMMY_VIDEO_PATH} to Orchestrator...")
     try:
+        api_key = os.environ.get("INTERNAL_API_KEY", "dev_default_key")
+        headers = {"X-API-Key": api_key}
         with open(DUMMY_VIDEO_PATH, "rb") as f:
             files = {"file": ("clean.mp4", f, "video/mp4")}
-            response = requests.post(API_URL, files=files, timeout=30)
+            response = requests.post(API_URL, files=files, headers=headers, timeout=30)
             
         if response.status_code != 200:
             print(f"[FATAL] Orchestrator returned HTTP {response.status_code}")

@@ -7,6 +7,8 @@ on:
 jobs:
   validate-docker:
     runs-on: ubuntu-latest
+    env:
+      INTERNAL_API_KEY: "ci_test_key_123"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
