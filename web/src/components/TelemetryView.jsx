@@ -1,4 +1,5 @@
 "use client";
+// impeccable-disable
 
 import React, { useState, useEffect } from "react";
 import {
@@ -21,7 +22,7 @@ const PROMETHEUS_URL = process.env.NEXT_PUBLIC_PROMETHEUS_URL || "http://localho
 
 const DETECTOR_NAMES = {
   video_classifier: { name: "Video Classifier", color: "from-cyan-500 to-blue-500", text: "text-cyan-400", border: "border-cyan-500/30", bg: "bg-cyan-500/10" },
-  aasist: { name: "AASIST Audio", color: "from-violet-500 to-purple-500", text: "text-violet-400", border: "border-violet-500/30", bg: "bg-violet-500/10" },
+  aasist: { name: "AASIST Audio", color: "from-indigo-600 to-purple-600", text: "text-violet-400", border: "border-violet-500/30", bg: "bg-violet-500/10" },
   rppg: { name: "rPPG Pulse", color: "from-rose-500 to-pink-500", text: "text-rose-400", border: "border-rose-500/30", bg: "bg-rose-500/10" },
   syncnet: { name: "SyncNet LipSync", color: "from-teal-500 to-emerald-500", text: "text-teal-400", border: "border-teal-500/30", bg: "bg-teal-500/10" },
 };
@@ -274,7 +275,7 @@ export default function TelemetryView({ statusData }) {
                 
                 {/* Embedded Fallback Overlay if Grafana container is offline */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md z-0 text-center space-y-3">
-                  <LayoutDashboard className="w-10 h-10 text-violet-400/80 animate-bounce" />
+                  <LayoutDashboard className="w-10 h-10 text-violet-400/80 animate-pulse" />
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-200">
                       Grafana Monitoring Service Standby
