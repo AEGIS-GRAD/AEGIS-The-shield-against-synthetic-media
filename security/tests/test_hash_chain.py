@@ -1,3 +1,10 @@
+"""
+Tests for the Frame Hash-Chaining Prototype.
+
+Since the live attack simulator (Task 3) is pending, this script simulates 
+a network tampering attack entirely in memory. It verifies that dropping even 
+a single frame instantly breaks the cryptographic chain and triggers a failure.
+"""
 import os
 import json
 import sys

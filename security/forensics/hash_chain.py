@@ -1,3 +1,13 @@
+"""
+AEGIS Frame Hash-Chaining Prototype (Task 4)
+Owned by: Cyber Team
+
+This module provides the cryptographic engine for verifying live surveillance feeds.
+It prevents Man-in-the-Middle (MitM) attacks, frame dropping, and deepfake splicing.
+
+- `generate_manifest()`: Runs on the edge camera. Hashes each frame combined with the previous hash.
+- `validate_stream()`: Runs on the ingestion server. Recalculates hashes on the fly and blocks the feed if they don't match the manifest perfectly.
+"""
 import cv2
 import hashlib
 import json
