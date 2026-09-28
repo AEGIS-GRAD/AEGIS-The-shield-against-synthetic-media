@@ -30,4 +30,5 @@ build/
 *.db
 eval/fixtures/
 
-
+security/tests/fixtures/*.json
+security/transport/certs/
