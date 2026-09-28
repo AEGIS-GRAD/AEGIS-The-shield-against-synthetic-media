@@ -24,6 +24,7 @@ from typing import Tuple
 
 import numpy as np
 from scipy import signal as sp_signal
+from scipy.ndimage import uniform_filter1d
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ _FILTER_ORDER: int = 4
 def extract_pulse_signal(
     rgb_signals: np.ndarray,
     fps: float,
+    denoise: bool = False,
 ) -> np.ndarray:
     """Apply the CHROM algorithm and return a bandpass-filtered pulse waveform.
 
@@ -51,6 +53,8 @@ def extract_pulse_signal(
             region [R, G, B] values per frame (as returned by
             :class:`~preprocess.RppgPreprocessor`).
         fps: Native video frame rate in frames-per-second.
+        denoise: If True, apply a 5-sample temporal moving-average filter to suppress
+            high-frequency camera sensor noise common in low-light / underexposed video.
 
     Returns:
         1-D float32 NumPy array of length N containing the filtered
@@ -71,16 +75,21 @@ def extract_pulse_signal(
             f"Need at least 2 frames to extract a pulse signal, got {n}."
         )
 
+    signals = rgb_signals.copy()
+    if denoise and n >= 5:
+        # 5-sample moving average across time axis to smooth high-frequency thermal noise
+        signals = uniform_filter1d(signals, size=5, axis=0, mode="nearest")
+
     # --- Step 1: per-channel temporal normalisation -------------------------
     # Divide each channel by its temporal mean.  This converts absolute
     # pixel values to relative fluctuations, making the algorithm invariant
     # to ambient lighting level.
-    mean_rgb = rgb_signals.mean(axis=0)  # shape (3,)
+    mean_rgb = signals.mean(axis=0)  # shape (3,)
     # Guard against zero-mean channels (e.g. fully black frames)
     mean_rgb = np.where(mean_rgb == 0.0, 1.0, mean_rgb)
-    R_n = rgb_signals[:, 0] / mean_rgb[0]
-    G_n = rgb_signals[:, 1] / mean_rgb[1]
-    B_n = rgb_signals[:, 2] / mean_rgb[2]
+    R_n = signals[:, 0] / mean_rgb[0]
+    G_n = signals[:, 1] / mean_rgb[1]
+    B_n = signals[:, 2] / mean_rgb[2]
 
     # --- Step 2: CHROM chrominance projections ------------------------------
     Xc = 3.0 * R_n - 2.0 * G_n
@@ -151,7 +160,10 @@ def estimate_heart_rate(
     return bpm
 
 
-def signal_quality_score(pulse_signal: np.ndarray) -> float:
+def signal_quality_score(
+    pulse_signal: np.ndarray,
+    fps: float = 30.0,
+) -> float:
     """Compute a spectral purity score measuring how periodic the pulse signal is.
 
     The score is defined as the fraction of total power in the cardiac band
@@ -168,6 +180,7 @@ def signal_quality_score(pulse_signal: np.ndarray) -> float:
 
     Args:
         pulse_signal: 1-D float array — the bandpass-filtered BVP signal.
+        fps: Sampling frequency in frames-per-second (defaults to 30.0).
 
     Returns:
         Spectral purity score in ``[0.0, 1.0]``.
@@ -180,13 +193,10 @@ def signal_quality_score(pulse_signal: np.ndarray) -> float:
         )
         return 0.0
 
-    # Use a fixed placeholder fps of 30 for the quality score because this
-    # function does not accept fps — quality is relative, not absolute.
-    # The cardiac band mask uses a wide [0.7–4 Hz] window so the exact fps
-    # matters only for resolving individual bins, not the overall ratio.
-    _fps_default = 30.0
+    if fps <= 0:
+        fps = 30.0
 
-    freqs, power = _compute_power_spectrum(pulse_signal, _fps_default)
+    freqs, power = _compute_power_spectrum(pulse_signal, fps)
     cardiac_mask = (freqs >= _BPM_LOW_HZ) & (freqs <= _BPM_HIGH_HZ)
 
     if not np.any(cardiac_mask):
@@ -198,7 +208,7 @@ def signal_quality_score(pulse_signal: np.ndarray) -> float:
 
     peak_power = power[cardiac_mask].max()
     score = float(np.clip(peak_power / band_power, 0.0, 1.0))
-    logger.debug("Signal quality score: %.4f", score)
+    logger.debug("Signal quality score: %.4f (fps=%.1f)", score, fps)
     return score
 
 

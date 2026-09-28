@@ -88,12 +88,48 @@ def create_fixtures():
     out.release()
     print(f"Generated poorly lit clip: {dark_path}")
 
+    # 6. Dim Light Video (moderately underexposed, lum 18–50 zone)
+    dim_path = os.path.join(FIXTURES_DIR, "dim_light.mp4")
+    out = cv2.VideoWriter(dim_path, fourcc, fps, (width, height))
+    for i in range(90):
+        osc = int(2 * np.sin(2 * np.pi * 1.2 * i / fps))
+        frame = np.full((height, width, 3), 28, dtype=np.uint8)
+        cv2.circle(frame, (width // 2, height // 2), 60, (28 + osc, 34 + osc, 42 + osc), -1)
+        out.write(frame)
+    out.release()
+    print(f"Generated dim light clip (18–50 lum zone): {dim_path}")
+
+    # 7. Marginal Short Clip (2.5s = 75 frames at 30fps, 2–5s zone)
+    marginal_path = os.path.join(FIXTURES_DIR, "marginal_short.mp4")
+    out = cv2.VideoWriter(marginal_path, fourcc, fps, (width, height))
+    for i in range(75):
+        osc = int(5 * np.sin(2 * np.pi * 1.2 * i / fps))
+        frame = np.full((height, width, 3), 200, dtype=np.uint8)
+        cv2.circle(frame, (width // 2, height // 2), 60, (110 + osc, 145 + osc, 190 + osc), -1)
+        out.write(frame)
+    out.release()
+    print(f"Generated marginal short clip (2.5s): {marginal_path}")
+
+    # 8. Borderline Short Clip (4.0s = 120 frames at 30fps)
+    borderline_path = os.path.join(FIXTURES_DIR, "borderline_short.mp4")
+    out = cv2.VideoWriter(borderline_path, fourcc, fps, (width, height))
+    for i in range(120):
+        osc = int(5 * np.sin(2 * np.pi * 1.2 * i / fps))
+        frame = np.full((height, width, 3), 200, dtype=np.uint8)
+        cv2.circle(frame, (width // 2, height // 2), 60, (110 + osc, 145 + osc, 190 + osc), -1)
+        out.write(frame)
+    out.release()
+    print(f"Generated borderline short clip (4.0s): {borderline_path}")
+
     return {
         "clean": clean_path,
         "silent": silent_path,
         "short": short_path,
         "occluded": occluded_path,
         "poorly_lit": dark_path,
+        "dim_light": dim_path,
+        "marginal_short": marginal_path,
+        "borderline_short": borderline_path,
     }
 
 

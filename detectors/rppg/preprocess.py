@@ -174,6 +174,21 @@ class RppgPreprocessor:
         avg_skin_ratio = total_skin_ratio / n_frames if n_frames > 0 else 0.0
         face_detection_ratio = detected_faces_count / n_frames if n_frames > 0 else 0.0
 
+        # Continuous confidence attenuation factors for marginal conditions
+        if mean_luminance >= 50.0:
+            luminance_confidence_factor = 1.0
+        elif mean_luminance <= 18.0:
+            luminance_confidence_factor = 0.0
+        else:
+            luminance_confidence_factor = (mean_luminance - 18.0) / (50.0 - 18.0)
+
+        if duration_sec >= 5.0:
+            duration_confidence_factor = 1.0
+        elif duration_sec <= 2.0:
+            duration_confidence_factor = 0.0
+        else:
+            duration_confidence_factor = (duration_sec - 2.0) / (5.0 - 2.0)
+
         metadata = {
             "total_frames": n_frames,
             "fps": fps,
@@ -181,6 +196,8 @@ class RppgPreprocessor:
             "mean_luminance": round(mean_luminance, 2),
             "face_detection_ratio": round(face_detection_ratio, 2),
             "avg_skin_ratio": round(avg_skin_ratio, 2),
+            "luminance_confidence_factor": round(float(luminance_confidence_factor), 3),
+            "duration_confidence_factor": round(float(duration_confidence_factor), 3),
             "guardrail_triggered": False,
             "flags": [],
             "claim": "rPPG signal extracted across facial region.",

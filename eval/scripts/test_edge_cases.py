@@ -49,6 +49,9 @@ def run_rppg_edge_case_tests():
         ("short_clip.mp4", "Video < 2s duration (24 frames)"),
         ("occluded_face.mp4", "Partially occluded face"),
         ("poorly_lit.mp4", "Severely underexposed video (< 8 px intensity)"),
+        ("dim_light.mp4", "Dimly lit video (mean lum in 18–50 zone)"),
+        ("marginal_short.mp4", "Marginal short clip (2.5s duration)"),
+        ("borderline_short.mp4", "Borderline short clip (4.0s duration)"),
     ]
 
     results = []
@@ -69,22 +72,52 @@ def run_rppg_edge_case_tests():
                 "flags": meta["flags"],
                 "claim": meta["claim"],
                 "score": 0.5,
+                "confidence": 0.5,
+                "input_quality": 0.0,
                 "verdict": "inconclusive",
                 "estimated_bpm": 0.0,
             }
         else:
-            pulse = extract_pulse_signal(rgb, fps)
+            lum_factor = meta.get("luminance_confidence_factor", 1.0)
+            dur_factor = meta.get("duration_confidence_factor", 1.0)
+            input_quality = round(min(lum_factor, dur_factor), 3)
+
+            pulse = extract_pulse_signal(rgb, fps, denoise=(lum_factor < 1.0))
             bpm = estimate_heart_rate(pulse, fps)
-            quality = signal_quality_score(pulse)
+            quality = signal_quality_score(pulse, fps=fps)
             score = float(1.0 - quality)
-            verdict = "synthetic" if score > 0.5 else "authentic"
+            score = max(0.0, min(1.0, score))
+            raw_conf = abs(score - 0.5) * 2.0
+            conf = raw_conf * input_quality
+
+            if input_quality < 0.5:
+                verdict = "inconclusive"
+            else:
+                verdict = "synthetic" if score > 0.5 else "authentic"
+
+            flags = []
+            if bpm < 45.0 or bpm > 180.0:
+                flags.append("atypical_heart_rate")
+            if lum_factor < 1.0:
+                flags.append("low_light_attenuation")
+            if dur_factor < 1.0:
+                flags.append("short_clip_attenuation")
+
+            claim = (
+                f"CHROM BVP signal extracted. BPM: {bpm:.1f} (quality: {quality:.2f})"
+            )
+            if lum_factor < 1.0 or dur_factor < 1.0:
+                claim += f" [attenuated: lum={lum_factor:.2f}, dur={dur_factor:.2f}]"
+
             res = {
                 "sample": filename,
                 "description": desc,
                 "guardrail": False,
-                "flags": [],
-                "claim": f"CHROM BVP signal extracted. BPM: {bpm:.1f}",
+                "flags": flags,
+                "claim": claim,
                 "score": round(score, 3),
+                "confidence": round(conf, 3),
+                "input_quality": input_quality,
                 "verdict": verdict,
                 "estimated_bpm": round(bpm, 1),
             }
@@ -92,10 +125,11 @@ def run_rppg_edge_case_tests():
         results.append(res)
         status_tag = "[GUARDRAIL TRIGGERED]" if res["guardrail"] else "[NORMAL INFERENCE]"
         print(f"\nSample: {filename} ({desc})")
-        print(f"  Status:    {status_tag}")
-        print(f"  Verdict:   {res['verdict']} (score: {res['score']})")
-        print(f"  Flags:     {res['flags']}")
-        print(f"  Evidence:  {res['claim']}")
+        print(f"  Status:        {status_tag}")
+        print(f"  Verdict:       {res['verdict']} (score: {res['score']}, confidence: {res['confidence']})")
+        print(f"  Input Quality: {res['input_quality']}")
+        print(f"  Flags:         {res['flags']}")
+        print(f"  Evidence:      {res['claim']}")
 
     return results
 
