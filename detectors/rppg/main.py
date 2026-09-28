@@ -83,6 +83,9 @@ class DetectionResponse(BaseModel):
     )
     latency_ms: int = Field(0, description="Processing time in milliseconds.")
     evidence: Evidence = Field(..., description="Forensic evidence claim and flags.")
+    input_quality: Optional[float] = Field(
+        1.0, ge=0.0, le=1.0, description="Composite input quality factor [0, 1] applied to confidence."
+    )
 
 
 class HealthResponse(BaseModel):
@@ -192,11 +195,16 @@ async def detect(
                     "claim": meta["claim"],
                     "flags": meta["flags"],
                 },
+                "input_quality": 0.0,
             }
 
-        # Step 2 — CHROM pulse extraction
+        # Step 2 — CHROM pulse extraction with low-light denoising
+        lum_factor = meta.get("luminance_confidence_factor", 1.0)
+        dur_factor = meta.get("duration_confidence_factor", 1.0)
+        input_quality = round(min(lum_factor, dur_factor), 3)
+
         try:
-            pulse = extract_pulse_signal(rgb_signals, fps)
+            pulse = extract_pulse_signal(rgb_signals, fps, denoise=(lum_factor < 1.0))
         except Exception as exc:
             logger.error("Pulse extraction failed: %s", exc)
             raise HTTPException(
@@ -204,36 +212,56 @@ async def detect(
                 detail=f"Failed to extract pulse signal: {exc}",
             ) from exc
 
-        # Step 3 — Heart rate + signal quality
+        # Step 3 — Heart rate + signal quality with actual fps
         try:
             bpm = estimate_heart_rate(pulse, fps)
         except Exception as exc:
             logger.warning("Heart-rate estimation failed: %s. Defaulting to 60 BPM.", exc)
             bpm = 60.0
 
-        quality = signal_quality_score(pulse)
+        quality = signal_quality_score(pulse, fps=fps)
 
-        # Step 4 — Score/verdict mapping with sanity check
+        # Step 4 — Score/verdict mapping with confidence attenuation
         score = float(1.0 - quality)
         score = max(0.0, min(1.0, score))
-        verdict = "synthetic" if score > 0.5 else "authentic"
-        confidence = abs(score - 0.5) * 2.0
+        raw_confidence = abs(score - 0.5) * 2.0
+        confidence = raw_confidence * input_quality
+
+        # If input quality is severely degraded (< 0.5), force inconclusive verdict
+        if input_quality < 0.5:
+            verdict = "inconclusive"
+        else:
+            verdict = "synthetic" if score > 0.5 else "authentic"
+
         elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
         claim = (
             f"BVP pulse signal extracted via CHROM with estimated heart rate of {bpm:.1f} BPM "
-            f"(spectral purity: {quality:.2f})."
+            f"(spectral purity: {quality:.2f})"
         )
+        if lum_factor < 1.0 or dur_factor < 1.0:
+            claim += (
+                f" (confidence attenuated: low-light factor {lum_factor:.2f}, "
+                f"duration factor {dur_factor:.2f})"
+            )
+        claim += "."
+
         flags = []
         if bpm < 45.0 or bpm > 180.0:
             flags.append("atypical_heart_rate")
+        if lum_factor < 1.0:
+            flags.append("low_light_attenuation")
+        if dur_factor < 1.0:
+            flags.append("short_clip_attenuation")
 
         logger.info(
-            "rPPG result: bpm=%.1f quality=%.4f score=%.4f verdict=%s",
+            "rPPG result: bpm=%.1f quality=%.4f score=%.4f verdict=%s input_quality=%.3f conf=%.4f",
             bpm,
             quality,
             score,
             verdict,
+            input_quality,
+            confidence,
         )
 
         return {
@@ -251,6 +279,7 @@ async def detect(
                 "claim": claim,
                 "flags": flags,
             },
+            "input_quality": input_quality,
         }
 
     finally:
