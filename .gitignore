@@ -29,5 +29,6 @@ build/
 *.log
 *.db
 eval/fixtures/
+security/tests/fixtures/*.json
 
 
