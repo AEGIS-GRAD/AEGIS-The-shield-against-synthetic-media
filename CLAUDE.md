@@ -17,6 +17,24 @@ AEGIS is a monorepo for a deepfake/synthetic-media detection system, built as a 
 
 Every microservice directory is self-contained: its own `Dockerfile`, `requirements.txt`, and `tests/`. **Never add a microservice-specific dependency (torch, fastapi, etc.) to the root `requirements.txt`** — that file is only for host-machine tooling shared across the team (wandb, jsonschema). Each service's `requirements.txt` must pin a minimum version (`package>=x.x.x`, never bare `package`).
 
+## Project context
+
+Graduation project, ECU 2026/2027. Supervisor: Dr. Amr Megahed. TA: Ramez Yousri. Team: 7 AI students, 3 cybersecurity students.
+
+## MVP scope (don't expand without asking)
+
+- **IN**: video deepfake detection with explainability, real-time alerting, frame hash-chaining with tamper detection, signed chain-of-evidence report.
+- **SECONDARY**: audio, basic fusion.
+- **DEFERRED**: full multi-agent orchestration, learned fusion, production deployment.
+- **NON-NEGOTIABLE** (supervisor priority): hash-chaining, digital forensics, chain of evidence.
+
+## Ownership
+
+- **AI team** owns `detectors/`, datasets, explainability, model compression.
+- **Cyber team** owns `security/`: transport security/mTLS, hash-chaining, forensics and chain of evidence, alerting/SIEM (Wazuh), red-teaming.
+
+Don't modify another team's folders unless asked.
+
 ## Source-of-truth docs (read before changing cross-service behavior)
 
 - **`shared/json-api-contracts-schema/SCHEMA.md`** — the strict request/response JSON contract between orchestrator and detectors. The orchestrator rejects any detector response missing a required field (`job_id`, `confidence`, `raw_score`, `latency_ms`, `model_version`, `evidence`). Also defines the security constraints (auth header, payload size, extension/magic-byte allowlist, path-traversal confinement) — don't redefine these elsewhere.
@@ -48,6 +66,15 @@ Key orchestrator internals (`orchestrator/app/`):
 - **`dispatch.py`** resolves each detector's URL via `DETECTOR_{NAME}_URL` env var, falling back to `http://detector_{name}:8000`.
 
 Each detector service follows the same shape (see `detectors/aasist/app.py` as the reference implementation): FastAPI app with `lifespan` model loading, `GET /health`, `POST /detect` (validates `X-Internal-Token` against `INTERNAL_API_KEY`, accepts either an absolute file path or base64 payload), Prometheus metrics mounted at `/metrics`, and a `telemetry.py` decorator (`@track_inference`) wrapping inference calls.
+
+## Design principles & context
+
+- **Closed loop is the core innovation**: engine telemetry (latency/memory) and debate-layer reliability history feed back into the orchestrator's detector selection. The orchestrator is rule-based for now, but never remove telemetry, logging, or result-history code — the loop depends on it.
+- **Live surveillance feeds are the key differentiator**, not just uploaded files. Don't design components that only work offline.
+- **Output must be usable in court**: evidence is hashed, signed, timestamped, and tamper-evident. Prefer explanations and evidence over bare scores.
+- **Three verdict states**: authentic / manipulated / integrity unknown. An integrity failure (broken hash chain, unauthenticated camera, missing provenance) must never result in "authentic".
+- **Cyber team deliverables**: (1) real-time alerting & incident response to SIEM/Wazuh (Omar), (2) feed integrity & transport security — mTLS, signing at capture, frame hash-chaining (Ahmed), (3) digital forensics & chain of evidence, including the legal use of PRNU (Yassin), (4) red-teaming (all three). Joint with the AI team: adversarial robustness, frame-injection detection.
+- **Task cadence**: tasks are supervisor-assigned weekly. Before starting one, check whether it depends on the other team's unfinished work and flag it.
 
 ## Running the stack
 
@@ -100,3 +127,15 @@ CI (`.github/workflows/`) runs these per path-filtered PR: `ci-docker-check.yml`
 - `confidence` is always normalized `0.0` (authentic) to `1.0` (synthetic) — this convention is load-bearing across aggregation, weights, and thresholds; don't invert it in a new detector.
 - Direct pushes to `main` are blocked (per root README): changes go through a PR, must pass `validate-docker` CI, and need peer review.
 - New/changed detector behavior that affects reliability should be reflected in the matching `capability_manifests/*.json` (schema in `capability_manifests/Schema.py`) and cross-referenced in `docs/LIMITATIONS.md` if it's a systematic failure mode, not a one-off bug (which goes in `docs/failure_notes.md` instead).
+
+## Guardrails
+
+- Always `git pull` and work on a new branch — never commit directly on `main`.
+- Show a plan before editing more than two files.
+- Never commit or push without asking first.
+- Never print or commit secrets.
+- If a task conflicts with the MVP scope above, stop and say so.
+
+## End of session
+
+When told to "wrap up": summarize what changed, update this file if anything here is now outdated, and show the diff before committing.
