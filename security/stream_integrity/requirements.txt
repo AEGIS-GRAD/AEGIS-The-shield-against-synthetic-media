@@ -1,0 +1,6 @@
+# Testing & Validation
+pytest>=7.0.0
+
+# Integration tests only: generating tampered streams (eval/scripts/generate_attack_streams.py)
+opencv-python-headless>=4.8.0
+numpy>=1.26.0
