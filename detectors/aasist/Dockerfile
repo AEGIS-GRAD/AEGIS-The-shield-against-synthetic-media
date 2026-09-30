@@ -19,10 +19,8 @@ RUN grep -v "^torch" requirements.txt > /tmp/reqs.txt && \
     pip install --no-cache-dir -r /tmp/reqs.txt && \
     rm /tmp/reqs.txt
 
-# Download pretrained AASIST weights if not bundled
-RUN mkdir -p /model_weights && \
-    curl -L -o /model_weights/AASIST.pth \
-    https://github.com/clovaai/aasist/raw/main/models/weights/AASIST.pth
+# AASIST.pth lives at the detector root and is brought in by "COPY . /app" below.
+# No network download needed.
 
 # Copy application source
 COPY . /app

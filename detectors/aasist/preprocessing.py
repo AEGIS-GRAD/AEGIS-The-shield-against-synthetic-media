@@ -15,6 +15,11 @@ import torchaudio.transforms as T
 TARGET_SAMPLE_RATE = 16000
 NB_SAMP = 64600  # AASIST standard input length (~4.04s at 16kHz)
 
+# Matches flag in app.py — set AASIST_DEBUG=1 to enable extra logging
+import logging as _logging
+_debug_logger = _logging.getLogger("aasist_preprocessing")
+DEBUG_MODE = os.getenv("AASIST_DEBUG", "0") == "1"
+
 
 def load_audio(source: str | bytes) -> tuple[np.ndarray, int]:
     """
@@ -53,7 +58,14 @@ def load_audio(source: str | bytes) -> tuple[np.ndarray, int]:
                 tmp_wav = tmp.name
             cmd = [ffmpeg_exe, "-y", "-i", source, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", tmp_wav]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if res.returncode == 0 and os.path.exists(tmp_wav) and os.path.getsize(tmp_wav) > 0:
+            wav_size = os.path.getsize(tmp_wav) if os.path.exists(tmp_wav) else 0
+            # [AASIST_DEBUG] Log extracted WAV file size — 0 bytes means no audio track
+            if DEBUG_MODE:
+                _debug_logger.info(
+                    f"[AASIST_DEBUG] ffmpeg extraction: returncode={res.returncode}, "
+                    f"tmp_wav='{tmp_wav}', size={wav_size} bytes"
+                )
+            if res.returncode == 0 and wav_size > 0:
                 waveform, sample_rate = sf.read(tmp_wav, dtype="float32")
                 try:
                     os.remove(tmp_wav)
