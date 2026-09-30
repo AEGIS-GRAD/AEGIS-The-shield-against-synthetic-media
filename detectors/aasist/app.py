@@ -40,7 +40,12 @@ AASIST_CONFIG = {
 }
 
 MODEL_VERSION = "aasist-v1.0"
-DEFAULT_WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "weights", "AASIST.pth")
+# Weights live at the detector root (AASIST.pth), NOT in a weights/ subdir.
+# This can be overridden at runtime via MODEL_WEIGHTS_PATH env var.
+DEFAULT_WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "AASIST.pth")
+
+# Set AASIST_DEBUG=1 to enable per-request diagnostic logging
+DEBUG_MODE = os.getenv("AASIST_DEBUG", "0") == "1"
 
 # Global model state
 state = {
@@ -53,19 +58,24 @@ state = {
 def load_model(weights_path: str = DEFAULT_WEIGHTS_PATH):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Initializing AASIST model on device: {device}")
-    
+
+    if not os.path.exists(weights_path):
+        raise FileNotFoundError(
+            f"AASIST weights not found at '{weights_path}'. "
+            "Place AASIST.pth in detectors/aasist/ or set MODEL_WEIGHTS_PATH env var. "
+            "Service will not start with random weights."
+        )
+
     model = Model(AASIST_CONFIG)
-    if os.path.exists(weights_path):
-        logger.info(f"Loading weights from: {weights_path}")
-        state_dict = torch.load(weights_path, map_location=device)
-        model.load_state_dict(state_dict)
-        logger.info("Weights loaded successfully.")
-    else:
-        logger.warning(f"Weight file not found at {weights_path}! Model initialized with random weights.")
+    logger.info(f"Loading weights from: {weights_path}")
+    state_dict = torch.load(weights_path, map_location=device)
+    model.load_state_dict(state_dict)
+    logger.info("Weights loaded successfully — model_loaded = True.")
 
     model.to(device)
     model.eval()
-    
+
+    # Only set model_loaded after a confirmed successful load_state_dict()
     state["model"] = model
     state["device"] = device
     state["model_loaded"] = True
@@ -148,6 +158,10 @@ async def detect(
         logger.error(f"Preprocessing error for job {req.job_id}: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Audio preprocessing failed: {str(e)}")
 
+    # [AASIST_DEBUG] Confirm tensor shape is exactly (1, 64600) before inference
+    if DEBUG_MODE:
+        logger.info(f"[AASIST_DEBUG] audio_tensor.shape = {audio_tensor.shape} (expected: torch.Size([1, 64600]))")
+
     # Model inference with precise timing
     start_time = time.perf_counter()
     with torch.no_grad():
@@ -163,6 +177,13 @@ async def detect(
     spoof_prob = float(probs[0].item())
     bonafide_prob = float(probs[1].item())
     spoof_logit = float(out[0, 0].item())
+
+    # [AASIST_DEBUG] Log raw logits and softmax probs — near-uniform [0.5, 0.5] = random weights
+    if DEBUG_MODE:
+        logger.info(
+            f"[AASIST_DEBUG] raw_logits = [{float(out[0,0].item()):.4f}, {float(out[0,1].item()):.4f}] | "
+            f"softmax = [spoof={spoof_prob:.4f}, bonafide={bonafide_prob:.4f}]"
+        )
 
     # AEGIS Contract: confidence 0.0 = Authentic, 1.0 = Synthetic/Deepfake
     confidence = max(0.0, min(1.0, float(spoof_prob)))
