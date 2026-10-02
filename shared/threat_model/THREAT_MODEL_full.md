@@ -51,6 +51,14 @@ Threats are evaluated using **STRIDE**. **MITRE ATLAS** is used where an AI-spec
 * **Denial of Service** covers loss of system availability.
 * **Elevation of Privilege** covers obtaining permissions beyond those legitimately assigned.
 
+#### Live Surveillance Threats
+
+The extension of AEGIS from static file uploads to live CCTV surveillance introduces entirely new attack vectors on the physical and network infrastructure:
+
+* **Injection Attacks (Frame Splicing):** An attacker intercepts the live video feed and splices in fake, manipulated frames in real-time. If the pipeline only checks intermittent keyframes, a carefully timed deepfake injection could bypass the AI detector entirely while altering the narrative of the video.
+* **Replay Attacks:** An attacker records legitimate, authentic footage of an empty room, and then continuously replays that old footage back to the ingestion server. This creates a "blind spot" allowing an intruder to bypass the camera without deploying any AI synthesis, fundamentally breaking the surveillance goal.
+* **Man-in-the-Middle (MitM) Interception:** A network-level attacker positions themselves between the edge camera and the ingestion server. They can intercept, drop, modify, or analyze the RTSP/RTP packets, compromising both the integrity and confidentiality of the surveillance stream.
+* **Spoofed Camera Identity:** An attacker unplugs a legitimate edge camera and plugs in a rogue device (like a laptop) using the same IP address. Without cryptographic identity verification, the ingestion server will blindly accept the rogue feed, allowing the attacker to stream arbitrary deepfakes directly into the core system.
 #### Threat Coverage for the Service Architecture (added Week 1)
 
 The threat surfaces above describe the system at a conceptual level. As the repository now defines a concrete microservice architecture — `orchestrator`, `engine`, `debate`, `eval`, `mcp`, and individual `detector_*` containers communicating over a shared internal Docker network — two additional, more immediate threats apply and directly inform this week's API design decisions:
