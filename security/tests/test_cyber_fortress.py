@@ -9,7 +9,7 @@ from stream_integrity.stream_validator import StreamValidator
 
 def run_cyber_fortress_test():
     print("=======================================================")
-    print("🛡️  AEGIS CYBER FORTRESS E2E INTEGRATION TEST 🛡️")
+    print("  AEGIS CYBER FORTRESS E2E INTEGRATION TEST  ")
     print("=======================================================\n")
 
     # 1. mTLS Transport Test (Task 6)
@@ -61,7 +61,7 @@ def run_cyber_fortress_test():
         print("  [!] Warning: Tampered manifest fixture not found.")
 
     print("\n=======================================================")
-    print("✅  ALL CYBER DEFENSES ACTIVATED. FORTRESS IS SECURE.")
+    print("  ALL CYBER DEFENSES ACTIVATED. FORTRESS IS SECURE.")
     print("=======================================================")
 
 if __name__ == "__main__":
