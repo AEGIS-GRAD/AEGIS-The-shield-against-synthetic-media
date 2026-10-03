@@ -31,27 +31,27 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ALERT_THRESHOLD = 0.65;
-const WARN_THRESHOLD  = 0.45;
-const HISTORY_WINDOW  = 60;
+const WARN_THRESHOLD = 0.45;
+const HISTORY_WINDOW = 60;
 
 const DETECTOR_CFG = [
-  { key: "video",   label: "Frame Classifier", model: "EfficientNet-B0", color: "#06b6d4", Icon: Film,     base: 0.12, variance: 0.18 },
-  { key: "rppg",    label: "rPPG Pulse",        model: "CHROM",          color: "#f43f5e", Icon: Activity, base: 0.10, variance: 0.14 },
-  { key: "aasist",  label: "AASIST Audio",      model: "GraphAttn",      color: "#a855f7", Icon: Mic,      base: 0.08, variance: 0.12 },
-  { key: "syncnet", label: "SyncNet A-V",        model: "TwoStream-CNN",  color: "#14b8a6", Icon: Video,    base: 0.09, variance: 0.16 },
+  { key: "video", label: "Frame Classifier", model: "EfficientNet-B0", color: "#06b6d4", Icon: Film, base: 0.12, variance: 0.18 },
+  { key: "rppg", label: "rPPG Pulse", model: "CHROM", color: "#f43f5e", Icon: Activity, base: 0.10, variance: 0.14 },
+  { key: "aasist", label: "AASIST Audio", model: "GraphAttn", color: "#a855f7", Icon: Mic, base: 0.08, variance: 0.12 },
+  { key: "syncnet", label: "SyncNet A-V", model: "TwoStream-CNN", color: "#14b8a6", Icon: Video, base: 0.09, variance: 0.16 },
 ];
 
 const CAMERA_FEEDS = [
   { id: "CAM-001", location: "Entrance Hall — Camera A" },
-  { id: "CAM-002", location: "Corridor B — Camera 3"   },
-  { id: "CAM-003", location: "Control Room — Cam 2"    },
-  { id: "CAM-004", location: "Server Bay — Cam 1"      },
+  { id: "CAM-002", location: "Corridor B — Camera 3" },
+  { id: "CAM-003", location: "Control Room — Cam 2" },
+  { id: "CAM-004", location: "Server Bay — Cam 1" },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-function lerp(a, b, t)    { return a + (b - a) * t; }
+function lerp(a, b, t) { return a + (b - a) * t; }
 
 function nextScore(current, base, variance, injecting) {
   const target = injecting
@@ -66,13 +66,13 @@ function fmtTime(d) {
 
 function scoreColor(score) {
   if (score >= ALERT_THRESHOLD) return "#ef4444";
-  if (score >= WARN_THRESHOLD)  return "#f59e0b";
+  if (score >= WARN_THRESHOLD) return "#f59e0b";
   return "#10b981";
 }
 
 function scoreLabel(score) {
   if (score >= ALERT_THRESHOLD) return "SYNTHETIC";
-  if (score >= WARN_THRESHOLD)  return "SUSPICIOUS";
+  if (score >= WARN_THRESHOLD) return "SUSPICIOUS";
   return "AUTHENTIC";
 }
 
@@ -84,7 +84,7 @@ function Sparkline({ history, width = 160, height = 36, color = "#06b6d4" }) {
     const canvas = ref.current;
     if (!canvas || history.length < 2) return;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width  = width  * dpr;
+    canvas.width = width * dpr;
     canvas.height = height * dpr;
     const ctx = canvas.getContext("2d");
     ctx.scale(dpr, dpr);
@@ -109,15 +109,15 @@ function Sparkline({ history, width = 160, height = 36, color = "#06b6d4" }) {
     ctx.beginPath();
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.strokeStyle = color;
-    ctx.lineWidth   = 1.5;
-    ctx.lineJoin    = "round";
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = "round";
     ctx.stroke();
     // Alert threshold
     const thY = pad + (1 - ALERT_THRESHOLD) * h;
     ctx.beginPath();
     ctx.moveTo(pad, thY); ctx.lineTo(pad + w, thY);
     ctx.strokeStyle = "#ef444455";
-    ctx.lineWidth   = 1;
+    ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
@@ -133,9 +133,9 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
     const canvas = ref.current;
     if (!canvas || history.length < 2) return;
     const dpr = window.devicePixelRatio || 1;
-    const w   = canvas.clientWidth  || 600;
-    const h   = canvas.clientHeight || 176;
-    canvas.width  = w * dpr;
+    const w = canvas.clientWidth || 600;
+    const h = canvas.clientHeight || 176;
+    canvas.width = w * dpr;
     canvas.height = h * dpr;
     const ctx = canvas.getContext("2d");
     ctx.scale(dpr, dpr);
@@ -148,7 +148,7 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
     ctx.fillStyle = "#475569";
     ctx.textAlign = "right";
     for (let i = 0; i <= 5; i++) {
-      const v  = i / 5;
+      const v = i / 5;
       const cy = padT + (1 - v) * ch;
       ctx.beginPath(); ctx.moveTo(padL, cy); ctx.lineTo(padL + cw, cy);
       ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 0.5; ctx.stroke();
@@ -156,7 +156,7 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
     }
     // Threshold zones
     const alertY = padT + (1 - ALERT_THRESHOLD) * ch;
-    const warnY  = padT + (1 - WARN_THRESHOLD)  * ch;
+    const warnY = padT + (1 - WARN_THRESHOLD) * ch;
     const zA = ctx.createLinearGradient(0, padT, 0, alertY);
     zA.addColorStop(0, "#ef444415"); zA.addColorStop(1, "#ef444408");
     ctx.fillStyle = zA; ctx.fillRect(padL, padT, cw, alertY - padT);
@@ -166,7 +166,7 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
     // Threshold labels
     ctx.font = "9px monospace"; ctx.textAlign = "left";
     ctx.fillStyle = "#ef444488"; ctx.fillText("ALERT 65%", padL + 4, alertY - 3);
-    ctx.fillStyle = "#f59e0b88"; ctx.fillText("WARN 45%",  padL + 4, warnY - 3);
+    ctx.fillStyle = "#f59e0b88"; ctx.fillText("WARN 45%", padL + 4, warnY - 3);
     // Threshold lines
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(padL, alertY); ctx.lineTo(padL + cw, alertY);
@@ -182,9 +182,9 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
     }));
     const lineColor = isAlert ? "#ef4444" : isWarning ? "#f59e0b" : "#10b981";
     const grad = ctx.createLinearGradient(0, padT, 0, padT + ch);
-    grad.addColorStop(0,   lineColor + "40");
+    grad.addColorStop(0, lineColor + "40");
     grad.addColorStop(0.7, lineColor + "08");
-    grad.addColorStop(1,   lineColor + "00");
+    grad.addColorStop(1, lineColor + "00");
     ctx.beginPath();
     ctx.moveTo(pts[0].x, padT + ch);
     pts.forEach(p => ctx.lineTo(p.x, p.y));
@@ -222,7 +222,7 @@ function RollingScoreChart({ history, isAlert, isWarning }) {
 // ─── Fake Camera Feed ─────────────────────────────────────────────────────────
 
 function FakeCameraFeed({ camId, score, isAlert, isWarning, active = true }) {
-  const ref    = useRef(null);
+  const ref = useRef(null);
   const rafRef = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -241,10 +241,10 @@ function FakeCameraFeed({ camId, score, isAlert, isWarning, active = true }) {
       const w = canvas.width, h = canvas.height;
       // Noise background
       const imgData = ctx.createImageData(w, h);
-      const data    = imgData.data;
+      const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
         const n = Math.random() * 8;
-        data[i] = 10 + n; data[i+1] = 12 + n; data[i+2] = 18 + n; data[i+3] = 255;
+        data[i] = 10 + n; data[i + 1] = 12 + n; data[i + 2] = 18 + n; data[i + 3] = 255;
       }
       ctx.putImageData(imgData, 0, 0);
       // Face silhouette
@@ -265,11 +265,11 @@ function FakeCameraFeed({ camId, score, isAlert, isWarning, active = true }) {
       if (isAlert) {
         const pulse = Math.sin(t * 0.15) * 0.5 + 0.5;
         ctx.fillStyle = `rgba(239,68,68,${0.06 + pulse * 0.08})`; ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = `rgba(239,68,68,${0.4 + pulse * 0.4})`; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w-2, h-2);
+        ctx.strokeStyle = `rgba(239,68,68,${0.4 + pulse * 0.4})`; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2);
       } else if (isWarning) {
         const pulse = Math.sin(t * 0.1) * 0.5 + 0.5;
         ctx.fillStyle = `rgba(245,158,11,${0.03 + pulse * 0.05})`; ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = `rgba(245,158,11,${0.3 + pulse * 0.3})`; ctx.lineWidth = 1.5; ctx.strokeRect(1, 1, w-2, h-2);
+        ctx.strokeStyle = `rgba(245,158,11,${0.3 + pulse * 0.3})`; ctx.lineWidth = 1.5; ctx.strokeRect(1, 1, w - 2, h - 2);
       }
       // Score text
       ctx.font = "bold 11px monospace"; ctx.fillStyle = scoreColor(score);
@@ -317,25 +317,25 @@ function AlertToast({ alerts, onDismiss }) {
 // ─── Main SurveillanceMonitor ─────────────────────────────────────────────────
 
 export default function SurveillanceMonitor() {
-  const [scores,     setScores    ] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, 0.12])));
-  const [history,    setHistory   ] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, Array(HISTORY_WINDOW).fill(0.12)])));
-  const [detScores,  setDetScores ] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, 0.1])));
-  const [detHist,    setDetHist   ] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, Array(40).fill(0.1)])));
-  const [alerts,     setAlerts    ] = useState([]);
-  const [muted,      setMuted     ] = useState(false);
-  const [paused,     setPaused    ] = useState(false);
-  const [selected,   setSelected  ] = useState("CAM-001");
-  const [injecting,  setInjecting ] = useState(false);
-  const [injectCam,  setInjectCam ] = useState("CAM-001");
+  const [scores, setScores] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, 0.12])));
+  const [history, setHistory] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, Array(HISTORY_WINDOW).fill(0.12)])));
+  const [detScores, setDetScores] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, 0.1])));
+  const [detHist, setDetHist] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, Array(40).fill(0.1)])));
+  const [alerts, setAlerts] = useState([]);
+  const [muted, setMuted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [selected, setSelected] = useState("CAM-001");
+  const [injecting, setInjecting] = useState(false);
+  const [injectCam, setInjectCam] = useState("CAM-001");
   const [alertCount, setAlertCount] = useState(0);
-  const [uptime,     setUptime    ] = useState(0);
+  const [uptime, setUptime] = useState(0);
   const [frameCount, setFrameCount] = useState(0);
-  const [curTime,    setCurTime   ] = useState("--:--:--");
-  const [mounted,    setMounted   ] = useState(false);
+  const [curTime, setCurTime] = useState("--:--:--");
+  const [mounted, setMounted] = useState(false);
 
-  const alertIdRef  = useRef(0);
-  const prevScores  = useRef({});
-  const scoresRef   = useRef(scores);
+  const alertIdRef = useRef(0);
+  const prevScores = useRef({});
+  const scoresRef = useRef(scores);
   const detScoresRef = useRef(detScores);
 
   // Keep refs in sync
@@ -412,9 +412,9 @@ export default function SurveillanceMonitor() {
   const dismissAlert = useCallback((id) => setAlerts(a => a.filter(x => x.id !== id)), []);
 
   const selScore = scores[selected] || 0;
-  const selHist  = history[selected] || [];
-  const isAlert  = selScore >= ALERT_THRESHOLD;
-  const isWarn   = selScore >= WARN_THRESHOLD && !isAlert;
+  const selHist = history[selected] || [];
+  const isAlert = selScore >= ALERT_THRESHOLD;
+  const isWarn = selScore >= WARN_THRESHOLD && !isAlert;
 
   const fmtUptime = (s) => {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -510,7 +510,7 @@ export default function SurveillanceMonitor() {
 
                 {/* Alert badge */}
                 {isAlert && (
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-bounce">
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-pulse">
                     <ShieldAlert className="w-4 h-4 text-red-400" />
                     <span className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">DEEPFAKE DETECTED</span>
                   </div>
@@ -559,16 +559,16 @@ export default function SurveillanceMonitor() {
                       }}
                     />
                     <div className="absolute top-0 h-full w-px bg-amber-500/60" style={{ left: `${WARN_THRESHOLD * 100}%` }} />
-                    <div className="absolute top-0 h-full w-px bg-red-500/60"   style={{ left: `${ALERT_THRESHOLD * 100}%` }} />
+                    <div className="absolute top-0 h-full w-px bg-red-500/60" style={{ left: `${ALERT_THRESHOLD * 100}%` }} />
                   </div>
                 </div>
 
                 {/* Meta */}
                 <div className="space-y-2 text-[11px] font-mono">
                   {[
-                    { label: "Camera",    val: selected },
-                    { label: "Frames",    val: String(frameCount * 2) },
-                    { label: "Alerts",    val: String(alertCount), danger: alertCount > 0 },
+                    { label: "Camera", val: selected },
+                    { label: "Frames", val: String(frameCount * 2) },
+                    { label: "Alerts", val: String(alertCount), danger: alertCount > 0 },
                     { label: "Threshold", val: `${(ALERT_THRESHOLD * 100).toFixed(0)}%` },
                   ].map(({ label, val, danger }) => (
                     <div key={label} className="flex justify-between">
@@ -602,8 +602,8 @@ export default function SurveillanceMonitor() {
           {/* Detector sub-score sparklines */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {DETECTOR_CFG.map(d => {
-              const s   = detScores[d.key] || 0;
-              const h   = detHist[d.key]   || [];
+              const s = detScores[d.key] || 0;
+              const h = detHist[d.key] || [];
               const bad = s >= ALERT_THRESHOLD;
               const wrn = s >= WARN_THRESHOLD;
               const Icon = d.Icon;
@@ -640,9 +640,9 @@ export default function SurveillanceMonitor() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {CAMERA_FEEDS.map(cam => {
-                const s    = scores[cam.id] || 0;
-                const bad  = s >= ALERT_THRESHOLD;
-                const wrn  = s >= WARN_THRESHOLD;
+                const s = scores[cam.id] || 0;
+                const bad = s >= ALERT_THRESHOLD;
+                const wrn = s >= WARN_THRESHOLD;
                 const isSel = cam.id === selected;
                 return (
                   <button
@@ -653,100 +653,18 @@ export default function SurveillanceMonitor() {
                     <div className="aspect-[4/3] bg-[#060c14]">
                       <FakeCameraFeed camId={cam.id} score={s} isAlert={bad} isWarning={wrn} active={!paused} />
                     </div>
-                    <div className={`absolute bottom-0 left-0 right-0 px-1.5 py-1 flex items-center justify-between text-[9px] font-mono ${bad ? "bg-red-950/90" : "bg-black/70"}`}>
-                      <span className={bad ? "text-red-300" : "text-slate-300"}>{cam.id}</span>
-                      <span style={{ color: scoreColor(s) }}>{(s * 100).toFixed(0)}%</span>
+                    <div className={`absolute bottom-0 left-0 right-0 px-1.5 py-1 flex items-center justify-between text-[9px] font-mono ${bad ? "bg-red-950/80 text-red-300" : wrn ? "bg-amber-950/80 text-amber-300" : "bg-black/60 text-slate-300"}`}>
+                      <span>{cam.id}</span>
+                      <span>{(s * 100).toFixed(0)}%</span>
                     </div>
-                    {isSel && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />}
-                    {bad  && <div className="absolute top-1 left-1"><ShieldAlert className="w-3.5 h-3.5 text-red-400" /></div>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Simulation control */}
-          <div className="p-4 border-b border-slate-800/60">
-            <p className="text-[10px] font-mono uppercase text-slate-500 mb-2 tracking-wider">Simulation Control</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-mono">
-                <span className="text-slate-500">Target:</span>
-                <select
-                  value={injectCam}
-                  onChange={e => setInjectCam(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-300 text-xs font-mono cursor-pointer focus:outline-none focus:border-cyan-500"
-                >
-                  {CAMERA_FEEDS.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
-                </select>
-              </div>
-              <button
-                onClick={() => setInjecting(v => !v)}
-                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${injecting ? "bg-red-500/20 border-red-500/50 text-red-300 animate-pulse" : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"}`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                {injecting ? "STOP DEEPFAKE INJECTION" : "SIMULATE DEEPFAKE"}
-              </button>
-            </div>
-          </div>
-
-          {/* Event log */}
-          <div className="flex-1 flex flex-col min-h-0 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-slate-400" />
-                <span className="text-xs font-mono font-semibold text-slate-300">EVENT LOG</span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-500">{alertCount} events</span>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
-              {alerts.length === 0 ? (
-                <div className="text-[11px] font-mono text-slate-600 text-center py-6">No events recorded</div>
-              ) : (
-                [...alerts].reverse().map(a => (
-                  <div key={a.id} className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-red-950/30 border border-red-900/40 text-[10px] font-mono">
-                    <ShieldAlert className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <span className="text-red-300 font-bold">{a.camId}</span>
-                      <span className="text-slate-400 ml-1">{(a.score * 100).toFixed(1)}%</span>
-                      <div className="text-slate-500">{a.time}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* System health */}
-          <div className="p-4 border-t border-slate-800/60 space-y-1.5 text-[10px] font-mono">
-            <p className="text-slate-500 uppercase tracking-wider mb-2">System Health</p>
-            {[
-              { label: "Orchestrator",   status: "nominal",  cls: "text-emerald-400" },
-              { label: "Video Detector", status: "nominal",  cls: "text-emerald-400" },
-              { label: "AASIST Audio",   status: "nominal",  cls: "text-emerald-400" },
-              { label: "Gateway (mTLS)", status: "secured",  cls: "text-cyan-400"    },
-              { label: "SIEM / Wazuh",   status: "active",   cls: "text-violet-400"  },
-            ].map(({ label, status, cls }) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="text-slate-500">{label}</span>
-                <span className={`${cls} uppercase font-semibold`}>{status}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
-
-      {/* ── Status bar ── */}
-      <footer className="flex-shrink-0 h-8 flex items-center px-4 gap-6 border-t border-slate-800/60 bg-slate-950/80 text-[10px] font-mono text-slate-500">
-        <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-cyan-500" /> mTLS SECURED</span>
-        <span className="flex items-center gap-1"><Wifi className="w-3 h-3 text-emerald-400" /> NETWORK ACTIVE</span>
-        <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> EDGE INFERENCE</span>
-        <div className="flex-1" />
-        {paused    && <span className="flex items-center gap-1 text-amber-400"><Radio className="w-3 h-3" /> FEED PAUSED</span>}
-        {injecting && <span className="flex items-center gap-1 text-red-400 animate-pulse"><Zap className="w-3 h-3" /> SYNTHETIC INJECTION ACTIVE</span>}
-        <span>FRAMES: {frameCount * 2}</span>
-        <span>ALERTS: {alertCount}</span>
-        <span>v0.2.0-milestone2</span>
-      </footer>
     </div>
   );
 }
