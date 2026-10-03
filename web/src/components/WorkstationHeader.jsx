@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Shield, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Shield, RefreshCw, Camera } from "lucide-react";
 
 export default function WorkstationHeader({ onReset, isRunning = false, activeMode = "simulation" }) {
   return (
@@ -40,6 +41,16 @@ export default function WorkstationHeader({ onReset, isRunning = false, activeMo
               {activeMode === "live" ? "API Gateway (Live: 8081)" : "Simulated Microservices"}
             </span>
           </div>
+
+          {/* Live Surveillance nav link */}
+          <Link
+            href="/surveillance"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-400 hover:text-cyan-300 border border-cyan-800/50 hover:border-cyan-700/60 transition-all"
+            title="Open Live Surveillance Monitor"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Live Surveillance</span>
+          </Link>
 
           {/* Quick Reset */}
           {onReset && (
