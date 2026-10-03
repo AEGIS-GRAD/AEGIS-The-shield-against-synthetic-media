@@ -1,9 +1,16 @@
-FROM python:3.10-slim
+# ── rPPG Remote Photoplethysmography Detector ──────────────────────────────────
+# Detects biological pulse signals in video to distinguish real faces from deepfakes.
+# Uses CHROM algorithm + MTCNN face detection.
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# System dependencies: libgl1/libglib2.0-0 required by OpenCV,
-# ffmpeg for video decoding, curl for healthcheck probe.
+# ── System dependencies ────────────────────────────────────────────────────────
+# libgl1 / libglib2.0-0  : required by OpenCV (headless mode)
+# ffmpeg                 : video decoding pipeline
+# curl                   : healthcheck probe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
@@ -11,22 +18,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CPU-only PyTorch first (needed by facenet-pytorch / MTCNN).
-# Separated from requirements.txt so the layer is cached independently.
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision \
-        --extra-index-url https://download.pytorch.org/whl/cpu
+# ── Python dependencies ────────────────────────────────────────────────────────
+RUN pip install --no-cache-dir --upgrade pip
 
-# Install remaining application requirements (excludes torch line).
+# CPU-only PyTorch + Torchvision (needed by facenet-pytorch / MTCNN)
+RUN pip install --no-cache-dir \
+    torch==2.2.2+cpu torchvision==0.17.2+cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
 COPY requirements.txt .
-RUN grep -v "^torch" requirements.txt > /tmp/reqs.txt && \
-    pip install --no-cache-dir -r /tmp/reqs.txt && \
-    rm /tmp/reqs.txt
+RUN grep -vE "^(torch|#)" requirements.txt > /tmp/reqs.txt \
+    && pip install --no-cache-dir -r /tmp/reqs.txt \
+    && rm /tmp/reqs.txt
 
-# Copy microservice source code.
-# No model weights directory needed — this is a pure signal-processing detector.
+# ── Application source ─────────────────────────────────────────────────────────
+# Pure signal-processing detector — no model weights directory needed.
 COPY . /app
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
