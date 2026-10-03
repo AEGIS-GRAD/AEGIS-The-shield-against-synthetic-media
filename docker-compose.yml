@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==========================================
   # SECURITY & INFRASTRUCTURE LAYER
@@ -95,13 +93,21 @@ services:
       - mediamtx
 
   web:
-    image: alpine
-    command: tail -f /dev/null
+    build:
+      context: ./web
+      dockerfile: Dockerfile
     container_name: aegis_web
     ports:
       - "3000:3000"
     volumes:
-      - ./web:/app # Automatically creates /web
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - NEXT_PUBLIC_INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:8081
+      - NEXT_PUBLIC_ORCHESTRATOR_URL=http://localhost:8000
     networks:
       - aegis_net
     depends_on:
@@ -238,7 +244,7 @@ services:
           memory: 3G
 
   detector_dire:
-    image: python:3.10-slim
+    image: python:3.11-slim
     command: tail -f /dev/null
     container_name: aegis_detector_dire
     volumes:
@@ -252,7 +258,7 @@ services:
           memory: 2G
 
   detector_binoculars:
-    image: python:3.10-slim
+    image: python:3.11-slim
     command: tail -f /dev/null
     container_name: aegis_detector_binoculars
     volumes:
@@ -295,11 +301,12 @@ services:
           memory: 4G
 
   # ==========================================
-  # TELEMETRY
+  # TELEMETRY (optional — start with: docker compose --profile telemetry up)
   # ==========================================
   prometheus:
     image: prom/prometheus:latest
     container_name: aegis_prometheus
+    profiles: [telemetry]
     ports:
       - "9090:9090"
     volumes:
@@ -310,6 +317,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: aegis_grafana
+    profiles: [telemetry]
     ports:
       - "3001:3000"
     environment:
