@@ -7,6 +7,7 @@ import WorkstationHeader from "./WorkstationHeader";
 import PipelineStepper from "./PipelineStepper";
 import DetectorResultsGrid from "./DetectorResultsGrid";
 import LiveStatusScreen from "./LiveStatusScreen";
+import LiveSurveillanceView from "./LiveSurveillanceView";
 import {
   Upload,
   Film,
@@ -26,6 +27,9 @@ import {
   Download,
   Play,
   FileCode2,
+  FileText,
+  Radio,
+  Info,
 } from "lucide-react";
 
 const ALLOWED_TYPES = [
@@ -63,6 +67,7 @@ export default function UploadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [liveStatus, setLiveStatus] = useState(null);
   const [viewMode, setViewMode] = useState("upload"); // "upload" | "status" | "results"
+  const [verificationMode, setVerificationMode] = useState("offline"); // "offline" | "live"
   const [submitResult, setSubmitResult] = useState(null);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -211,29 +216,58 @@ export default function UploadPage() {
       {/* Background Subtle Gradient Overlay */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,182,212,0.12),rgba(255,255,255,0))] pointer-events-none" />
 
-      {/* Persistent Top Navigation Bar */}
+      {/* Persistent Top Navigation Bar with Mode Switcher */}
       <WorkstationHeader
         onReset={handleClearFile}
         isRunning={isSubmitting || viewMode === "status"}
         activeMode={submitResult?.endpoint_used?.includes("8081") ? "live" : "simulation"}
+        verificationMode={verificationMode}
+        onModeChange={(mode) => setVerificationMode(mode)}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-        <div className="w-full max-w-5xl space-y-6">
+        <div className="w-full max-w-6xl space-y-6">
 
-          {/* Pipeline Stepper Breadcrumb */}
-          <PipelineStepper
-            currentStep={viewMode}
-            onStepClick={(step) => {
-              if (step === "upload") setViewMode("upload");
-              if (step === "status" && liveStatus) setViewMode("status");
-              if (step === "results" && submitResult) setViewMode("results");
-            }}
-          />
+          {/* Render Mode 2: Live Surveillance Monitoring View */}
+          {verificationMode === "live" ? (
+            <LiveSurveillanceView />
+          ) : (
+            /* Render Mode 1: Offline File Verification View (Month 1 Flow) */
+            <div className="space-y-6">
+              
+              {/* Informational Mode Banner for Offline File Verification */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900/90 to-indigo-950/50 border border-cyan-500/30 backdrop-blur-xl shadow-xl flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shrink-0">
+                  <FileText className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-bold text-white tracking-tight">
+                      Offline File Verification Mode
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wider">
+                      Single-Pass Post-Hoc Verdict
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Upload static media files for multi-modal deepfake analysis. The pipeline performs a <strong>single-pass offline evaluation</strong> across detectors (video classifier, rPPG pulse consistency, voice spoofing, and lip sync) to calculate a fixed final verdict score and signed forensic report.
+                  </p>
+                </div>
+              </div>
 
-          {/* Workstation Container Card */}
-          <div className="bg-[#111827]/85 backdrop-blur-xl border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 space-y-6">
+              {/* Pipeline Stepper Breadcrumb */}
+              <PipelineStepper
+                currentStep={viewMode}
+                onStepClick={(step) => {
+                  if (step === "upload") setViewMode("upload");
+                  if (step === "status" && liveStatus) setViewMode("status");
+                  if (step === "results" && submitResult) setViewMode("results");
+                }}
+              />
+
+              {/* Workstation Container Card */}
+              <div className="bg-[#111827]/85 backdrop-blur-xl border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 space-y-6">
 
             {/* View Mode 1: Live Status Screen during/after processing */}
             {viewMode === "status" ? (
@@ -508,6 +542,8 @@ export default function UploadPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
 
           {/* Footer Note */}
           <div className="text-center text-xs text-slate-500 font-mono">
