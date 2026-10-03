@@ -298,6 +298,9 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
               <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${tagStyle}`}>
                 {verdictTag}
               </span>
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-800/60 uppercase">
+                Single-Pass Offline Verdict
+              </span>
             </div>
             <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">{summary}</p>
           </div>
