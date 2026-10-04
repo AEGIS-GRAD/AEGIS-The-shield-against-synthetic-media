@@ -66,3 +66,10 @@ You can query the aggregated metrics using Prometheus at:
 - `detector_inference_latency_seconds`: Histogram of inference latency.
 - `detector_inference_calls_total`: Counter for total requests processed.
 - `detector_gpu_memory_allocated_bytes`: PyTorch VRAM consumption.
+
+---
+
+> [!NOTE]
+> **Handoff Note for Cybersecurity Team (from Mohand Mohsen — AI Track):**
+> Both `aegis_detector_rppg` and `aegis_detector_syncnet` are now fully instrumented with Prometheus `/metrics` endpoints (port 8000). When convenient, please uncomment their scrape targets in `security/telemetry/prometheus.yml` (`aegis_detector_rppg:8000` and `aegis_detector_syncnet:8000`) so Prometheus collects their live metrics alongside `aasist` and `video-classifier`.
+

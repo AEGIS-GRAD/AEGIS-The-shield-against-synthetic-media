@@ -13,3 +13,4 @@ scipy>=1.10.0
 facenet-pytorch>=2.5.3
 torch>=2.0.0
 pytest>=7.4.0
+prometheus-client>=0.20.0

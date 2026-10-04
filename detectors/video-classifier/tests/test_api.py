@@ -70,3 +70,12 @@ def test_detect_endpoint_no_file():
     """Test POST /detect without uploading a file returns 422 Unprocessable Entity."""
     response = client.post("/detect")
     assert response.status_code == 422
+
+
+def test_metrics_endpoint():
+    """Validates Prometheus /metrics endpoint is mounted and exposes inference metrics."""
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "detector_inference_latency_seconds" in response.text
+    assert "detector_inference_calls_total" in response.text
+

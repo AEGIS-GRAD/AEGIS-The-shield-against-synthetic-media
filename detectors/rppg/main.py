@@ -36,6 +36,7 @@ from pydantic import BaseModel, Field
 
 from preprocess import RppgPreprocessor
 from rppg_extract import estimate_heart_rate, extract_pulse_signal, signal_quality_score
+from telemetry import metrics_app, track_inference
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("rppg")
@@ -49,7 +50,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.mount("/metrics", metrics_app)
+
 preprocessor = RppgPreprocessor()
+
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +115,7 @@ class DetectorRequest(BaseModel):
 
 
 @app.post("/detect", response_model=DetectionResponse)
+@track_inference("rppg")
 async def detect(
     request: Request,
     x_internal_token: Optional[str] = Header(default=None),

@@ -77,3 +77,41 @@ def filter_detectors(manifests: list[dict], metadata: dict) -> tuple[list[dict],
         else:
             excluded.append({"detector_name": manifest["detector_name"], "reason": reason})
     return eligible, excluded
+
+
+def apply_telemetry_constraints(
+    eligible: list[dict],
+    excluded: list[dict],
+    telemetry: Optional[dict] = None,
+) -> tuple[list[dict], list[dict]]:
+    """
+    Filters out detectors that are hard-down according to live telemetry
+    (e.g., Prometheus reported up=0 or circuit-breaker is OPEN).
+    Degraded detectors are KEPT eligible so the LLM planner can reason over
+    the latency/cost trade-off.
+    """
+    if not telemetry:
+        return eligible, excluded
+
+    new_eligible = []
+    new_excluded = list(excluded)
+
+    for m in eligible:
+        name = m["detector_name"]
+        tel = telemetry.get(name)
+        if tel:
+            # tel can be DetectorTelemetry object or dict
+            status = getattr(tel, "status", None) or (tel.get("status") if isinstance(tel, dict) else None)
+            is_up = getattr(tel, "up", True) if not isinstance(tel, dict) else tel.get("up", True)
+
+            if status == "down" or not is_up:
+                new_excluded.append({
+                    "detector_name": name,
+                    "reason": f"live telemetry: detector is offline/down (up={is_up}, status={status})",
+                })
+                continue
+
+        new_eligible.append(m)
+
+    return new_eligible, new_excluded
+
