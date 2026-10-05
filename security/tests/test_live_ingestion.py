@@ -16,14 +16,12 @@ HOST = '127.0.0.1'
 PORT = 8443
 
 def run_server():
-    """Runs the Ingestion Server in a background subprocess."""
     server_script = os.path.join(os.path.dirname(__file__), '..', 'gateway', 'ingestion', 'server.py')
-    # Run the server and suppress its stdout to keep the test output clean
     return subprocess.Popen([sys.executable, server_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def test_live_ingestion():
     print("=========================================================")
-    print("  AEGIS LIVE INGESTION GATEWAY E2E TEST (Tasks 1 & 3)")
+    print("  AEGIS LIVE INGESTION GATEWAY E2E TEST (Tasks 1 & 3)  ")
     print("=========================================================\n")
 
     print("[SYSTEM] Booting Ingestion Server in background...")
@@ -35,14 +33,36 @@ def test_live_ingestion():
     client_key = os.path.join(cert_dir, 'client.key')
     ca_cert = os.path.join(cert_dir, 'ca.crt')
 
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
-    context.load_cert_chain(certfile=client_cert, keyfile=client_key)
-    context.check_hostname = False # Loopback interface
+    context_valid = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+    context_valid.load_cert_chain(certfile=client_cert, keyfile=client_key)
+    context_valid.check_hostname = False
 
-    print("\n[TEST 1] Connecting Camera to Ingestion Server via mTLS...")
+    # Create a rogue context (no client cert)
+    context_rogue = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+    context_rogue.check_hostname = False
+
+    print("\n[TEST 1] Task 3: Attempting UNAUTHENTICATED (Rogue) Connection...")
+    try:
+        sock_rogue = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        conn_rogue = context_rogue.wrap_socket(sock_rogue, server_hostname=HOST)
+        conn_rogue.connect((HOST, PORT))
+        conn_rogue.sendall(b"TEST")
+        data = conn_rogue.recv(1024)
+        if not data:
+            print("  [OK] Server closed the connection immediately (mTLS enforcement).")
+        else:
+            print("  [FATAL] Server accepted an unauthenticated connection! Defenses failed.")
+            server_proc.kill()
+            sys.exit(1)
+    except ssl.SSLError as e:
+        print("  [OK] Server instantly REJECTED unauthenticated connection via mTLS!")
+    except Exception as e:
+        print(f"  [OK] Connection blocked: {e}")
+
+    print("\n[TEST 2] Task 3: Connecting Camera to Ingestion Server via mTLS...")
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        conn = context.wrap_socket(sock, server_hostname=HOST)
+        conn = context_valid.wrap_socket(sock, server_hostname=HOST)
         conn.connect((HOST, PORT))
         print("  [OK] Secure connection established! Server accepted our certificate.")
     except Exception as e:
@@ -50,10 +70,9 @@ def test_live_ingestion():
         server_proc.kill()
         sys.exit(1)
 
-    print("\n[TEST 2] Sending Valid Stream Frames...")
+    print("\n[TEST 3] Task 1: Sending Valid Stream Frames...")
     genesis_hash = hashlib.sha256(b"AEGIS_GENESIS").hexdigest()
     
-    # Frame 1
     frame_1_bytes = b"Frame_1_Data"
     h1 = hashlib.sha256()
     h1.update(genesis_hash.encode('utf-8'))
@@ -74,8 +93,7 @@ def test_live_ingestion():
     except Exception as e:
         print(f"  [FATAL] Failed to send frame: {e}")
 
-    print("\n[TEST 3] Simulating Splicing Attack (Hash Mismatch)...")
-    # Frame 2 (Hacker splices fake frame, hash won't match chain)
+    print("\n[TEST 4] Task 1: Simulating Splicing Attack (Hash Mismatch)...")
     payload_2 = {
         "sequence_number": 2,
         "timestamp_ms": 66,
@@ -85,13 +103,11 @@ def test_live_ingestion():
 
     conn.sendall((json.dumps(payload_2) + "\n").encode('utf-8'))
     print("  [>] Sent Malicious Frame 2.")
-    time.sleep(1) # Give server time to sever the connection
+    time.sleep(1) 
 
-    print("\n[TEST 4] Validating Server Incident Response...")
+    print("\n[TEST 5] Task 1: Validating Server Incident Response...")
     conn.settimeout(2.0)
     try:
-        # If the server severed the connection, recv will return empty bytes instantly.
-        # If the server kept it open but didn't respond, it would timeout.
         data = conn.recv(1024)
         if data == b'':
             print("  [OK] Server instantly SEVERED the TCP connection after catching the attack!")
@@ -107,7 +123,7 @@ def test_live_ingestion():
         print("  [OK] Server instantly SEVERED the TCP connection after catching the attack!")
 
     print("\n=========================================================")
-    print("  ALL INGESTION GATEWAY TESTS PASSED.")
+    print("  ALL INGESTION GATEWAY TESTS PASSED.  ")
     print("=========================================================")
     
     server_proc.kill()

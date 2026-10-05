@@ -8,7 +8,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security
 from fastapi.security.api_key import APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
-from metadata import get_input_metadata
+from media_metadata import get_input_metadata
 from rules import decide_detectors_to_call
 from dispatch import call_all_detectors
 from aggregate import aggregate_results

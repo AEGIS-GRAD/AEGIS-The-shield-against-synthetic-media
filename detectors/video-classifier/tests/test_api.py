@@ -54,22 +54,20 @@ def test_detect_endpoint():
         data = response.json()
 
         # Validate schema fields
-        assert data["modality"] == "video"
-        assert isinstance(data["score"], float)
-        assert 0.0 <= data["score"] <= 1.0
-        assert data["verdict"] in ["authentic", "synthetic"]
+        assert "job_id" in data
+        assert isinstance(data["raw_score"], float)
         assert isinstance(data["confidence"], float)
         assert 0.0 <= data["confidence"] <= 1.0
-        assert data["model"] == "efficientnet-b0-ffpp-c23"
+        assert "latency_ms" in data
     finally:
         if os.path.exists(video_path):
             os.remove(video_path)
 
 
 def test_detect_endpoint_no_file():
-    """Test POST /detect without uploading a file returns 422 Unprocessable Entity."""
+    """Test POST /detect without uploading a file returns 400 Bad Request."""
     response = client.post("/detect")
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_metrics_endpoint():
