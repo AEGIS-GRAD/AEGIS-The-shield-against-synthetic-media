@@ -88,10 +88,19 @@ def test_live_ingestion():
     time.sleep(1) # Give server time to sever the connection
 
     print("\n[TEST 4] Validating Server Incident Response...")
+    conn.settimeout(2.0)
     try:
-        # Try to send a third frame. It should fail because the server severed the TCP connection.
-        conn.sendall((json.dumps(payload_1) + "\n").encode('utf-8'))
-        print("  [FATAL] Server allowed transmission after an attack! The defenses failed.")
+        # If the server severed the connection, recv will return empty bytes instantly.
+        # If the server kept it open but didn't respond, it would timeout.
+        data = conn.recv(1024)
+        if data == b'':
+            print("  [OK] Server instantly SEVERED the TCP connection after catching the attack!")
+        else:
+            print("  [FATAL] Server did not sever the connection (received data or stayed open)!")
+            server_proc.kill()
+            sys.exit(1)
+    except socket.timeout:
+        print("  [FATAL] Server allowed transmission after an attack! The defenses failed (connection stayed open).")
         server_proc.kill()
         sys.exit(1)
     except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
