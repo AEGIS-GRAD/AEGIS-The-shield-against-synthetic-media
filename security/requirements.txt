@@ -1,2 +1,4 @@
 opencv-python>=4.11.0
 cryptography>=44.0.0
+PyWavelets>=1.4.1
+scipy>=1.10.1
