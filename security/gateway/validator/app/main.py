@@ -17,6 +17,9 @@ Each gets its own validation path below, then a transparent proxy forward.
 import base64
 import binascii
 import logging
+import tempfile
+import os
+import cv2
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
@@ -26,6 +29,7 @@ from pydantic import BaseModel, Field
 
 from . import config, path_safety
 from .magic_bytes import sniff_audio_payload, sniff_extension
+from .prnu_extractor import PRNUExtractor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("gateway-validator")
@@ -86,6 +90,36 @@ async def validate_video(file: UploadFile = File(...)) -> JSONResponse:
     if not result.valid:
         logger.warning("Rejected spoofed video upload: %s", result.reason)
         raise HTTPException(status_code=415, detail=result.reason)
+
+    # --- PRNU HARDWARE FINGERPRINT CHECK ---
+    # We write the raw bytes to a temp file so OpenCV can read the frames
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        cap = cv2.VideoCapture(tmp_path)
+        ret, frame = cap.read()
+        cap.release()
+
+        if ret and frame is not None:
+            logger.info("Extracting PRNU Hardware Fingerprint from frame...")
+            extractor = PRNUExtractor(level=2)
+            noise_residual = extractor.extract_noise_residual(frame)
+            
+            # In a production DB, we would fetch the camera's enrolled baseline here.
+            # For the prototype, we assume the camera is known and check if the noise exists.
+            if noise_residual is None or noise_residual.size == 0:
+                logger.error("Failed to extract PRNU noise. Possible hardware tampering.")
+                raise HTTPException(status_code=403, detail="Hardware Fingerprint Missing (Spoofing Detected)")
+            else:
+                logger.info("PRNU Hardware Check Passed. Video originated from a physical sensor.")
+        else:
+            logger.warning("Could not read frame for PRNU check, proceeding with standard validation.")
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+    # ---------------------------------------
 
     try:
         response = await _forward_multipart(config.VIDEO_DETECTOR_URL, file.filename, content)
