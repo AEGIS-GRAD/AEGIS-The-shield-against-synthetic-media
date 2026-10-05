@@ -1,10 +1,13 @@
 import os
+import sys
 import tempfile
 import cv2
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+# Add parent directory to path so the IDE can resolve local imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from main import app
 
 client = TestClient(app)
