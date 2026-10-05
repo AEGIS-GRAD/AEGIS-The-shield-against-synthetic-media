@@ -23,7 +23,7 @@ def run_server():
 
 def test_live_ingestion():
     print("=========================================================")
-    print("🛡️  AEGIS LIVE INGESTION GATEWAY E2E TEST (Tasks 1 & 3)")
+    print("  AEGIS LIVE INGESTION GATEWAY E2E TEST (Tasks 1 & 3)")
     print("=========================================================\n")
 
     print("[SYSTEM] Booting Ingestion Server in background...")
@@ -98,7 +98,7 @@ def test_live_ingestion():
         print("  [OK] Server instantly SEVERED the TCP connection after catching the attack!")
 
     print("\n=========================================================")
-    print("✅  ALL INGESTION GATEWAY TESTS PASSED.")
+    print("  ALL INGESTION GATEWAY TESTS PASSED.")
     print("=========================================================")
     
     server_proc.kill()
