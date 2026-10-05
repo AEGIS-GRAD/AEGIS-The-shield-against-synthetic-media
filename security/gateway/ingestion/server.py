@@ -75,6 +75,8 @@ async def handle_camera_stream(reader, writer):
             # 2. Validate Cryptographic Hash Chain (Catch Deepfake Splicing)
             if not hash_validator.validate_frame(frame_bytes, expected_hash):
                 print(f"[!] INTEGRITY COMPROMISED (Splicing Attack) on {camera_id}: Hash mismatch at seq {seq}")
+                print(f"[*] Expected Hash: {expected_hash}")
+                print(f"[*] Server Calculated Hash (from client frame): {hash_validator.current_hash}")
                 print(f"[*] SEVERING CONNECTION to {camera_id}")
                 break # Drop connection instantly
                 
@@ -106,7 +108,7 @@ async def start_server():
     context.load_verify_locations(cafile=client_ca)
 
     server = await asyncio.start_server(
-        handle_camera_stream, HOST, PORT, ssl=context
+        handle_camera_stream, HOST, PORT, ssl=context, limit=1024 * 1024 * 10 # 10 MB limit for huge frame payloads
     )
 
     print(f"[AEGIS GATEWAY] Asynchronous Ingestion Server starting on {HOST}:{PORT}")
