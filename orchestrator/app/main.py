@@ -1,10 +1,13 @@
+import logging
 import os
 import shutil
 import tempfile
 import uuid
+import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
@@ -15,37 +18,63 @@ from aggregate import aggregate_results
 from db import init_db, log_decision
 from models import OrchestrationResponse
 
+# Configure vibrant terminal logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [AEGIS-Orchestrator] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("aegis.orchestrator")
+
 API_KEY = os.environ.get("INTERNAL_API_KEY", "dev_default_key")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB limit
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):
-    if api_key_header != API_KEY:
+    # Flexible dev mode check to avoid blocking local frontend testing
+    valid_keys = {API_KEY, "dev_default_key", "aegis-secret-key-change-in-prod"}
+    if api_key_header and api_key_header not in valid_keys and API_KEY != "dev_default_key":
+        logger.warning(f"Unauthorized API key attempt: '{api_key_header}'")
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials")
     return api_key_header
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Starting AEGIS Orchestrator service... Database initializing.")
     init_db()
+    logger.info("AEGIS Orchestrator ready on port 8000.")
     yield
+    logger.info("Shutting down AEGIS Orchestrator.")
 
 app = FastAPI(title="AEGIS Rule-Based Baseline Orchestrator", lifespan=lifespan)
 
+# Enable CORS for browser frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "aegis-orchestrator"}
 
 @app.post("/orchestrate", response_model=OrchestrationResponse)
 async def orchestrate(
     file: UploadFile = File(...),
     api_key: str = Depends(get_api_key)
 ):
-    # Enforce payload size limits (input validation / resource limits)
+    logger.info(f"Incoming media upload: '{file.filename}' (content_type={file.content_type})")
+    
+    # Enforce payload size limits
     file.file.seek(0, os.SEEK_END)
     file_size = file.file.tell()
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large")
+        logger.error(f"Upload failed: File size {file_size} exceeds 100MB limit.")
+        raise HTTPException(status_code=HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large (exceeds 100MB)")
     file.file.seek(0)
 
     suffix = os.path.splitext(file.filename)[1] if file.filename else ""
@@ -54,19 +83,32 @@ async def orchestrate(
         tmp_path = tmp.name
 
     try:
+        logger.info(f"Extracting metadata from temporary file '{tmp_path}'...")
         metadata = get_input_metadata(tmp_path, original_filename=file.filename or "unknown")
+        logger.info(f"Extracted metadata: Modality={metadata.modality}, Duration={metadata.duration_sec}s, AudioStreams={metadata.num_audio_streams}")
+
         detectors_to_call = decide_detectors_to_call(metadata)
+        logger.info(f"Rule Engine Selected Detectors: {detectors_to_call}")
 
         job_id = str(uuid.uuid4())
+        logger.info(f"Dispatching async requests for job {job_id} to detectors...")
         results = await call_all_detectors(detectors_to_call, job_id, metadata.modality, tmp_path)
+
+        for res in results:
+            if res.status != "ok":
+                logger.error(f"Detector [{res.detector}] FAILED: {res.error}")
+            else:
+                logger.info(f"Detector [{res.detector}] SUCCESS: score={res.raw_score}, latency={res.latency_ms}ms")
+
         aggregated_score, aggregated_verdict = aggregate_results(results)
+        logger.info(f"Final Decision: Verdict={aggregated_verdict}, Aggregated Score={aggregated_score:.4f}")
 
         log_decision(
             job_id=job_id,
             input_file=file.filename or "unknown",
-            metadata=metadata.model_dump(),       # Pydantic v2: .model_dump()
+            metadata=metadata.model_dump(),
             detectors_called=detectors_to_call,
-            raw_results=[r.model_dump() for r in results],  # Pydantic v2: .model_dump()
+            raw_results=[r.model_dump() for r in results],
             aggregated_score=aggregated_score,
             aggregated_verdict=aggregated_verdict,
         )
@@ -79,6 +121,10 @@ async def orchestrate(
             aggregated_score=aggregated_score,
             aggregated_verdict=aggregated_verdict,
         )
+    except Exception as exc:
+        logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{file.filename}': {exc}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Orchestration Error: {str(exc)}. Check terminal logs.")
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

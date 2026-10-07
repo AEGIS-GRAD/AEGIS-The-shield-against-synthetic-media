@@ -66,20 +66,20 @@ const VERDICT_STYLES = {
   authentic: {
     icon: ShieldCheck,
     label: "AUTHENTIC",
-    badge: "bg-emerald-950/70 text-emerald-400 border border-emerald-800/60",
-    barColor: "bg-emerald-500",
+    badge: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold",
+    barColor: "bg-emerald-600",
   },
   synthetic: {
     icon: ShieldAlert,
     label: "SYNTHETIC",
-    badge: "bg-rose-950/70 text-rose-400 border border-rose-800/60",
-    barColor: "bg-rose-500",
+    badge: "bg-rose-100 text-rose-800 border border-rose-300 font-bold",
+    barColor: "bg-rose-600",
   },
   inconclusive: {
     icon: ShieldQuestion,
     label: "INCONCLUSIVE",
-    badge: "bg-amber-950/70 text-amber-400 border border-amber-800/60",
-    barColor: "bg-amber-500",
+    badge: "bg-amber-100 text-amber-800 border border-amber-300 font-bold",
+    barColor: "bg-amber-600",
   },
 };
 
@@ -256,29 +256,29 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
   const syntheticList = activeResults.filter((r) => r.verdict === "synthetic");
   const hasDisagreement = authenticList.length > 0 && syntheticList.length > 0;
 
-  let bannerStyle = "border-emerald-500/40 bg-emerald-950/20";
+  let bannerStyle = "border-emerald-300 bg-emerald-50 text-emerald-900 shadow-sm";
   let Icon = ShieldCheck;
-  let iconColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
+  let iconColor = "text-emerald-700 bg-emerald-100 border-emerald-300";
   let title = "Cross-Modal Consensus: Authentic Media Verified";
   let verdictTag = "AUTHENTIC";
-  let tagStyle = "bg-emerald-950/80 text-emerald-300 border-emerald-700/60";
+  let tagStyle = "bg-emerald-200 text-emerald-900 border-emerald-400 font-bold";
   let summary = `All ${activeResults.length} active detectors agree media shows natural characteristics.`;
 
   if (hasDisagreement) {
-    bannerStyle = "border-amber-500/40 bg-amber-950/20";
+    bannerStyle = "border-amber-300 bg-amber-50 text-amber-900 shadow-sm";
     Icon = AlertTriangle;
-    iconColor = "text-amber-400 bg-amber-500/10 border-amber-500/30";
+    iconColor = "text-amber-700 bg-amber-100 border-amber-300";
     title = "Cross-Modal Disagreement Detected";
     verdictTag = "DEBATE REQUIRED";
-    tagStyle = "bg-amber-950/80 text-amber-300 border-amber-700/60";
+    tagStyle = "bg-amber-200 text-amber-900 border-amber-400 font-bold";
     summary = `Conflicting claims: ${authenticList.length} Authentic vs. ${syntheticList.length} Synthetic. Layer C Debate queued.`;
   } else if (syntheticList.length > 0) {
-    bannerStyle = "border-rose-500/40 bg-rose-950/20";
+    bannerStyle = "border-rose-300 bg-rose-50 text-rose-900 shadow-sm";
     Icon = ShieldAlert;
-    iconColor = "text-rose-400 bg-rose-500/10 border-rose-500/30";
+    iconColor = "text-rose-700 bg-rose-100 border-rose-300";
     title = "Cross-Modal Consensus: Synthetic Media Detected";
     verdictTag = "SYNTHETIC";
-    tagStyle = "bg-rose-950/80 text-rose-300 border-rose-700/60";
+    tagStyle = "bg-rose-200 text-rose-900 border-rose-400 font-bold";
     summary = `Agreed across active detectors (${syntheticList.map((r) => r.label.split(" ")[0]).join(", ")}).`;
   }
 
@@ -286,23 +286,23 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
     <div className={`p-4 sm:p-5 rounded-xl border ${bannerStyle} space-y-3`}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left: Verdict Status */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div className={`p-2.5 rounded-xl border flex-shrink-0 ${iconColor}`}>
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-sm sm:text-base text-slate-100 truncate">
+              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 truncate">
                 {title}
               </h3>
               <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${tagStyle}`}>
                 {verdictTag}
               </span>
-              <span className="px-2 py-0.5 rounded text-[9px] font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-800/60 uppercase">
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono text-cyan-800 bg-cyan-100 border border-cyan-300 uppercase font-bold">
                 Single-Pass Offline Verdict
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">{summary}</p>
+            <p className="text-xs text-slate-700 mt-0.5 line-clamp-1 font-semibold">{summary}</p>
           </div>
         </div>
 
@@ -311,9 +311,9 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
           {onViewLogs && (
             <button
               onClick={onViewLogs}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-300 transition-colors cursor-pointer shadow-xs font-bold"
             >
-              <Terminal className="w-3.5 h-3.5 text-slate-400" />
+              <Terminal className="w-3.5 h-3.5 text-slate-600" />
               <span>Logs</span>
             </button>
           )}
@@ -321,9 +321,9 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
           {onExportJson && (
             <button
               onClick={onExportJson}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-100 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-white bg-cyan-600 hover:bg-cyan-700 border border-cyan-600 transition-colors cursor-pointer shadow-xs font-bold"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <Download className="w-3.5 h-3.5 text-white" />
               <span>Export JSON</span>
             </button>
           )}
@@ -331,19 +331,19 @@ function ForensicVerdictBanner({ detectorResponses, fileName, fileSize, onViewLo
       </div>
 
       {/* Sub-bar: Clean Media Details */}
-      <div className="pt-2 border-t border-slate-800/50 flex items-center justify-between text-[11px] font-mono text-slate-400">
+      <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] font-mono text-slate-600">
         <div className="flex items-center gap-2 min-w-0 truncate">
-          <span className="text-slate-300 font-semibold truncate" title={fileName}>
+          <span className="text-slate-800 font-bold truncate" title={fileName}>
             {truncateMiddle(fileName, 32)}
           </span>
           {fileSize && (
             <>
               <span>•</span>
-              <span>{fileSize}</span>
+              <span className="font-semibold">{fileSize}</span>
             </>
           )}
         </div>
-        <span className="text-slate-400 flex-shrink-0 ml-2">
+        <span className="text-slate-500 font-bold flex-shrink-0 ml-2">
           {activeResults.length} Active Modalities
         </span>
       </div>
@@ -372,12 +372,12 @@ export default function DetectorResultsGrid({
         onExportJson={onExportJson}
       />
 
-      {/* Grid Title Bar (Clean, single-line) */}
+      {/* Grid Title Bar */}
       <div className="flex items-center justify-between pt-1">
-        <h2 className="text-xs sm:text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+        <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider font-mono">
           Layer B Detector Breakdown
         </h2>
-        <span className="text-[11px] font-mono text-slate-400">
+        <span className="text-[11px] font-mono text-slate-500 font-bold">
           {completedCount} of {order.length} Evaluated
         </span>
       </div>

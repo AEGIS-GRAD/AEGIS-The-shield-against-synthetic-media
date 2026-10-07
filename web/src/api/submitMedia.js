@@ -3,6 +3,8 @@
  * by posting to the Cybersecurity API Gateway endpoint or Orchestrator.
  */
 
+import { logger } from "./systemLogger";
+
 const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://localhost:8081";
 const INTERNAL_API_KEY = process.env.NEXT_PUBLIC_INTERNAL_API_KEY || "aegis-secret-key-change-in-prod";
 const ORCHESTRATOR_BASE_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:8000";
@@ -242,64 +244,131 @@ export async function submitMediaWithProgress(file, onProgress) {
     return runPresetSimulation(presetId, file, jobId, onProgress);
   }
 
-  // Otherwise, attempt Gateway or Orchestrator live connectivity with immediate fallback
+  // Log submission initiation
+  logger.info("Ingestion", `Initiating verification for uploaded file '${file.name}' (${formatFileSize(file.size)})`, {
+    job_id: jobId,
+    filename: file.name,
+    size_bytes: file.size,
+    type: file.type,
+    is_audio: isAudio,
+  });
+
+  // Attempt real Orchestrator connection
+  logger.info("Orchestrator", `Sending health check to ${ORCHESTRATOR_BASE_URL}/health...`);
+
+  let probe;
   try {
-    const probe = await fetch(`${ORCHESTRATOR_BASE_URL}/health`, {
+    probe = await fetch(`${ORCHESTRATOR_BASE_URL}/health`, {
       method: "GET",
-      signal: AbortSignal.timeout ? AbortSignal.timeout(600) : undefined,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(1500) : undefined,
     });
-    if (probe.ok) {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const orchestrateRes = await fetch(`${ORCHESTRATOR_BASE_URL}/orchestrate`, {
-        method: "POST",
-        body: formData,
-        signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
-      });
-
-      if (orchestrateRes.ok) {
-        const data = await orchestrateRes.json();
-        // Transform orchestrator response to grid format
-        const detectorMap = {};
-        for (const item of (data.raw_results || [])) {
-          detectorMap[item.detector] = item;
-        }
-
-        if (onProgress) {
-          onProgress({
-            job_id: jobId,
-            filename: file.name,
-            modality: data.metadata?.modality || (isAudio ? "audio" : "video"),
-            overall_status: "completed",
-            progress_percent: 100,
-            elapsed_ms: 650,
-            detectors: Object.fromEntries(
-              Object.entries(detectorMap).map(([k, v]) => [k, { ...v, status: v.status === "ok" ? "complete" : "failed" }])
-            ),
-          });
-        }
-
-        return {
-          ...detectorMap,
-          raw_response: data,
-          endpoint_used: `${ORCHESTRATOR_BASE_URL}/orchestrate`,
-          status_code: 200,
-        };
-      }
-    }
   } catch (err) {
-    // Docker or network offline, proceed to smooth standalone simulator
+    logger.error("Orchestrator", `Backend unreachable at ${ORCHESTRATOR_BASE_URL}/health. Connection refused or timeout.`, {
+      error: err.message,
+      target_url: `${ORCHESTRATOR_BASE_URL}/health`,
+    });
+
+    throw new Error(
+      `BACKEND OFFLINE: Failed to connect to Python Orchestrator at ${ORCHESTRATOR_BASE_URL}. Go to the terminal to see what the error is and verify uvicorn/fastapi is running.`
+    );
   }
 
-  // Realistic progressive simulation based on media type
-  return runDynamicSimulation(file, jobId, isAudio, onProgress);
+  if (!probe.ok) {
+    logger.error("Orchestrator", `Backend health probe returned status ${probe.status}`, { status: probe.status });
+    throw new Error(
+      `BACKEND HEALTH ERROR: Orchestrator health endpoint returned HTTP ${probe.status}. Go to the terminal to see what the error is.`
+    );
+  }
+
+  logger.info("Orchestrator", `Health check OK. Dispatching media to ${ORCHESTRATOR_BASE_URL}/orchestrate...`);
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let orchestrateRes;
+  try {
+    orchestrateRes = await fetch(`${ORCHESTRATOR_BASE_URL}/orchestrate`, {
+      method: "POST",
+      headers: {
+        "X-API-Key": INTERNAL_API_KEY,
+      },
+      body: formData,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
+    });
+  } catch (err) {
+    logger.error("Orchestrator", `POST /orchestrate network request failed`, {
+      error: err.message,
+      target_url: `${ORCHESTRATOR_BASE_URL}/orchestrate`,
+    });
+    throw new Error(
+      `PIPELINE NETWORK FAILURE: Failed to post media to ${ORCHESTRATOR_BASE_URL}/orchestrate. Go to the terminal to see what the error is.`
+    );
+  }
+
+  if (!orchestrateRes.ok) {
+    let errorText = "";
+    try {
+      const errJson = await orchestrateRes.json();
+      errorText = errJson.detail || JSON.stringify(errJson);
+    } catch {
+      errorText = await orchestrateRes.text();
+    }
+    logger.error("Orchestrator", `POST /orchestrate returned HTTP ${orchestrateRes.status}`, {
+      status: orchestrateRes.status,
+      detail: errorText,
+    });
+
+    throw new Error(
+      `ORCHESTRATOR HTTP ${orchestrateRes.status}: ${errorText || "Internal Server Error"}. Go to the terminal to see what the error is.`
+    );
+  }
+
+  const data = await orchestrateRes.json();
+  logger.success("Orchestrator", `Received response from /orchestrate`, data);
+
+  // Transform orchestrator response to grid format
+  const detectorMap = {};
+  for (const item of data.raw_results || []) {
+    detectorMap[item.detector] = item;
+    if (item.status !== "ok") {
+      logger.warn("Detector Warning", `Detector '${item.detector}' failed execution: ${item.error || "Unknown error"}`, item);
+    } else {
+      logger.info("Detector Success", `Detector '${item.detector}' returned score ${item.raw_score} (latency: ${item.latency_ms}ms)`, item);
+    }
+  }
+
+  if (onProgress) {
+    onProgress({
+      job_id: jobId,
+      filename: file.name,
+      modality: data.metadata?.modality || (isAudio ? "audio" : "video"),
+      overall_status: "completed",
+      progress_percent: 100,
+      elapsed_ms: 650,
+      detectors: Object.fromEntries(
+        Object.entries(detectorMap).map(([k, v]) => [k, { ...v, status: v.status === "ok" ? "complete" : "failed" }])
+      ),
+    });
+  }
+
+  return {
+    ...detectorMap,
+    raw_response: data,
+    endpoint_used: `${ORCHESTRATOR_BASE_URL}/orchestrate`,
+    status_code: 200,
+  };
 }
 
 /**
  * Runs tailored simulation for the 4 demo presets
  */
 async function runPresetSimulation(presetId, file, jobId, onProgress) {
+  logger.info("Demo Preset", `Running predefined demo preset '${presetId}' (File: ${file.name})`, {
+    preset_id: presetId,
+    job_id: jobId,
+    filename: file.name,
+    note: "This is a curated demo preset for demonstration testing.",
+  });
   const startTime = Date.now();
   const isAudio = presetId === "voice_clone";
   const isSilent = presetId === "silent_video";

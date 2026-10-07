@@ -8,11 +8,13 @@ import PipelineStepper from "./PipelineStepper";
 import DetectorResultsGrid from "./DetectorResultsGrid";
 import LiveStatusScreen from "./LiveStatusScreen";
 import LiveSurveillanceView from "./LiveSurveillanceView";
+import SystemLogsDrawer from "./SystemLogsDrawer";
 import {
   Upload,
   Film,
   Music,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Loader2,
   RefreshCw,
@@ -30,6 +32,7 @@ import {
   FileText,
   Radio,
   Info,
+  Terminal,
 } from "lucide-react";
 
 const ALLOWED_TYPES = [
@@ -71,6 +74,7 @@ export default function UploadPage() {
   const [submitResult, setSubmitResult] = useState(null);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -212,8 +216,8 @@ export default function UploadPage() {
   const isAudio = selectedFile?.type?.startsWith("audio/");
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Background Subtle Gradient Overlay */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+      {/* Background Subtle Light Overlay */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(6,182,212,0.12),rgba(255,255,255,0))] pointer-events-none" />
 
       {/* Persistent Top Navigation Bar with Mode Switcher */}
@@ -223,6 +227,7 @@ export default function UploadPage() {
         activeMode={submitResult?.endpoint_used?.includes("8081") ? "live" : "simulation"}
         verificationMode={verificationMode}
         onModeChange={(mode) => setVerificationMode(mode)}
+        onOpenLogs={() => setIsLogsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -237,20 +242,20 @@ export default function UploadPage() {
             <div className="space-y-6">
               
               {/* Informational Mode Banner for Offline File Verification */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900/90 to-indigo-950/50 border border-cyan-500/30 backdrop-blur-xl shadow-xl flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shrink-0">
-                  <FileText className="w-5 h-5 text-cyan-400" />
+              <div className="p-4 rounded-2xl bg-white border border-cyan-200 shadow-sm flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-600 shrink-0">
+                  <FileText className="w-5 h-5 text-cyan-600" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-bold text-white tracking-tight">
+                    <h2 className="text-base font-bold text-slate-900 tracking-tight">
                       Offline File Verification Mode
                     </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-100 text-cyan-800 border border-cyan-300 uppercase tracking-wider">
                       Single-Pass Post-Hoc Verdict
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                     Upload static media files for multi-modal deepfake analysis. The pipeline performs a <strong>single-pass offline evaluation</strong> across detectors (video classifier, rPPG pulse consistency, voice spoofing, and lip sync) to calculate a fixed final verdict score and signed forensic report.
                   </p>
                 </div>
@@ -267,7 +272,7 @@ export default function UploadPage() {
               />
 
               {/* Workstation Container Card */}
-              <div className="bg-[#111827]/85 backdrop-blur-xl border border-slate-800/90 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 space-y-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 space-y-6">
 
             {/* View Mode 1: Live Status Screen during/after processing */}
             {viewMode === "status" ? (
@@ -367,19 +372,19 @@ export default function UploadPage() {
               <div className="space-y-6">
                 {/* Header Subtitle inside card */}
                 <div className="text-center space-y-1">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
                     Synthetic Media Detection
                   </h1>
-                  <p className="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto">
+                  <p className="text-slate-600 text-xs sm:text-sm max-w-lg mx-auto">
                     Upload video or audio media files for multi-modal deepfake analysis, frame-level boundary inspection, and biological pulse verification.
                   </p>
                 </div>
 
                 {/* 1-Click Milestone Demo Presets */}
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono">
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
                       <span>Month 1 Demo Presets (1-Click Rehearsal)</span>
                     </div>
                     <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
@@ -391,18 +396,18 @@ export default function UploadPage() {
                     {DEMO_PRESETS.map((preset) => (
                       <div
                         key={preset.id}
-                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 transition-all"
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 transition-all"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-semibold text-slate-200 truncate">
+                            <p className="text-xs font-bold text-slate-800 truncate">
                               {preset.title}
                             </p>
                             <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${preset.badgeColor}`}>
                               {preset.modality.split(" ")[0]}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
                             {preset.description}
                           </p>
                         </div>
@@ -410,10 +415,10 @@ export default function UploadPage() {
                         <button
                           type="button"
                           onClick={() => handleRunPreset(preset.id)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/60 text-xs font-mono font-medium transition-colors flex-shrink-0 cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white border border-cyan-600 text-xs font-mono font-bold transition-colors flex-shrink-0 cursor-pointer shadow-xs"
                           title={`Run ${preset.title}`}
                         >
-                          <Play className="w-3 h-3 fill-cyan-300" />
+                          <Play className="w-3 h-3 fill-white" />
                           <span>Run</span>
                         </button>
                       </div>
@@ -429,10 +434,10 @@ export default function UploadPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className={`relative flex flex-col items-center justify-center p-8 sm:p-12 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 group ${
                     isDragging
-                      ? "border-cyan-500 bg-cyan-950/20 shadow-lg shadow-cyan-500/10 scale-[1.01]"
+                      ? "border-cyan-500 bg-cyan-50 shadow-lg scale-[1.01]"
                       : selectedFile
-                      ? "border-slate-700 bg-slate-900/50 hover:border-slate-600"
-                      : "border-slate-800 hover:border-cyan-500/50 bg-slate-900/30 hover:bg-slate-900/60"
+                      ? "border-slate-300 bg-slate-50 hover:border-slate-400"
+                      : "border-slate-300 hover:border-cyan-500 bg-slate-50/50 hover:bg-cyan-50/40"
                   }`}
                 >
                   <input
@@ -444,62 +449,99 @@ export default function UploadPage() {
                     id="media-file-input"
                   />
 
-                  <div className="p-4 rounded-full bg-slate-800/80 group-hover:bg-cyan-950/50 group-hover:text-cyan-400 text-slate-400 transition-colors mb-4 border border-slate-700/60">
-                    <Upload className="w-7 h-7" />
+                  <div className="p-4 rounded-full bg-cyan-50 group-hover:bg-cyan-100 text-cyan-600 transition-colors mb-4 border border-cyan-200">
+                    <Upload className="w-7 h-7 text-cyan-600" />
                   </div>
 
                   <div className="text-center space-y-1">
-                    <p className="text-sm sm:text-base font-medium text-slate-200">
-                      <span className="text-cyan-400 group-hover:underline">Click to browse</span> or drag and drop custom media
+                    <p className="text-sm sm:text-base font-semibold text-slate-800">
+                      <span className="text-cyan-600 group-hover:underline font-bold">Click to browse</span> or drag and drop custom media
                     </p>
-                    <p className="text-xs text-slate-400 font-mono">
+                    <p className="text-xs text-slate-500 font-mono">
                       Supported: MP4, MOV, MP3, WAV (Max size: 100 MB)
                     </p>
                   </div>
                 </div>
 
-                {/* Inline Validation Error Message */}
+                {/* Inline Validation / Backend Error Message */}
                 {validationError && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                    <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <strong className="font-semibold text-rose-200 block">Invalid File</strong>
-                      <span>{validationError}</span>
+                  <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2.5 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 shrink-0">
+                          <AlertCircle className="w-6 h-6 text-rose-700" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <span>Backend Pipeline / Execution Error</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-200 text-rose-800 border border-rose-400 uppercase">
+                              Check Terminal
+                            </span>
+                          </h3>
+                          <p className="text-sm font-bold text-rose-700 font-mono">
+                            👉 Go to the terminal to see what the error is.
+                          </p>
+                          <p className="text-xs text-slate-700 font-mono leading-relaxed bg-white p-2.5 rounded-lg border border-rose-200 mt-1">
+                            {validationError}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setValidationError(null)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-rose-100 transition-colors cursor-pointer shrink-0"
+                        title="Dismiss error notification"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setValidationError(null)}
-                      className="text-rose-400 hover:text-rose-200 transition-colors cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex items-center justify-end gap-2.5 pt-1 border-t border-rose-200">
+                      <button
+                        type="button"
+                        onClick={() => setIsLogsOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-cyan-700 border border-slate-300 text-xs font-mono font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        <Terminal className="w-3.5 h-3.5 text-cyan-600" />
+                        <span>View System Diagnostic Logs</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setValidationError(null)}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold border border-rose-600 transition-colors cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {/* Selected File Preview Card */}
                 {selectedFile && !validationError && (
-                  <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-4 animate-in fade-in duration-200">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4 animate-in fade-in duration-200">
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div className="p-3 rounded-lg bg-cyan-950/50 text-cyan-400 border border-cyan-800/40 flex-shrink-0">
+                      <div className="p-3 rounded-lg bg-cyan-100 text-cyan-700 border border-cyan-200 flex-shrink-0">
                         {isVideo ? (
-                          <Film className="w-6 h-6" />
+                          <Film className="w-6 h-6 text-cyan-700" />
                         ) : isAudio ? (
-                          <Music className="w-6 h-6" />
+                          <Music className="w-6 h-6 text-cyan-700" />
                         ) : (
-                          <File className="w-6 h-6" />
+                          <File className="w-6 h-6 text-cyan-700" />
                         )}
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <p
-                          className="text-sm font-semibold text-slate-200 truncate"
+                          className="text-sm font-bold text-slate-800 truncate"
                           title={selectedFile.name}
                         >
                           {truncateMiddle(selectedFile.name, 40)}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 font-mono mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-mono mt-0.5">
                           <span>{formatFileSize(selectedFile.size)}</span>
                           <span>•</span>
-                          <span className="uppercase text-cyan-400/90">
+                          <span className="uppercase text-cyan-700 font-bold">
                             {selectedFile.type || "Media Stream"}
                           </span>
                         </div>
@@ -509,7 +551,7 @@ export default function UploadPage() {
                     <button
                       onClick={handleClearFile}
                       disabled={isSubmitting}
-                      className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
                       title="Remove file"
                     >
                       <X className="w-5 h-5" />
@@ -521,21 +563,21 @@ export default function UploadPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={!selectedFile || !!validationError || isSubmitting}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm transition-all duration-200 shadow-md cursor-pointer ${
                     !selectedFile || !!validationError || isSubmitting
-                      ? "bg-slate-800 text-slate-500 border border-slate-700/50 cursor-not-allowed shadow-none"
-                      : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-cyan-500/20 hover:shadow-cyan-500/30 active:scale-[0.99]"
+                      ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
+                      : "bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold shadow-cyan-600/20 active:scale-[0.99]"
                   }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin text-white" />
                       <span>Analyzing Media...</span>
                     </>
                   ) : (
                     <>
                       <span>Submit for Detection</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4 text-white" />
                     </>
                   )}
                 </button>
@@ -551,6 +593,9 @@ export default function UploadPage() {
           </div>
         </div>
       </main>
+
+      {/* System Diagnostic Logs Modal / Drawer */}
+      <SystemLogsDrawer isOpen={isLogsOpen} onClose={() => setIsLogsOpen(false)} />
     </div>
   );
 }

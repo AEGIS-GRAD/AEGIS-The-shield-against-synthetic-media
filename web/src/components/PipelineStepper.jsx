@@ -61,42 +61,42 @@ export default function PipelineStepper({ currentStep = "upload", onStepClick })
               disabled={!isClickable}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left transition-all duration-150 relative overflow-hidden ${
                 isCurrent
-                  ? "bg-slate-900/90 border-cyan-500/40 ring-1 ring-cyan-500/20"
+                  ? "bg-white border-cyan-500 shadow-sm ring-1 ring-cyan-500/20"
                   : isComplete
-                  ? "bg-slate-950/60 border-slate-800 hover:border-slate-700 cursor-pointer"
-                  : "bg-slate-950/30 border-slate-800/40 opacity-50 cursor-not-allowed"
+                  ? "bg-slate-50 border-slate-200 hover:border-slate-300 cursor-pointer"
+                  : "bg-slate-100/60 border-slate-200 opacity-60 cursor-not-allowed"
               }`}
             >
               {/* Step indicator badge */}
               <div
                 className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-mono font-bold transition-colors ${
                   isComplete
-                    ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                    ? "bg-emerald-100 border border-emerald-300 text-emerald-700"
                     : isCurrent
-                    ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300"
-                    : "bg-slate-800/60 border border-slate-700/50 text-slate-500"
+                    ? "bg-cyan-100 border border-cyan-300 text-cyan-700 font-bold"
+                    : "bg-slate-200 border border-slate-300 text-slate-500"
                 }`}
               >
-                {isComplete ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Icon className="w-3.5 h-3.5" />}
+                {isComplete ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Icon className="w-3.5 h-3.5 text-cyan-700" />}
               </div>
 
               {/* Step Label & Subtitle */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-slate-500">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-slate-500 font-bold">
                     Step {step.stepNumber}
                   </span>
                   {isCurrent && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 animate-pulse" />
                   )}
                 </div>
                 <p
-                  className={`text-xs font-semibold truncate ${
+                  className={`text-xs font-bold truncate ${
                     isCurrent
-                      ? "text-slate-100"
+                      ? "text-slate-900"
                       : isComplete
-                      ? "text-slate-300"
-                      : "text-slate-500"
+                      ? "text-slate-700"
+                      : "text-slate-400"
                   }`}
                 >
                   {step.label}
