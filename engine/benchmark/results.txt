@@ -1,0 +1,12 @@
+=====================================================================
+           AEGIS ENGINE EDGE MODEL BENCHMARK RESULTS                 
+=====================================================================
+
+| Backend   | Model Size (MB)   | Latency (ms/frame)   | Throughput (FPS)   | Accuracy (%)   | EER (%)   |
+|-----------|-------------------|----------------------|--------------------|----------------|-----------|
+| PYTORCH   | 5.93 MB           | 2.25 ms              | 444.8 FPS          | 50.00 %        | 60.00 %   |
+| ONNX_FP32 | 5.81 MB           | 1.69 ms              | 591.3 FPS          | 50.00 %        | 60.00 %   |
+| ONNX_INT8 | 1.64 MB           | 2.84 ms              | 352.2 FPS          | 50.00 %        | 30.00 %   |
+
+Evaluated on 10 videos (497 frames total).
+MobileNetV3-Small deepfake classifier on FaceForensics++ evaluation subset.
