@@ -99,8 +99,19 @@ export default function LiveSurveillanceView() {
   // Alert & Evidence Escalation States
   const [alertThreshold, setAlertThreshold] = useState(0.65);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [acknowledgedAlertId, setAcknowledgedAlertId] = useState(null);
+  const [isAlertAcknowledged, setIsAlertAcknowledged] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
+
+  // Reset alert acknowledgment state when changing cameras or when score drops below threshold
+  useEffect(() => {
+    setIsAlertAcknowledged(false);
+  }, [selectedCam]);
+
+  useEffect(() => {
+    if (emaScore < alertThreshold) {
+      setIsAlertAcknowledged(false);
+    }
+  }, [emaScore, alertThreshold]);
 
   // Build specific forensic evidence breakdown for threshold breaches
   const buildForensicEvidence = (cam, frame, score) => {
@@ -258,7 +269,9 @@ export default function LiveSurveillanceView() {
       // Trigger Sound Alarm & SOC Alert logging when threshold is breached
       if (nextEma >= alertThreshold) {
         if (tick % 8 === 0 || eventLogs.length === 0) {
-          playAlertChime(isAudioMuted);
+          if (!isAlertAcknowledged) {
+            playAlertChime(isAudioMuted);
+          }
 
           const timestamp = new Date().toLocaleTimeString();
           const frameNum = processedFrames + 1;
@@ -293,7 +306,7 @@ export default function LiveSurveillanceView() {
     }, 600);
 
     return () => clearInterval(interval);
-  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs, alertThreshold, isAudioMuted, processedFrames]);
+  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs, alertThreshold, isAudioMuted, processedFrames, isAlertAcknowledged]);
 
   // SVG Chart Paths
   const chartHeight = 110;
@@ -308,8 +321,8 @@ export default function LiveSurveillanceView() {
 
   const areaPath = `M 0,${chartHeight} L ${points} L ${chartWidth},${chartHeight} Z`;
 
-  const isSynthetic = emaScore >= 0.65;
-  const isAuthentic = emaScore < 0.40;
+  const isSynthetic = emaScore >= alertThreshold;
+  const isAuthentic = emaScore < Math.max(0.20, alertThreshold - 0.25);
 
   const mockTelemetryStatus = {
     job_id: "surveillance-stream-live",
@@ -471,30 +484,45 @@ export default function LiveSurveillanceView() {
               
               {/* Strobe Alert Header Banner on Video Feed */}
               {isSynthetic && (
-                <div className="absolute top-0 left-0 right-0 z-30 bg-rose-600/95 backdrop-blur-md text-white px-4 py-2.5 border-b border-rose-400 flex items-center justify-between shadow-xl animate-in slide-in-from-top duration-300">
-                  <div className="flex items-center gap-2.5">
-                    <ShieldAlert className="w-5 h-5 text-white animate-bounce shrink-0" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase font-mono tracking-wider text-rose-100">
-                          CRITICAL THREAT BREACHED — FRAME #{processedFrames}
-                        </span>
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white text-rose-900 uppercase">
-                          Score: {(emaScore * 100).toFixed(1)}%
-                        </span>
+                !isAlertAcknowledged ? (
+                  <div className="absolute top-0 left-0 right-0 z-30 bg-rose-600/95 backdrop-blur-md text-white px-4 py-2.5 border-b border-rose-400 flex items-center justify-between shadow-xl animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="w-5 h-5 text-white animate-bounce shrink-0" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase font-mono tracking-wider text-rose-100">
+                            CRITICAL THREAT BREACHED — FRAME #{processedFrames}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white text-rose-900 uppercase">
+                            Score: {(emaScore * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-rose-100 font-mono mt-0.5">
+                          PRNU Mismatch & rPPG Pulse Disruption detected at frame #{processedFrames - 18}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-rose-100 font-mono mt-0.5">
-                        PRNU Mismatch & rPPG Pulse Disruption detected at frame #{processedFrames - 18}
-                      </p>
                     </div>
+                    <button
+                      onClick={() => setIsAlertAcknowledged(true)}
+                      className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-lg shadow cursor-pointer shrink-0 transition-colors"
+                    >
+                      Acknowledge Alert
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setAcknowledgedAlertId(`alert-${processedFrames}`)}
-                    className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-lg shadow cursor-pointer shrink-0 transition-colors"
-                  >
-                    Acknowledge Alert
-                  </button>
-                </div>
+                ) : (
+                  <div className="absolute top-0 left-0 right-0 z-30 bg-slate-900/90 backdrop-blur-md text-emerald-300 px-4 py-2 border-b border-emerald-500/40 flex items-center justify-between shadow-md animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-2 font-mono text-xs font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>ALERT ACKNOWLEDGED BY OPERATOR — MONITORING LIVE FEED</span>
+                    </div>
+                    <button
+                      onClick={() => setIsAlertAcknowledged(false)}
+                      className="px-2.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] rounded border border-slate-600 transition-colors cursor-pointer"
+                    >
+                      Re-arm Alarm
+                    </button>
+                  </div>
+                )
               )}
               
               {/* Actual Laptop Webcam Video Element */}
@@ -649,7 +677,7 @@ export default function LiveSurveillanceView() {
                   </div>
                   <div className="text-[10px] opacity-90 font-sans">
                     {isSynthetic
-                      ? "Sliding-window EMA exceeded 0.65 threshold across consecutive frames."
+                      ? `Sliding-window EMA exceeded ${alertThreshold.toFixed(2)} threshold across consecutive frames.`
                       : "Temporal pulse and facial boundaries fall within authentic physiological parameters."}
                   </div>
                 </div>
@@ -659,17 +687,17 @@ export default function LiveSurveillanceView() {
             {/* SVG Line Graph */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
-                <span>Synthetic Threshold (0.65)</span>
+                <span>Synthetic Threshold ({alertThreshold.toFixed(2)})</span>
                 <span>Buffer Size: 16 Frames</span>
               </div>
 
               <div className="relative w-full h-28 bg-slate-50 rounded-xl border border-slate-200 p-2 overflow-hidden">
                 <div
-                  className="absolute left-0 right-0 border-b border-dashed border-rose-400 z-10"
-                  style={{ top: `${(1 - 0.65) * 100}%` }}
+                  className="absolute left-0 right-0 border-b border-dashed border-rose-400 z-10 transition-all duration-300"
+                  style={{ top: `${(1 - alertThreshold) * 100}%` }}
                 >
-                  <span className="absolute right-2 -top-4 text-[9px] font-mono text-rose-600 bg-white px-1 rounded border border-rose-200">
-                    0.65 THRESHOLD
+                  <span className="absolute right-2 -top-4 text-[9px] font-mono text-rose-600 bg-white px-1 rounded border border-rose-200 font-bold shadow-2xs">
+                    {alertThreshold.toFixed(2)} THRESHOLD
                   </span>
                 </div>
 
@@ -758,12 +786,22 @@ export default function LiveSurveillanceView() {
                   <ShieldAlert className="w-4 h-4 text-rose-600 animate-bounce" />
                   <span>Surfaced Forensic Evidence — Frame #{processedFrames}</span>
                 </div>
-                <button
-                  onClick={() => setAcknowledgedAlertId(`alert-${processedFrames}`)}
-                  className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[10px] hover:bg-rose-700 transition-colors shadow-xs"
-                >
-                  Acknowledge Alert
-                </button>
+                {isAlertAcknowledged ? (
+                  <button
+                    onClick={() => setIsAlertAcknowledged(false)}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                    <span>Acknowledged (Click to Re-arm)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAlertAcknowledged(true)}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[10px] hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
+                  >
+                    Acknowledge Alert
+                  </button>
+                )}
               </div>
 
               <p className="text-[11px] text-rose-800 font-mono font-medium leading-tight">
