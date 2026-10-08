@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { playAlertChime } from "../utils/audioAlert";
 import {
   Shield,
   ShieldAlert,
@@ -297,15 +298,23 @@ function FakeCameraFeed({ camId, score, isAlert, isWarning, active = true }) {
 function AlertToast({ alerts, onDismiss }) {
   if (!alerts.length) return null;
   return (
-    <div className="fixed top-16 right-4 z-[100] flex flex-col gap-2 w-80">
+    <div className="fixed top-16 right-4 z-[100] flex flex-col gap-2 w-96">
       {alerts.slice(-3).map((a) => (
-        <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-red-500/50 bg-red-950/90 backdrop-blur-xl shadow-2xl shadow-red-900/40">
-          <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div key={a.id} className="flex items-start gap-3 p-3.5 rounded-xl border border-red-500/60 bg-red-950/95 backdrop-blur-xl shadow-2xl shadow-red-900/50 animate-in slide-in-from-right duration-300">
+          <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 animate-bounce" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">DEEPFAKE ALERT — {a.camId}</p>
-            <p className="text-xs text-red-400/80 font-mono mt-0.5">Score: {(a.score * 100).toFixed(1)}% · {a.time}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black text-red-300 font-mono uppercase tracking-wider">CRITICAL THREAT — {a.camId}</p>
+              <span className="text-[10px] text-red-400/80 font-mono">{a.time}</span>
+            </div>
+            <p className="text-[11px] text-red-200 font-mono mt-1 font-bold">
+              Score: {(a.score * 100).toFixed(1)}% (Breached Threshold)
+            </p>
+            <p className="text-[10px] text-red-300/90 font-mono mt-0.5 bg-red-900/60 p-1.5 rounded border border-red-800/60">
+              👉 {a.evidence || `PRNU fingerprint mismatch detected at frame #${a.frameNum || 1402}`}
+            </p>
           </div>
-          <button onClick={() => onDismiss(a.id)} className="text-red-400/60 hover:text-red-300 transition-colors cursor-pointer">
+          <button onClick={() => onDismiss(a.id)} className="text-red-400/60 hover:text-red-300 transition-colors cursor-pointer p-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -365,9 +374,18 @@ export default function SurveillanceMonitor() {
         CAMERA_FEEDS.forEach(cam => {
           const was = prevScores.current[cam.id] || 0;
           const now = next[cam.id];
-          if (now >= ALERT_THRESHOLD && was < ALERT_THRESHOLD && !muted) {
+          if (now >= ALERT_THRESHOLD && was < ALERT_THRESHOLD) {
             const id = ++alertIdRef.current;
-            setAlerts(a => [...a.slice(-9), { id, camId: cam.id, score: now, time: fmtTime() }]);
+            const currentFrame = (frameCount + 1) * 2;
+            playAlertChime(muted);
+            setAlerts(a => [...a.slice(-9), {
+              id,
+              camId: cam.id,
+              score: now,
+              frameNum: currentFrame,
+              evidence: `PRNU mismatch & rPPG pulse disruption detected at frame #${currentFrame}`,
+              time: fmtTime()
+            }]);
             setAlertCount(c => c + 1);
           }
         });
