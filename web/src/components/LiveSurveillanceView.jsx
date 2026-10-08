@@ -487,7 +487,7 @@ export default function LiveSurveillanceView() {
                 !isAlertAcknowledged ? (
                   <div className="absolute top-0 left-0 right-0 z-30 bg-rose-600/95 backdrop-blur-md text-white px-4 py-2.5 border-b border-rose-400 flex items-center justify-between shadow-xl animate-in slide-in-from-top duration-300">
                     <div className="flex items-center gap-2.5">
-                      <ShieldAlert className="w-5 h-5 text-white animate-bounce shrink-0" />
+                      <ShieldAlert className="w-5 h-5 text-white animate-pulse shrink-0" />
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black uppercase font-mono tracking-wider text-rose-100">
@@ -783,7 +783,7 @@ export default function LiveSurveillanceView() {
             <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 shadow-md space-y-3 animate-in fade-in duration-300">
               <div className="flex items-center justify-between border-b border-rose-200 pb-2">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-rose-900 uppercase font-mono">
-                  <ShieldAlert className="w-4 h-4 text-rose-600 animate-bounce" />
+                  <ShieldAlert className="w-4 h-4 text-rose-600 animate-pulse" />
                   <span>Surfaced Forensic Evidence — Frame #{processedFrames}</span>
                 </div>
                 {isAlertAcknowledged ? (

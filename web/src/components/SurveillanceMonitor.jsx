@@ -301,7 +301,7 @@ function AlertToast({ alerts, onDismiss }) {
     <div className="fixed top-16 right-4 z-[100] flex flex-col gap-2 w-96">
       {alerts.slice(-3).map((a) => (
         <div key={a.id} className="flex items-start gap-3 p-3.5 rounded-xl border border-red-500/60 bg-red-950/95 backdrop-blur-xl shadow-2xl shadow-red-900/50 animate-in slide-in-from-right duration-300">
-          <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 animate-bounce" />
+          <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 animate-pulse" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <p className="text-xs font-black text-red-300 font-mono uppercase tracking-wider">CRITICAL THREAT — {a.camId}</p>
