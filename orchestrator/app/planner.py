@@ -23,7 +23,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import requests
+try:
+    import httpx
+except ImportError:
+    httpx = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from models import InputMetadata
 from rules import decide_detectors_to_call
@@ -184,12 +192,22 @@ def call_llm(
             "temperature": 0,
         }
         try:
-            resp = requests.post(
-                OPENROUTER_URL,
-                headers=headers,
-                json=payload,
-                timeout=PLANNER_TIMEOUT_S,
-            )
+            if httpx is not None:
+                resp = httpx.post(
+                    OPENROUTER_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=PLANNER_TIMEOUT_S,
+                )
+            elif requests is not None:
+                resp = requests.post(
+                    OPENROUTER_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=PLANNER_TIMEOUT_S,
+                )
+            else:
+                return None, "NO_HTTP_CLIENT_AVAILABLE", 0.0
             latency = time.time() - t0
             if resp.status_code != 200:
                 logger.warning(f"OpenRouter model {model_name} returned HTTP {resp.status_code}")
