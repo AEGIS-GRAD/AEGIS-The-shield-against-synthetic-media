@@ -339,6 +339,7 @@ export default function SurveillanceMonitor() {
   const [alertCount, setAlertCount] = useState(0);
   const [uptime, setUptime] = useState(0);
   const [frameCount, setFrameCount] = useState(0);
+  const frameCountRef = useRef(0);
   const [curTime, setCurTime] = useState("--:--:--");
   const [mounted, setMounted] = useState(false);
 
@@ -363,6 +364,10 @@ export default function SurveillanceMonitor() {
   useEffect(() => {
     if (paused) return;
     const interval = setInterval(() => {
+      frameCountRef.current += 1;
+      const currentFrame = frameCountRef.current * 2;
+      setFrameCount(frameCountRef.current);
+
       // Update camera scores
       setScores(prev => {
         const next = { ...prev };
@@ -376,7 +381,6 @@ export default function SurveillanceMonitor() {
           const now = next[cam.id];
           if (now >= ALERT_THRESHOLD && was < ALERT_THRESHOLD) {
             const id = ++alertIdRef.current;
-            const currentFrame = (frameCount + 1) * 2;
             playAlertChime(muted);
             setAlerts(a => [...a.slice(-9), {
               id,
@@ -421,8 +425,6 @@ export default function SurveillanceMonitor() {
         });
         return next;
       });
-
-      setFrameCount(f => f + 1);
     }, 500);
     return () => clearInterval(interval);
   }, [paused, injecting, injectCam, selected, muted]);
