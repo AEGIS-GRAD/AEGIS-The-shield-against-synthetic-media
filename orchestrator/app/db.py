@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime
@@ -24,6 +25,11 @@ class RequestLog(Base):
     duration_seconds = Column(Float)
     aggregated_score = Column(Float, nullable=True)
     aggregated_verdict = Column(String)
+    planner_mode = Column(String, default="rule_based")
+    plan_json = Column(String, nullable=True)
+    rationale = Column(String, nullable=True)
+    fallback = Column(Boolean, default=False)
+    fallback_reason = Column(String, nullable=True)
 
     decisions = relationship("OrchestratorDecision", back_populates="request")
     telemetry = relationship("DetectorTelemetry", back_populates="request")
@@ -55,9 +61,23 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def log_decision(job_id, input_file, metadata, detectors_called, raw_results, aggregated_score, aggregated_verdict):
+def log_decision(
+    job_id,
+    input_file,
+    metadata,
+    detectors_called,
+    raw_results,
+    aggregated_score,
+    aggregated_verdict,
+    planner_mode="rule_based",
+    plan=None,
+    rationale=None,
+    fallback=False,
+    fallback_reason=None,
+):
     db = SessionLocal()
     try:
+        plan_str = json.dumps(plan) if plan is not None and not isinstance(plan, str) else plan
         req = RequestLog(
             job_id=job_id,
             input_file=input_file,
@@ -65,7 +85,12 @@ def log_decision(job_id, input_file, metadata, detectors_called, raw_results, ag
             has_audio=metadata.get("has_audio", False),
             duration_seconds=metadata.get("duration_seconds", 0.0),
             aggregated_score=aggregated_score,
-            aggregated_verdict=aggregated_verdict
+            aggregated_verdict=aggregated_verdict,
+            planner_mode=planner_mode,
+            plan_json=plan_str,
+            rationale=rationale,
+            fallback=fallback,
+            fallback_reason=fallback_reason,
         )
         db.add(req)
         db.commit()

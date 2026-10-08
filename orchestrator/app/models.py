@@ -37,3 +37,7 @@ class OrchestrationResponse(BaseModel):
     raw_results: List[DetectorResult]
     aggregated_score: Optional[float] = None
     aggregated_verdict: str
+    planner_mode: Optional[str] = "rule_based"
+    plan: Optional[dict] = None
+    fallback: Optional[bool] = False
+    fallback_reason: Optional[str] = None

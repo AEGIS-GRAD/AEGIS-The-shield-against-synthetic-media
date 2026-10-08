@@ -6,13 +6,19 @@ import uuid
 import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security
+from typing import Optional
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_413_REQUEST_ENTITY_TOO_LARGE
+from starlette.status import HTTP_403_FORBIDDEN
+try:
+    from starlette.status import HTTP_413_CONTENT_TOO_LARGE as HTTP_413_TOO_LARGE
+except ImportError:
+    from starlette.status import HTTP_413_REQUEST_ENTITY_TOO_LARGE as HTTP_413_TOO_LARGE
 
 from media_metadata import get_input_metadata
 from rules import decide_detectors_to_call
+from planner import plan_detectors, resolve_planner_mode, get_configured_planner_mode
 from dispatch import call_all_detectors
 from aggregate import aggregate_results
 from db import init_db, log_decision
@@ -43,11 +49,12 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 async def lifespan(app: FastAPI):
     logger.info("Starting AEGIS Orchestrator service... Database initializing.")
     init_db()
-    logger.info("AEGIS Orchestrator ready on port 8000.")
+    configured_mode = get_configured_planner_mode()
+    logger.info(f"AEGIS Orchestrator ready on port 8000 (default planning mode: {configured_mode}).")
     yield
     logger.info("Shutting down AEGIS Orchestrator.")
 
-app = FastAPI(title="AEGIS Rule-Based Baseline Orchestrator", lifespan=lifespan)
+app = FastAPI(title="AEGIS Multi-Modal Orchestrator", lifespan=lifespan)
 
 # Enable CORS for browser frontend access
 app.add_middleware(
@@ -60,11 +67,19 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "aegis-orchestrator"}
+    return {
+        "status": "ok",
+        "service": "aegis-orchestrator",
+        "planner_mode": get_configured_planner_mode(),
+    }
 
 @app.post("/orchestrate", response_model=OrchestrationResponse)
 async def orchestrate(
     file: UploadFile = File(...),
+    planner_mode: Optional[str] = Query(None, description="Planning mode override: 'llm' or 'rule_based'"),
+    risk_profile: Optional[str] = Query("standard", description="Risk profile: 'low', 'standard', 'high'"),
+    compute_budget_s: Optional[float] = Query(None, description="Compute budget ceiling in seconds"),
+    x_planner_mode: Optional[str] = Header(None, alias="X-Planner-Mode"),
     api_key: str = Depends(get_api_key)
 ):
     logger.info(f"Incoming media upload: '{file.filename}' (content_type={file.content_type})")
@@ -74,7 +89,7 @@ async def orchestrate(
     file_size = file.file.tell()
     if file_size > MAX_FILE_SIZE:
         logger.error(f"Upload failed: File size {file_size} exceeds 100MB limit.")
-        raise HTTPException(status_code=HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large (exceeds 100MB)")
+        raise HTTPException(status_code=HTTP_413_TOO_LARGE, detail="File too large (exceeds 100MB)")
     file.file.seek(0)
 
     suffix = os.path.splitext(file.filename)[1] if file.filename else ""
@@ -85,10 +100,28 @@ async def orchestrate(
     try:
         logger.info(f"Extracting metadata from temporary file '{tmp_path}'...")
         metadata = get_input_metadata(tmp_path, original_filename=file.filename or "unknown")
-        logger.info(f"Extracted metadata: Modality={metadata.modality}, Duration={metadata.duration_sec}s, AudioStreams={metadata.num_audio_streams}")
+        logger.info(f"Extracted metadata: Modality={metadata.modality}, Duration={metadata.duration_seconds}s, HasAudio={metadata.has_audio}")
 
-        detectors_to_call = decide_detectors_to_call(metadata)
-        logger.info(f"Rule Engine Selected Detectors: {detectors_to_call}")
+        # Determine effective planning mode (query param > header > environment config)
+        effective_mode = resolve_planner_mode(planner_mode or x_planner_mode)
+        logger.info(f"Orchestrator Planning Mode: '{effective_mode}'")
+
+        planning_result = plan_detectors(
+            metadata=metadata,
+            mode=effective_mode,
+            risk_profile=risk_profile or "standard",
+            budget_s=compute_budget_s,
+        )
+        detectors_to_call = planning_result.detectors_to_call
+        plan_data = planning_result.plan
+        is_fallback = planning_result.fallback
+        fallback_reason = planning_result.fallback_reason
+        rationale = plan_data.get("rationale") if plan_data else None
+
+        if is_fallback:
+            logger.warning(f"LLM Planner fallback triggered ({fallback_reason}). Dispatched baseline detectors: {detectors_to_call}")
+        else:
+            logger.info(f"Planner Selected Detectors [{planning_result.planner_mode}]: {detectors_to_call}")
 
         job_id = str(uuid.uuid4())
         logger.info(f"Dispatching async requests for job {job_id} to detectors...")
@@ -111,6 +144,11 @@ async def orchestrate(
             raw_results=[r.model_dump() for r in results],
             aggregated_score=aggregated_score,
             aggregated_verdict=aggregated_verdict,
+            planner_mode=planning_result.planner_mode,
+            plan=plan_data,
+            rationale=rationale,
+            fallback=is_fallback,
+            fallback_reason=fallback_reason,
         )
 
         return OrchestrationResponse(
@@ -120,6 +158,10 @@ async def orchestrate(
             raw_results=results,
             aggregated_score=aggregated_score,
             aggregated_verdict=aggregated_verdict,
+            planner_mode=planning_result.planner_mode,
+            plan=plan_data,
+            fallback=is_fallback,
+            fallback_reason=fallback_reason,
         )
     except Exception as exc:
         logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{file.filename}': {exc}")

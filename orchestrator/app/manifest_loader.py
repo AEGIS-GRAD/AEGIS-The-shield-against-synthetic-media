@@ -1,4 +1,4 @@
-﻿"""
+"""
 manifest_loader.py — Capability-manifest consumption layer (Task 1)
 =====================================================================
 Single canonical source for loading and validating the per-detector
@@ -91,7 +91,19 @@ class ManifestValidationError(ManifestError):
 def _manifests_dir() -> Path:
     """Return the capability_manifests directory (env-overridable for tests)."""
     override = os.environ.get("AEGIS_MANIFESTS_DIR")
-    return Path(override) if override else _MANIFESTS_DIR_DEFAULT
+    if override:
+        return Path(override)
+    if _MANIFESTS_DIR_DEFAULT.is_dir():
+        return _MANIFESTS_DIR_DEFAULT
+    for candidate in [
+        _REPO_ROOT / "capability_manifests",
+        Path(__file__).resolve().parent.parent.parent / "capability_manifests",
+        Path("/capability_manifests"),
+        Path("/app/capability_manifests"),
+    ]:
+        if candidate.is_dir():
+            return candidate
+    return _MANIFESTS_DIR_DEFAULT
 
 
 def validate_manifest(data: dict) -> None:
