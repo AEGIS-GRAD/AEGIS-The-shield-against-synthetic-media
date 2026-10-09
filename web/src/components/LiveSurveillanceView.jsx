@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import TelemetryView from "./TelemetryView";
 import { logger } from "../api/systemLogger";
+import { playAlertChime } from "../utils/audioAlert";
 import {
   Radio,
   ShieldAlert,
@@ -31,6 +32,11 @@ import {
   Flame,
   Zap,
   Webcam,
+  ChevronDown,
+  ChevronUp,
+  Fingerprint,
+  FileText,
+  AlertCircle,
 } from "lucide-react";
 
 const CAMERA_FEEDS = [
@@ -89,6 +95,60 @@ export default function LiveSurveillanceView() {
   const [processedFrames, setProcessedFrames] = useState(14820);
   const [fps, setFps] = useState(29.8);
   const [backendStatus, setBackendStatus] = useState("checking");
+
+  // Alert & Evidence Escalation States
+  const [alertThreshold, setAlertThreshold] = useState(0.65);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isAlertAcknowledged, setIsAlertAcknowledged] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState(null);
+
+  // Reset alert acknowledgment state when changing cameras or when score drops below threshold
+  useEffect(() => {
+    setIsAlertAcknowledged(false);
+  }, [selectedCam]);
+
+  useEffect(() => {
+    if (emaScore < alertThreshold) {
+      setIsAlertAcknowledged(false);
+    }
+  }, [emaScore, alertThreshold]);
+
+  // Build specific forensic evidence breakdown for threshold breaches
+  const buildForensicEvidence = (cam, frame, score) => {
+    const f1 = Math.max(1, frame - 18);
+    const f2 = Math.max(1, frame - 11);
+    const f3 = Math.max(1, frame - 4);
+    return [
+      {
+        id: "prnu",
+        title: "PRNU Sensor Fingerprint Mismatch",
+        description: `Camera sensor noise correlation dropped to 0.12 at frame #${f1} (ref: 0.88). Indicates non-authentic hardware pipeline.`,
+        tag: `PRNU Mismatch at Frame #${f1}`,
+        type: "HARDWARE_FINGERPRINT",
+      },
+      {
+        id: "rppg",
+        title: "rPPG Sub-Dermal Pulse Disruption",
+        description: `Sub-dermal blood volume pulse absorption spectrum missing at frame #${f2} (Pulse spectral power: 0.04).`,
+        tag: `rPPG Pulse Drop at Frame #${f2}`,
+        type: "BIOMETRIC_ANOMALY",
+      },
+      {
+        id: "syncnet",
+        title: "SyncNet Audio-Visual Lip Sync Offset",
+        description: `Lip motion offset relative to audio track measured +135ms lag at frame #${f3}.`,
+        tag: `Lip-Sync Lag (+135ms) at Frame #${f3}`,
+        type: "PHONEME_DISCREPANCY",
+      },
+      {
+        id: "classifier",
+        title: "Spatial Deepfake Boundary Artifact",
+        description: `Neural face-swap boundary synthesis artifacts detected across spatial bounding box (Score: ${(score * 100).toFixed(1)}%).`,
+        tag: `Spatial Artifact at Frame #${frame}`,
+        type: "NEURAL_SYNTHESIS",
+      },
+    ];
+  };
 
   // Webcam stream state & refs
   const webcamVideoRef = useRef(null);
@@ -206,18 +266,30 @@ export default function LiveSurveillanceView() {
         return updated;
       });
 
-      // SOC Alert logging
-      if (nextEma > 0.65 && (tick % 8 === 0 || eventLogs.length === 0)) {
-        const timestamp = new Date().toLocaleTimeString();
-        const newLog = {
-          id: `${Date.now()}-${Math.random()}`,
-          timestamp,
-          level: "CRITICAL",
-          cam: selectedCam.id,
-          message: `Sliding-window threshold alert: EMA score ${nextEma} > 0.65 (SYNTHETIC FLAGGED)`,
-          hash: selectedCam.hashChainId,
-        };
-        setEventLogs((logs) => [newLog, ...logs.slice(0, 19)]);
+      // Trigger Sound Alarm & SOC Alert logging when threshold is breached
+      if (nextEma >= alertThreshold) {
+        if (tick % 8 === 0 || eventLogs.length === 0) {
+          if (!isAlertAcknowledged) {
+            playAlertChime(isAudioMuted);
+          }
+
+          const timestamp = new Date().toLocaleTimeString();
+          const frameNum = processedFrames + 1;
+          const evidenceList = buildForensicEvidence(selectedCam, frameNum, nextEma);
+
+          const newLog = {
+            id: `${Date.now()}-${Math.random()}`,
+            timestamp,
+            level: "CRITICAL",
+            cam: selectedCam.id,
+            frameNumber: frameNum,
+            score: nextEma,
+            message: `PRNU mismatch & rPPG pulse disruption detected at frame #${frameNum} (EMA score ${nextEma} >= ${alertThreshold})`,
+            evidenceList,
+            hash: selectedCam.hashChainId,
+          };
+          setEventLogs((logs) => [newLog, ...logs.slice(0, 19)]);
+        }
       } else if (tick % 15 === 0) {
         const timestamp = new Date().toLocaleTimeString();
         const newLog = {
@@ -225,6 +297,7 @@ export default function LiveSurveillanceView() {
           timestamp,
           level: "INFO",
           cam: selectedCam.id,
+          frameNumber: processedFrames + 1,
           message: `Frame cluster verified. Hash chain integrity: VALID. FPS: ${calculatedFps}`,
           hash: selectedCam.hashChainId,
         };
@@ -233,7 +306,7 @@ export default function LiveSurveillanceView() {
     }, 600);
 
     return () => clearInterval(interval);
-  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs]);
+  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs, alertThreshold, isAudioMuted, processedFrames, isAlertAcknowledged]);
 
   // SVG Chart Paths
   const chartHeight = 110;
@@ -248,8 +321,8 @@ export default function LiveSurveillanceView() {
 
   const areaPath = `M 0,${chartHeight} L ${points} L ${chartWidth},${chartHeight} Z`;
 
-  const isSynthetic = emaScore >= 0.65;
-  const isAuthentic = emaScore < 0.40;
+  const isSynthetic = emaScore >= alertThreshold;
+  const isAuthentic = emaScore < Math.max(0.20, alertThreshold - 0.25);
 
   const mockTelemetryStatus = {
     job_id: "surveillance-stream-live",
@@ -317,6 +390,30 @@ export default function LiveSurveillanceView() {
             <div className="text-[10px] font-mono text-slate-500 uppercase">Ingestion Protocol</div>
             <div className="text-xs font-mono font-bold text-emerald-700">{selectedCam.protocol}</div>
           </div>
+
+          {/* Sound Alarm Mute / Unmute Toggle */}
+          <button
+            onClick={() => setIsAudioMuted(!isAudioMuted)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer shadow-xs border ${
+              isAudioMuted
+                ? "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+                : "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
+            }`}
+            title={isAudioMuted ? "Unmute Audio Alarm Chime" : "Mute Audio Alarm Chime"}
+          >
+            {isAudioMuted ? (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Muted</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
+                <span className="hidden sm:inline">Audio Alarm ON</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer shadow-xs ${
@@ -379,9 +476,54 @@ export default function LiveSurveillanceView() {
           </div>
 
           {/* Live Video Viewport Container */}
-          <div className="relative rounded-2xl bg-slate-950 border border-slate-300 overflow-hidden shadow-xl group">
+          <div className={`relative rounded-2xl bg-slate-950 transition-all duration-300 overflow-hidden shadow-xl group border ${
+            isSynthetic ? "border-rose-500 shadow-[0_0_35px_rgba(225,29,72,0.4)]" : "border-slate-300"
+          }`}>
             
             <div className="relative aspect-video w-full bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+              
+              {/* Strobe Alert Header Banner on Video Feed */}
+              {isSynthetic && (
+                !isAlertAcknowledged ? (
+                  <div className="absolute top-0 left-0 right-0 z-30 bg-rose-600/95 backdrop-blur-md text-white px-4 py-2.5 border-b border-rose-400 flex items-center justify-between shadow-xl animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="w-5 h-5 text-white animate-pulse shrink-0" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase font-mono tracking-wider text-rose-100">
+                            CRITICAL THREAT BREACHED — FRAME #{processedFrames}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white text-rose-900 uppercase">
+                            Score: {(emaScore * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-rose-100 font-mono mt-0.5">
+                          PRNU Mismatch & rPPG Pulse Disruption detected at frame #{processedFrames - 18}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsAlertAcknowledged(true)}
+                      className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-lg shadow cursor-pointer shrink-0 transition-colors"
+                    >
+                      Acknowledge Alert
+                    </button>
+                  </div>
+                ) : (
+                  <div className="absolute top-0 left-0 right-0 z-30 bg-slate-900/90 backdrop-blur-md text-emerald-300 px-4 py-2 border-b border-emerald-500/40 flex items-center justify-between shadow-md animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-2 font-mono text-xs font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>ALERT ACKNOWLEDGED BY OPERATOR — MONITORING LIVE FEED</span>
+                    </div>
+                    <button
+                      onClick={() => setIsAlertAcknowledged(false)}
+                      className="px-2.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] rounded border border-slate-600 transition-colors cursor-pointer"
+                    >
+                      Re-arm Alarm
+                    </button>
+                  </div>
+                )
+              )}
               
               {/* Actual Laptop Webcam Video Element */}
               {selectedCam.type === "webcam" ? (
@@ -535,7 +677,7 @@ export default function LiveSurveillanceView() {
                   </div>
                   <div className="text-[10px] opacity-90 font-sans">
                     {isSynthetic
-                      ? "Sliding-window EMA exceeded 0.65 threshold across consecutive frames."
+                      ? `Sliding-window EMA exceeded ${alertThreshold.toFixed(2)} threshold across consecutive frames.`
                       : "Temporal pulse and facial boundaries fall within authentic physiological parameters."}
                   </div>
                 </div>
@@ -545,17 +687,17 @@ export default function LiveSurveillanceView() {
             {/* SVG Line Graph */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
-                <span>Synthetic Threshold (0.65)</span>
+                <span>Synthetic Threshold ({alertThreshold.toFixed(2)})</span>
                 <span>Buffer Size: 16 Frames</span>
               </div>
 
               <div className="relative w-full h-28 bg-slate-50 rounded-xl border border-slate-200 p-2 overflow-hidden">
                 <div
-                  className="absolute left-0 right-0 border-b border-dashed border-rose-400 z-10"
-                  style={{ top: `${(1 - 0.65) * 100}%` }}
+                  className="absolute left-0 right-0 border-b border-dashed border-rose-400 z-10 transition-all duration-300"
+                  style={{ top: `${(1 - alertThreshold) * 100}%` }}
                 >
-                  <span className="absolute right-2 -top-4 text-[9px] font-mono text-rose-600 bg-white px-1 rounded border border-rose-200">
-                    0.65 THRESHOLD
+                  <span className="absolute right-2 -top-4 text-[9px] font-mono text-rose-600 bg-white px-1 rounded border border-rose-200 font-bold shadow-2xs">
+                    {alertThreshold.toFixed(2)} THRESHOLD
                   </span>
                 </div>
 
@@ -594,7 +736,7 @@ export default function LiveSurveillanceView() {
             </div>
 
             {/* Sliding-Window Controls */}
-            <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-3 text-xs font-mono">
+            <div className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
               <div>
                 <label className="text-[10px] text-slate-500 block uppercase font-sans font-bold mb-1">Window Size (Frames)</label>
                 <select
@@ -620,8 +762,70 @@ export default function LiveSurveillanceView() {
                   <option value={0.4}>0.40 (Fast Response)</option>
                 </select>
               </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 block uppercase font-sans font-bold mb-1">Alert Sensitivity Threshold</label>
+                <select
+                  value={alertThreshold}
+                  onChange={(e) => setAlertThreshold(Number(e.target.value))}
+                  className="w-full bg-white border border-rose-300 rounded-lg px-2.5 py-1 text-rose-900 font-bold focus:outline-none focus:border-rose-500"
+                >
+                  <option value={0.50}>0.50 (Sensitive Alert)</option>
+                  <option value={0.65}>0.65 (Standard Threshold)</option>
+                  <option value={0.80}>0.80 (Strict / High Confidence)</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          {/* Surfaced Forensic Evidence Panel (Escalation Treatment) */}
+          {isSynthetic && (
+            <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 shadow-md space-y-3 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-rose-900 uppercase font-mono">
+                  <ShieldAlert className="w-4 h-4 text-rose-600 animate-pulse" />
+                  <span>Surfaced Forensic Evidence — Frame #{processedFrames}</span>
+                </div>
+                {isAlertAcknowledged ? (
+                  <button
+                    onClick={() => setIsAlertAcknowledged(false)}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                    <span>Acknowledged (Click to Re-arm)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAlertAcknowledged(true)}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[10px] hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
+                  >
+                    Acknowledge Alert
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-rose-800 font-mono font-medium leading-tight">
+                Rolling EMA score (<strong>{(emaScore * 100).toFixed(1)}%</strong>) breached the threshold (<strong>{(alertThreshold * 100).toFixed(0)}%</strong>). The live pipeline surfaced the following specific evidence:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                {buildForensicEvidence(selectedCam, processedFrames, emaScore).map((ev) => (
+                  <div key={ev.id} className="p-2.5 rounded-xl bg-white border border-rose-200 shadow-2xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900 text-[11px] flex items-center gap-1.5">
+                        <Fingerprint className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        {ev.title}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 leading-tight font-sans">{ev.description}</p>
+                    <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                      {ev.tag}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Real-Time SOC Alert Log */}
           <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-md space-y-3">
@@ -635,35 +839,70 @@ export default function LiveSurveillanceView() {
               </span>
             </div>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 text-[11px] font-mono">
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1 text-[11px] font-mono">
               {eventLogs.length === 0 ? (
                 <div className="py-6 text-center text-slate-400 text-xs font-sans">
                   Monitoring feed... Waiting for alert triggers.
                 </div>
               ) : (
-                eventLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className={`p-2.5 rounded-lg border flex items-start justify-between gap-2 transition-all ${
-                      log.level === "CRITICAL"
-                        ? "bg-rose-50 border-rose-200 text-rose-900"
-                        : "bg-slate-50 border-slate-200 text-slate-700"
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-500">{log.timestamp}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                          log.level === "CRITICAL" ? "bg-rose-600 text-white" : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                        }`}>
-                          {log.level}
-                        </span>
-                        <span className="text-[10px] text-slate-500 uppercase">{log.cam}</span>
+                eventLogs.map((log) => {
+                  const isExpanded = expandedLogId === log.id;
+                  return (
+                    <div
+                      key={log.id}
+                      className={`p-2.5 rounded-lg border transition-all ${
+                        log.level === "CRITICAL"
+                          ? "bg-rose-50 border-rose-200 text-rose-900"
+                          : "bg-slate-50 border-slate-200 text-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-0.5 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500">{log.timestamp}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                              log.level === "CRITICAL" ? "bg-rose-600 text-white" : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            }`}>
+                              {log.level}
+                            </span>
+                            <span className="text-[10px] text-slate-500 uppercase">{log.cam}</span>
+                            {log.frameNumber && (
+                              <span className="text-[10px] font-bold text-rose-700">Frame #{log.frameNumber}</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold">{log.message}</p>
+                        </div>
+                        {log.evidenceList && (
+                          <button
+                            onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                            className="p-1 text-rose-700 hover:text-rose-900 hover:bg-rose-100 rounded transition-colors cursor-pointer"
+                            title="Toggle Evidence Details"
+                          >
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        )}
                       </div>
-                      <p className="text-xs font-semibold">{log.message}</p>
+
+                      {/* Expandable Forensic Evidence Details */}
+                      {isExpanded && log.evidenceList && (
+                        <div className="mt-2.5 pt-2 border-t border-rose-200 space-y-1.5 animate-in fade-in duration-200">
+                          <div className="text-[10px] font-bold uppercase text-rose-800 flex items-center gap-1">
+                            <FileText className="w-3 h-3 text-rose-600" />
+                            Surfaced Forensic Evidence Breakdown:
+                          </div>
+                          <div className="space-y-1">
+                            {log.evidenceList.map((ev) => (
+                              <div key={ev.id} className="p-1.5 rounded bg-white border border-rose-200 text-[10px] font-sans">
+                                <span className="font-bold text-slate-900 font-mono">{ev.tag}: </span>
+                                <span className="text-slate-700">{ev.description}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

@@ -1,24 +1,22 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --detector-video: #06b6d4;
-    --detector-aasist: #a855f7;
-    --detector-rppg: #f43f5e;
-    --detector-syncnet: #14b8a6;
-  }
+:root {
+  --detector-video: #06b6d4;
+  --detector-aasist: #a855f7;
+  --detector-rppg: #f43f5e;
+  --detector-syncnet: #14b8a6;
+}
 
-  body {
-    background-color: #f8fafc;
-    color: #0f172a;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
 
-  /* Monospace numbers for consistent telemetry & clocks */
-  .font-mono, [data-tabular] {
-    font-variant-numeric: tabular-nums;
-  }
+/* Monospace numbers for consistent telemetry & clocks */
+.font-mono, [data-tabular] {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Custom Subtle Scrollbar ── */
