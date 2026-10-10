@@ -1,0 +1,8 @@
+numpy
+scipy
+fastapi
+uvicorn
+opencv-python
+facenet-pytorch
+pytest
+httpx
