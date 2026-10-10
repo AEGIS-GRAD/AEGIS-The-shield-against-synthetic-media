@@ -37,3 +37,5 @@ security/transport/certs/
 # Cache directories
 .frame_cache/
 **/.frame_cache/
+.frame_cache_efficientnet/
+**/.frame_cache_efficientnet/
