@@ -1,46 +1,173 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* AEGIS design system — Warm Sand & Navy, light only. All colors oklch. */
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-disabled: var(--disabled);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-authentic: var(--authentic);
+  --color-authentic-soft: var(--authentic-soft);
+  --color-authentic-ink: var(--authentic-ink);
+  --color-synthetic: var(--synthetic);
+  --color-synthetic-soft: var(--synthetic-soft);
+  --color-synthetic-ink: var(--synthetic-ink);
+  --color-inconclusive: var(--inconclusive);
+  --color-inconclusive-soft: var(--inconclusive-soft);
+  --color-inconclusive-ink: var(--inconclusive-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-soft: 0 1px 3px oklch(0.34 0.07 255 / 0.08);
+  --shadow-lift: 0 8px 24px -8px oklch(0.34 0.07 255 / 0.18);
+}
 
 :root {
-  --detector-video: #06b6d4;
-  --detector-aasist: #a855f7;
-  --detector-rppg: #f43f5e;
-  --detector-syncnet: #14b8a6;
+  --radius: 8px;
+  --background: oklch(0.978 0.008 80);
+  --foreground: oklch(0.29 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.29 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.29 0 0);
+  --primary: oklch(0.34 0.07 255);
+  --primary-foreground: oklch(0.985 0.005 80);
+  --primary-soft: oklch(0.95 0.015 255);
+  --secondary: oklch(0.955 0.012 80);
+  --secondary-foreground: oklch(0.34 0.07 255);
+  --muted: oklch(0.96 0.01 80);
+  --muted-foreground: oklch(0.5 0.02 85);
+  --disabled: oklch(0.7 0.02 90);
+  --accent: oklch(0.64 0.15 42);
+  --accent-foreground: oklch(0.99 0.005 80);
+  --accent-soft: oklch(0.95 0.03 45);
+  --destructive: oklch(0.62 0.2 23);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.92 0.017 80);
+  --input: oklch(0.92 0.017 80);
+  --ring: oklch(0.64 0.15 42);
+  --authentic: oklch(0.63 0.17 149);
+  --authentic-soft: oklch(0.96 0.025 155);
+  --authentic-ink: oklch(0.45 0.13 150);
+  --synthetic: oklch(0.62 0.2 23);
+  --synthetic-soft: oklch(0.95 0.02 18);
+  --synthetic-ink: oklch(0.5 0.19 25);
+  --inconclusive: oklch(0.79 0.16 72);
+  --inconclusive-soft: oklch(0.97 0.04 85);
+  --inconclusive-ink: oklch(0.5 0.12 65);
+  --info: oklch(0.62 0.19 260);
+  --info-soft: oklch(0.95 0.025 260);
+  --info-ink: oklch(0.48 0.18 262);
+  --chart-1: oklch(0.34 0.07 255);
+  --chart-2: oklch(0.64 0.15 42);
+  --chart-3: oklch(0.59 0.08 182);
+  --chart-4: oklch(0.72 0.11 85);
+  --chart-5: oklch(0.6 0.03 255);
+  --chart-6: oklch(0.52 0.08 330);
+  --sidebar: oklch(0.34 0.07 255);
+  --sidebar-foreground: oklch(0.88 0.02 255);
+  --sidebar-primary: oklch(0.64 0.15 42);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.4 0.07 255);
+  --sidebar-accent-foreground: oklch(0.99 0 0);
+  --sidebar-border: oklch(0.42 0.06 255);
+  --sidebar-ring: oklch(0.64 0.15 42);
 }
 
-body {
-  background-color: #f8fafc;
-  color: #0f172a;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.02em; color: var(--color-primary); }
+  h2 { font-size: 22px; line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; color: var(--color-primary); }
+  h3 { font-size: 18px; line-height: 1.3; font-weight: 600; color: var(--color-primary); }
 }
 
-/* Monospace numbers for consistent telemetry & clocks */
-.font-mono, [data-tabular] {
-  font-variant-numeric: tabular-nums;
+@utility surface {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
 }
 
-/* ── Custom Subtle Scrollbar ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@utility mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
-/* ── Skeleton shimmer animation ── */
-@keyframes aegis-shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+@utility caption {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
 }
 
-.animate-shimmer {
-  animation: aegis-shimmer 2s infinite ease-in-out;
+@utility transition-soft {
+  transition: all 150ms ease;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@utility animate-live {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+@utility animate-scan {
+  animation: scan 3s linear infinite;
 }
