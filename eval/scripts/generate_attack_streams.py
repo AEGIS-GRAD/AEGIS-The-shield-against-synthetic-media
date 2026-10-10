@@ -54,10 +54,19 @@ INDEX_FIELDS = [
 ]
 
 
-def synthesize_frames(n, fps, background, seed):
-    """Camera-like scene with a moving subject, burned-in counter and sensor
-    noise, so every frame is unique (replay/reorder must change content)."""
+def synthesize_frames(n, fps, background, seed, prnu_seed=None):
+    """Camera-like scene with a moving subject, burned-in counter, and persistent
+    PRNU sensor pattern + temporal sensor noise.
+    
+    If prnu_seed is specified, a persistent PRNU noise matrix unique to this physical sensor
+    is generated and blended into every frame."""
     rng = np.random.default_rng(seed)
+    
+    # Generate persistent hardware PRNU sensor fingerprint
+    effective_prnu_seed = prnu_seed if prnu_seed is not None else seed
+    prnu_rng = np.random.default_rng(effective_prnu_seed)
+    persistent_prnu = prnu_rng.normal(0, 3.5, (HEIGHT, WIDTH, 3)).astype(np.float32)
+
     frames = []
     for i in range(n):
         frame = np.full((HEIGHT, WIDTH, 3), background, dtype=np.uint8)
@@ -66,8 +75,13 @@ def synthesize_frames(n, fps, background, seed):
         cv2.circle(frame, (x, HEIGHT // 2), 28, (110, 145, 190), -1)
         cv2.putText(frame, f"{i:05d}", (8, 22), cv2.FONT_HERSHEY_SIMPLEX,
                     0.6, (255, 255, 255), 1, cv2.LINE_AA)
-        noise = rng.integers(-3, 4, frame.shape, dtype=np.int16)
-        frames.append(np.clip(frame.astype(np.int16) + noise, 0, 255).astype(np.uint8))
+        
+        # Temporal thermal noise per frame
+        thermal_noise = rng.integers(-2, 3, frame.shape, dtype=np.int16)
+        
+        # Superimpose physical sensor PRNU fingerprint and thermal noise
+        noisy_frame = frame.astype(np.float32) + persistent_prnu + thermal_noise
+        frames.append(np.clip(noisy_frame, 0, 255).astype(np.uint8))
     return frames
 
 
@@ -88,7 +102,7 @@ def read_frames(path, max_frames):
 
 def capture_meta(source, index, fps):
     """The sequence_number/timestamp_ms a frame carried when it was captured."""
-    seq_base, ts_base = (A_SEQ_BASE, A_TS_BASE_MS) if source == "A" else (B_SEQ_BASE, B_TS_BASE_MS)
+    seq_base, ts_base = (A_SEQ_BASE, A_TS_BASE_MS) if source in ("A", "C") else (B_SEQ_BASE, B_TS_BASE_MS)
     return seq_base + index, ts_base + round(index * 1000 / fps)
 
 
@@ -101,6 +115,10 @@ def build_scenario(tamper_type, mode, n, start, length, fps):
     if tamper_type == "splice":
         for j, pos in enumerate(seg):
             refs[pos] = ("B", j)
+    elif tamper_type == "prnu_splice":
+        # Spliced segment from Camera C: visually identical scene, but physically different sensor
+        for pos in seg:
+            refs[pos] = ("C", pos)
     elif tamper_type == "replay":
         replay_from = start - length
         for j, pos in enumerate(seg):
@@ -110,10 +128,14 @@ def build_scenario(tamper_type, mode, n, start, length, fps):
         swapped = list(range(start + half, start + length)) + list(range(start, start + half))
         for pos, src in zip(seg, swapped):
             refs[pos] = ("A", src)
+    elif tamper_type == "auth_bypass":
+        # Device credentials attack: stream frames remain unmanipulated visually,
+        # but connection attempts use invalid, expired, or forged client credentials
+        refs = [("A", i) for i in range(n)]
 
     meta = []
     for pos, (src, idx) in enumerate(refs):
-        if mode == "forged":
+        if mode == "forged" or mode == "invalid_credentials":
             meta.append(capture_meta("A", pos, fps))
         else:
             meta.append(capture_meta(src, idx, fps))
@@ -137,6 +159,8 @@ DESCRIPTIONS = {
     ("replay", "forged"): "Segment replaced by earlier footage from the same stream; metadata rewritten to look continuous.",
     ("reorder", "carried"): "Two adjacent blocks delivered swapped; frames keep original metadata, so values arrive out of order.",
     ("reorder", "forged"): "Two adjacent blocks delivered swapped; metadata rewritten to look in-order.",
+    ("prnu_splice", "forged"): "Spliced segment from visually identical scene captured on a physically different camera sensor (tests PRNU hardware fingerprint detection).",
+    ("auth_bypass", "invalid_credentials"): "Connection attempt using invalid, untrusted, or forged device credentials to test mTLS authentication layer.",
 }
 
 
@@ -144,7 +168,8 @@ def generate(output_dir, source, splice_source, num_frames, fps, seed):
     if source:
         frames_a, fps = read_frames(source, num_frames)
     else:
-        frames_a = synthesize_frames(num_frames, fps, (170, 185, 175), seed)
+        # Camera A: Primary camera with enrolled PRNU sensor seed 1001
+        frames_a = synthesize_frames(num_frames, fps, (170, 185, 175), seed=seed, prnu_seed=1001)
     n = len(frames_a)
 
     # Segment sits in the middle third; replay needs `length` frames before it.
@@ -158,9 +183,14 @@ def generate(output_dir, source, splice_source, num_frames, fps, seed):
         if len(frames_b) < length:
             raise ValueError(f"Splice source needs >= {length} frames, got {len(frames_b)}")
     else:
-        frames_b = synthesize_frames(length, fps, (95, 110, 140), seed + 1)
+        # Camera B: Dissimilar camera source with distinct background and sensor
+        frames_b = synthesize_frames(length, fps, (95, 110, 140), seed=seed + 1, prnu_seed=2002)
 
-    pools = {"A": frames_a, "B": frames_b}
+    # Camera C: Visually similar / identical scene to Camera A, but captured by a physically different sensor
+    # (used for testing PRNU hardware fingerprint extraction)
+    frames_c = synthesize_frames(num_frames, fps, (170, 185, 175), seed=seed, prnu_seed=9999)
+
+    pools = {"A": frames_a, "B": frames_b, "C": frames_c}
     os.makedirs(output_dir, exist_ok=True)
     reference_path = os.path.join(output_dir, "clean", "stream.mkv")
 
@@ -168,6 +198,9 @@ def generate(output_dir, source, splice_source, num_frames, fps, seed):
         (f"{t}_{m}", t, m)
         for t in ("splice", "replay", "reorder")
         for m in ("carried", "forged")
+    ] + [
+        ("prnu_splice", "prnu_splice", "forged"),
+        ("auth_bypass", "auth_bypass", "invalid_credentials"),
     ]
 
     index_rows = []
@@ -186,7 +219,10 @@ def generate(output_dir, source, splice_source, num_frames, fps, seed):
 
         rows = []
         for pos, ((src, idx), (seq, ts)) in enumerate(zip(refs, meta)):
-            tampered = (src, idx) != ("A", pos)
+            if tamper_type == "auth_bypass":
+                tampered = True
+            else:
+                tampered = (src, idx) != ("A", pos)
             rows.append({
                 "position": pos,
                 "sequence_number": seq,
@@ -213,8 +249,8 @@ def generate(output_dir, source, splice_source, num_frames, fps, seed):
             "num_frames": n,
             "num_tampered": len(tampered_positions),
             "first_tampered_position": tampered_positions[0] if tampered_positions else -1,
-            "segment_start": start if tampered_positions else -1,
-            "segment_length": length if tampered_positions else 0,
+            "segment_start": start if (tampered_positions and tamper_type != "auth_bypass") else (0 if tamper_type == "auth_bypass" else -1),
+            "segment_length": length if (tampered_positions and tamper_type != "auth_bypass") else (n if tamper_type == "auth_bypass" else 0),
             "description": DESCRIPTIONS[(tamper_type, mode)],
         })
         print(f"Generated {name}: {len(tampered_positions)}/{n} tampered frames -> {stream_path}")

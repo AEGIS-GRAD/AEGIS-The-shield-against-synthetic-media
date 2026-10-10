@@ -51,3 +51,26 @@ Covers valid uploads plus malicious cases: spoofed extensions, disallowed extens
 - **Test 2 (Oversized Upload):** `413 Payload Too Large`.
 - **Test 3 (Spoofed File):** `415 Unsupported Media Type`.
 - **Test 4 (Path-Traversal Filename):** `400 Bad Request`.
+
+---
+
+## Live Streaming Ingestion & DoS Hardening (`ingestion/`)
+
+Live surveillance streams exhibit a fundamentally different threat profile than discrete file uploads: they are **long-lived TCP/TLS persistent connections**.
+
+To prevent denial-of-service (DoS) attacks from exhausting server resources, `ingestion/server.py` enforces:
+
+1. **Global Concurrency Ceiling:** Capped via `AEGIS_MAX_CONCURRENT_STREAMS` (default 20). Excess streams beyond capacity are shed gracefully with an explicit rejection message and immediate socket closure.
+2. **Per-IP Quota Enforcement:** Limited via `AEGIS_MAX_STREAMS_PER_IP` (default 5) to prevent a single IP from monopolizing camera slots.
+3. **Token-Bucket Frame Rate Limiter:** Enforces nominal frame rate (`AEGIS_MAX_STREAM_FPS`, default 60 fps) with burst tolerance (`AEGIS_STREAM_BURST_CAPACITY`, default 30). High-frequency frame floods (> 100 fps blast) are shed immediately to prevent CPU hashing starvation.
+4. **Anti-Slowloris Inactivity Timeout:** Connections that stall without sending frame lines for > `AEGIS_STREAM_IDLE_TIMEOUT` (default 10.0s) are dropped automatically.
+
+### Running Streaming Ingestion & DoS Tests:
+```bash
+# Run standalone DoS hardening and flood load-shedding test suite:
+pytest security/tests/test_stream_dos_hardening.py -v
+
+# Run full attack simulation harness (all 5+ attack categories):
+pytest security/tests/test_harness_integration.py -v
+```
+

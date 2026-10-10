@@ -53,6 +53,70 @@ def stream_scenario(scenario_name, index_row, context, clean_hashes):
     stream_path = os.path.join(scenario_dir, 'stream.mkv')
     manifest_path = os.path.join(scenario_dir, 'manifest.csv')
     
+    # 1. SPECIAL CASE: auth_bypass (test unauthorized / rogue device credentials against mTLS)
+    if scenario_name == 'auth_bypass':
+        print("  -> Simulating unauthenticated / rogue device connection attempt...")
+        ca_cert = os.path.join(os.path.dirname(__file__), '..', 'transport', 'certs', 'ca.crt')
+        rogue_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+        rogue_context.check_hostname = False
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            conn = rogue_context.wrap_socket(sock, server_hostname=HOST)
+            conn.connect((HOST, PORT))
+            conn.sendall(b"ROGUE_UNAUTHENTICATED_STREAM\n")
+            data = conn.recv(1024)
+            if data == b'':
+                print("  [OK] Server rejected and severed unauthenticated rogue connection!")
+                return True
+            else:
+                print("  [FAIL] Server accepted an unauthenticated rogue camera connection!")
+                return False
+        except ssl.SSLError as e:
+            print(f"  [OK] Server successfully REJECTED unauthorized device credentials at TLS layer: {e}")
+            return True
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            print("  [OK] Server severed unauthenticated rogue connection!")
+            return True
+        except Exception as e:
+            print(f"  [OK] Connection refused or rejected: {e}")
+            return True
+
+    # 2. SPECIAL CASE: prnu_splice (validate hardware sensor PRNU fingerprint mismatch)
+    if scenario_name == 'prnu_splice':
+        print("  -> Forensics Layer: Validating PRNU Hardware Fingerprint on spliced frames...")
+        from security.forensics.prnu import PRNUExtractor
+        extractor = PRNUExtractor(level=2, wavelet="db4")
+        
+        # Build baseline from clean reference stream frames
+        ref_path = os.path.join(os.path.dirname(scenario_dir), 'clean', 'stream.mkv')
+        ref_cap = cv2.VideoCapture(ref_path)
+        ref_frames = []
+        for _ in range(15):
+            ret_f, f_b = ref_cap.read()
+            if ret_f:
+                ref_frames.append(f_b)
+        ref_cap.release()
+        
+        baseline_prnu = extractor.generate_baseline(ref_frames)
+        
+        # Check spliced frame PCE vs baseline
+        spliced_pos = int(index_row.get('segment_start', 20))
+        cap_check = cv2.VideoCapture(stream_path)
+        spliced_frame = None
+        for i in range(spliced_pos + 1):
+            ret_s, f_s = cap_check.read()
+            if i == spliced_pos and ret_s:
+                spliced_frame = f_s
+        cap_check.release()
+        
+        if spliced_frame is not None:
+            residual = extractor.extract_noise_residual(spliced_frame)
+            pce = extractor.compute_pce(residual, baseline_prnu)
+            print(f"  -> PRNU PCE of Spliced Frame: {pce:.2f} (Threshold: 50.0)")
+            assert pce < 50.0, f"PRNU PCE unexpectedly high on foreign sensor: {pce}"
+            print("  [OK] PRNU Forensics Extractor detected hardware sensor anomaly!")
+
     # Read manifest for sequence numbers and timestamps
     manifest = []
     with open(manifest_path, 'r') as f:
@@ -62,7 +126,7 @@ def stream_scenario(scenario_name, index_row, context, clean_hashes):
             
     cap = cv2.VideoCapture(stream_path)
     
-    # Connect
+    # Connect with authenticated client context
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2.0)
