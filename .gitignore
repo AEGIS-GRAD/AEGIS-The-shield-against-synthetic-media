@@ -33,3 +33,7 @@ security/tests/fixtures/*.json
 
 security/tests/fixtures/*.json
 security/transport/certs/
+
+# Cache directories
+.frame_cache/
+**/.frame_cache/
