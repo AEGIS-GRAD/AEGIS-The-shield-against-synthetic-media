@@ -1,11 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UploadCloud, Cctv, ArrowRight, ShieldCheck } from "lucide-react";
 import { analyses } from "@/lib/mock";
 import { ModalityIcon, VerdictBadge } from "@/components/aegis/ui";
 
 export default function Home() {
+  const [recent, setRecent] = useState<any[]>(analyses.slice(0, 3).map((a) => ({ ...a, is_demo: true })));
+
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRecent(data.slice(0, 3));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="mx-auto max-w-5xl py-6">
       <div className="text-center">
@@ -30,7 +44,7 @@ export default function Home() {
           href="/live"
           icon={<Cctv className="size-7" />}
           title="Open live surveillance"
-          text="Watch your camera feeds in real time and get alerted the moment footage looks manipulated."
+          text="Watch your camera feeds in real time and test Task 3 streaming rPPG via live webcam."
           cta="Open camera wall"
           live
         />
@@ -38,21 +52,37 @@ export default function Home() {
 
       <div className="mt-12">
         <div className="mb-3 flex items-center justify-between">
-          <h3>Recent forensic reports</h3>
+          <div className="flex items-center gap-2">
+            <h3>Recent forensic reports</h3>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+              LIVE STORE
+            </span>
+          </div>
           <Link href="/reports" className="text-xs font-medium text-accent hover:underline">
             See all →
           </Link>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          {analyses.slice(0, 3).map((a) => (
+          {recent.map((a) => (
             <Link key={a.id} href={`/reports/${a.id}`} className="surface p-4 transition-soft hover:shadow-lift">
-              <div className="flex items-center gap-2">
-                <ModalityIcon m={a.modality} />
-                <span className="truncate text-sm font-medium">{a.file}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ModalityIcon m={a.modality} />
+                  <span className="truncate text-sm font-medium">{a.file}</span>
+                </div>
+                {a.is_demo ? (
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-muted text-muted-foreground border shrink-0">
+                    DEMO
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold shrink-0">
+                    REAL
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <VerdictBadge verdict={a.verdict} size="sm" />
-                <span className="mono text-muted-foreground">{a.time}</span>
+                <span className="mono text-muted-foreground text-xs">{a.time}</span>
               </div>
             </Link>
           ))}

@@ -1,14 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { analyses, type Verdict } from "@/lib/mock";
 import { Chip, ConfidenceMeter, EmptyState, ModalityIcon, PageHeader, Panel, VerdictBadge } from "@/components/aegis/ui";
 import { cn } from "@/lib/utils";
 
+type ReportItem = {
+  id: string;
+  file: string;
+  modality: any;
+  verdict: Verdict;
+  confidence: number;
+  time: string;
+  status: string;
+  is_demo?: boolean;
+};
+
 export default function ReportsPage() {
   const [f, setF] = useState<Verdict | "all">("all");
-  const rows = analyses.filter((a) => f === "all" || a.verdict === f);
+  const [items, setItems] = useState<ReportItem[]>(analyses.map(a => ({ ...a, is_demo: true })));
+
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setItems(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch /api/jobs, using mock fallback:", err);
+      });
+  }, []);
+
+  const rows = items.filter((a) => f === "all" || a.verdict === f);
 
   return (
     <div>
@@ -18,7 +44,10 @@ export default function ReportsPage() {
           <button
             key={v}
             onClick={() => setF(v)}
-            className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium capitalize transition-soft", f === v ? "border-accent bg-accent-soft text-accent" : "bg-card text-muted-foreground hover:text-primary")}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-sm font-medium capitalize transition-soft",
+              f === v ? "border-accent bg-accent-soft text-accent" : "bg-card text-muted-foreground hover:text-primary"
+            )}
           >
             {v}
           </button>
@@ -36,6 +65,7 @@ export default function ReportsPage() {
                   <th className="font-medium">Verdict</th>
                   <th className="w-44 font-medium">Confidence</th>
                   <th className="font-medium">Time</th>
+                  <th className="font-medium">Type</th>
                   <th className="font-medium">Status</th>
                 </tr>
               </thead>
@@ -58,6 +88,17 @@ export default function ReportsPage() {
                       <ConfidenceMeter value={a.confidence} verdict={a.verdict} />
                     </td>
                     <td className="mono text-muted-foreground">{a.time}</td>
+                    <td>
+                      {a.is_demo ? (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+                          DEMO
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold">
+                          REAL
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <Chip tone={a.status === "Flagged" ? "warn" : "neutral"}>{a.status}</Chip>
                     </td>

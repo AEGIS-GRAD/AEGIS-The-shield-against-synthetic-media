@@ -39,6 +39,8 @@ import numpy as np
 REPO_ROOT  = Path(__file__).resolve().parents[2]   # d:/DeepFake_Grad
 VC_DIR     = REPO_ROOT / "detectors" / "video-classifier"
 AASIST_DIR = REPO_ROOT / "detectors" / "aasist"
+RPPG_DIR   = REPO_ROOT / "detectors" / "rppg"
+SYNCNET_DIR= REPO_ROOT / "detectors" / "syncnet"
 
 VIDEO_FAKE = REPO_ROOT / "eval" / "data" / "video_subset" / "fake"
 VIDEO_REAL = REPO_ROOT / "eval" / "data" / "video_subset" / "real"
@@ -57,6 +59,18 @@ logger = logging.getLogger("eval_standalone")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _import_file(mod_name: str, file_path: Path):
+    """Dynamically loads a python module from file path without static import errors."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(mod_name, str(file_path))
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module {mod_name} from {file_path}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
 
 def _collect(folder: Path, exts: set, limit: int | None) -> List[Path]:
     files = sorted(p for p in folder.iterdir() if p.suffix.lower() in exts)
@@ -146,8 +160,8 @@ def _load_vc_model(weights_path: Path):
 
 def run_video_classifier(limit: int | None):
     import torch
-    sys.path.insert(0, str(VC_DIR))
-    from preprocess import VideoPreprocessor
+    vc_prep_mod = _import_file("vc_preprocess", VC_DIR / "preprocess.py")
+    VideoPreprocessor = vc_prep_mod.VideoPreprocessor
 
     weights_path = VC_DIR / "efficientnet_b0_ffpp_c23.pth"
     if not weights_path.exists():
@@ -210,8 +224,6 @@ def run_video_classifier(limit: int | None):
 
 def run_aasist(limit: int | None, debug: bool = False):
     import torch
-    sys.path.insert(0, str(AASIST_DIR))
-
     if debug:
         os.environ["AASIST_DEBUG"] = "1"
 
@@ -221,8 +233,10 @@ def run_aasist(limit: int | None, debug: bool = False):
         logger.error("Place AASIST.pth inside detectors/aasist/")
         sys.exit(1)
 
-    from models.AASIST import Model
-    from preprocessing import preprocess_audio
+    aasist_mod = _import_file("aasist_model_arch", AASIST_DIR / "models" / "AASIST.py")
+    Model = aasist_mod.Model
+    prep_mod = _import_file("aasist_prep", AASIST_DIR / "preprocessing.py")
+    preprocess_audio = prep_mod.preprocess_audio
 
     AASIST_CONFIG = {
         "architecture": "AASIST",
@@ -293,6 +307,106 @@ def run_aasist(limit: int | None, debug: bool = False):
     return m
 
 
+# ── rPPG ───────────────────────────────────────────────────────────────────────
+
+def run_rppg(limit: int | None):
+    rppg_prep_mod = _import_file("rppg_preprocess", RPPG_DIR / "preprocess.py")
+    RppgPreprocessor = rppg_prep_mod.RppgPreprocessor
+    rppg_ext_mod = _import_file("rppg_extract_module", RPPG_DIR / "rppg_extract.py")
+    extract_pulse_signal = rppg_ext_mod.extract_pulse_signal
+    estimate_heart_rate = rppg_ext_mod.estimate_heart_rate
+    signal_quality_score = rppg_ext_mod.signal_quality_score
+
+    preprocessor = RppgPreprocessor()
+    fake_files = _collect(VIDEO_FAKE, VIDEO_EXTS, limit)
+    real_files = _collect(VIDEO_REAL, VIDEO_EXTS, limit)
+    logger.info(f"[rPPG] {len(fake_files)} fake, {len(real_files)} real")
+
+    scores, labels = [], []
+    failed = 0
+
+    for label_val, files, tag in [(1, fake_files, "FAKE"), (0, real_files, "REAL")]:
+        for fpath in files:
+            try:
+                t0 = time.perf_counter()
+                rgb_signals, fps, meta = preprocessor.preprocess_video(str(fpath))
+                if meta.get("guardrail_triggered", False):
+                    score = 0.5
+                else:
+                    lum = meta.get("luminance_confidence_factor", 1.0)
+                    pulse = extract_pulse_signal(rgb_signals, fps, denoise=(lum < 1.0))
+                    quality = signal_quality_score(pulse, fps=fps)
+                    score = float(np.clip(1.0 - quality, 0.0, 1.0))
+
+                elapsed = (time.perf_counter() - t0) * 1000
+                verdict = "FAKE" if score >= 0.5 else "REAL"
+                ok = "[OK]" if (verdict == "FAKE") == (label_val == 1) else "[FAIL]"
+                print(f"  {ok} [{tag}] {fpath.name[:52]:<52s}  score={score:.4f}  {elapsed:6.0f}ms")
+                scores.append(score)
+                labels.append(label_val)
+            except Exception as e:
+                failed += 1
+                print(f"  ! [{tag}] {fpath.name[:52]:<52s}  ERROR: {e}")
+
+    if failed:
+        logger.warning(f"[rPPG] {failed} files failed and were skipped")
+
+    m = _compute_metrics(scores, labels)
+    _print_results("RPPG  (CHROM Pulse Consistency)", m, "Classical physiological micro-vascular signal analysis")
+    return m
+
+
+# ── SyncNet ────────────────────────────────────────────────────────────────────
+
+def run_syncnet(limit: int | None):
+    if str(SYNCNET_DIR) not in sys.path:
+        sys.path.insert(0, str(SYNCNET_DIR))
+    sync_prep_mod = _import_file("syncnet_preprocess", SYNCNET_DIR / "preprocess.py")
+    SyncNetPreprocessor = sync_prep_mod.SyncNetPreprocessor
+    sync_infer_mod = _import_file("syncnet_infer", SYNCNET_DIR / "infer.py")
+    SyncNetInference = sync_infer_mod.SyncNetInference
+
+    weights_p = SYNCNET_DIR / "weights" / "syncnet_v2.model"
+    if not weights_p.exists():
+        logger.error(f"SyncNet weights not found at: {weights_p}")
+        sys.exit(1)
+
+    preprocessor = SyncNetPreprocessor()
+    inference = SyncNetInference()
+
+    fake_files = _collect(VIDEO_FAKE, VIDEO_EXTS, limit)
+    real_files = _collect(VIDEO_REAL, VIDEO_EXTS, limit)
+    logger.info(f"[SyncNet] {len(fake_files)} fake, {len(real_files)} real")
+
+    scores, labels = [], []
+    failed = 0
+
+    for label_val, files, tag in [(1, fake_files, "FAKE"), (0, real_files, "REAL")]:
+        for fpath in files:
+            try:
+                t0 = time.perf_counter()
+                vid_seqs, aud_seqs, has_audio = preprocessor.preprocess(str(fpath))
+                conf, raw_offset, ev = inference.score_video(vid_seqs, aud_seqs, has_audio)
+                elapsed = (time.perf_counter() - t0) * 1000
+
+                status = "[SILENT]" if "not_applicable" in (ev.flags or []) else "[A/V]"
+                verdict = "FAKE" if conf >= 0.5 else "REAL"
+                ok = "[OK]" if (verdict == "FAKE") == (label_val == 1) else "[--]"
+                print(f"  {ok} {status} [{tag}] {fpath.name[:45]:<45s}  conf={conf:.4f}  offset={raw_offset:+4.1f}  {elapsed:6.0f}ms")
+                scores.append(conf)
+                labels.append(label_val)
+            except Exception as e:
+                failed += 1
+                print(f"  ! [{tag}] {fpath.name[:52]:<52s}  ERROR: {e}")
+
+    if failed:
+        logger.warning(f"[SyncNet] {failed} files failed and were skipped")
+
+    m = _compute_metrics(scores, labels)
+    _print_results("SYNCNET  (Audio-Visual Lip-Sync)", m, "Lip-phoneme temporal cross-correlation analysis")
+    return m
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main():
@@ -301,9 +415,9 @@ def main():
     )
     parser.add_argument(
         "--detector",
-        choices=["video-classifier", "aasist", "both"],
+        choices=["video-classifier", "aasist", "rppg", "syncnet", "both", "all"],
         default="both",
-        help="Which detector to evaluate (default: both)",
+        help="Which detector to evaluate: video-classifier, aasist, rppg, syncnet, both (vc+aasist), all",
     )
     parser.add_argument(
         "--limit",
@@ -335,7 +449,7 @@ def main():
 
     results = {}
 
-    if args.detector in ("video-classifier", "both"):
+    if args.detector in ("video-classifier", "both", "all"):
         print("\n" + "=" * 60)
         print("  EVALUATING: Video Classifier")
         print(f"  Dataset : {VIDEO_FAKE.parent}  (150 fake / 150 real)")
@@ -343,13 +457,29 @@ def main():
         print("=" * 60)
         results["video-classifier"] = run_video_classifier(args.limit)
 
-    if args.detector in ("aasist", "both"):
+    if args.detector in ("aasist", "both", "all"):
         print("\n" + "=" * 60)
         print("  EVALUATING: AASIST")
         print(f"  Dataset : {AUDIO_FAKE.parent}  (150 fake / 150 real)")
         print("  Model   : ClovaAI AASIST  /  ASVspoof 2019 LA eval")
         print("=" * 60)
         results["aasist"] = run_aasist(args.limit, debug=args.debug)
+
+    if args.detector in ("rppg", "all"):
+        print("\n" + "=" * 60)
+        print("  EVALUATING: rPPG (CHROM Pulse Consistency)")
+        print(f"  Dataset : {VIDEO_FAKE.parent}  (150 fake / 150 real)")
+        print("  Method  : Remote Photoplethysmography CHROM")
+        print("=" * 60)
+        results["rppg"] = run_rppg(args.limit)
+
+    if args.detector in ("syncnet", "all"):
+        print("\n" + "=" * 60)
+        print("  EVALUATING: SyncNet (Lip-Sync Consistency)")
+        print(f"  Dataset : {VIDEO_FAKE.parent}  (150 fake / 150 real)")
+        print("  Model   : SyncNet v2 Checkpoint")
+        print("=" * 60)
+        results["syncnet"] = run_syncnet(args.limit)
 
     if args.out:
         import json
@@ -363,3 +493,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

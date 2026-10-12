@@ -1,0 +1,242 @@
+[
+  {
+    "id": "AEG-9503",
+    "file": "011_805.mp4",
+    "modality": "video",
+    "verdict": "synthetic",
+    "confidence": 1.0,
+    "time": "02:46",
+    "status": "Complete",
+    "is_demo": false,
+    "thumbnail_url": "/thumbnails/AEG-9503.jpg",
+    "duration_s": 17.1,
+    "total_frames": 411,
+    "results": {
+      "video": {
+        "p_synthetic": 0.996,
+        "max_p": 1.0,
+        "confidence": 1.0,
+        "frames_scored": 24,
+        "model": "EfficientNet-B0 + MobileNetV3-Small (Fine-tuned FF++)"
+      },
+      "rppg": {
+        "p_synthetic": 0.78,
+        "hr_bpm": 74.0,
+        "quality": 0.72
+      },
+      "syncnet": {
+        "p_synthetic": 0.95,
+        "offset": 3
+      },
+      "aasist": {
+        "p_synthetic": 0.9
+      }
+    },
+    "frame_scores": [
+      0.995,
+      0.993,
+      0.998,
+      1.0,
+      0.998,
+      0.991,
+      0.996,
+      0.999,
+      1.0,
+      0.999,
+      1.0,
+      0.994,
+      0.993,
+      0.998,
+      1.0,
+      0.999,
+      0.998,
+      0.999,
+      1.0,
+      0.997,
+      0.994,
+      0.983,
+      0.991,
+      0.994
+    ]
+  },
+  {
+    "id": "AEG-5150",
+    "file": "011_805.mp4",
+    "modality": "video",
+    "verdict": "synthetic",
+    "confidence": 1.0,
+    "time": "02:46",
+    "status": "Complete",
+    "is_demo": false,
+    "thumbnail_url": "/thumbnails/AEG-5150.jpg",
+    "duration_s": 17.1,
+    "total_frames": 411,
+    "results": {
+      "video": {
+        "p_synthetic": 0.996,
+        "max_p": 1.0,
+        "confidence": 1.0,
+        "frames_scored": 24,
+        "model": "EfficientNet-B0 + MobileNetV3-Small (Fine-tuned FF++)"
+      },
+      "rppg": {
+        "p_synthetic": 0.78,
+        "hr_bpm": 74.0,
+        "quality": 0.72
+      },
+      "syncnet": {
+        "p_synthetic": 0.95,
+        "offset": 3
+      },
+      "aasist": {
+        "p_synthetic": 0.9
+      }
+    },
+    "frame_scores": [
+      0.995,
+      0.993,
+      0.998,
+      1.0,
+      0.998,
+      0.991,
+      0.996,
+      0.999,
+      1.0,
+      0.999,
+      1.0,
+      0.994,
+      0.993,
+      0.998,
+      1.0,
+      0.999,
+      0.998,
+      0.999,
+      1.0,
+      0.997,
+      0.994,
+      0.983,
+      0.991,
+      0.994
+    ]
+  },
+  {
+    "id": "AEG-2961",
+    "file": "026.mp4",
+    "modality": "video",
+    "verdict": "authentic",
+    "confidence": 0.71,
+    "time": "02:45",
+    "status": "Complete",
+    "is_demo": false,
+    "thumbnail_url": "/thumbnails/AEG-2961.jpg",
+    "duration_s": 12.9,
+    "total_frames": 322,
+    "results": {
+      "video": {
+        "p_synthetic": 0.293,
+        "max_p": 0.936,
+        "confidence": 0.71,
+        "frames_scored": 24,
+        "model": "EfficientNet-B0 + MobileNetV3-Small (Fine-tuned FF++)"
+      },
+      "rppg": {
+        "p_synthetic": 0.12,
+        "hr_bpm": 74.0,
+        "quality": 0.72
+      },
+      "syncnet": {
+        "p_synthetic": 0.28,
+        "offset": 0
+      },
+      "aasist": {
+        "p_synthetic": 0.26
+      }
+    },
+    "frame_scores": [
+      0.268,
+      0.098,
+      0.051,
+      0.929,
+      0.034,
+      0.84,
+      0.056,
+      0.936,
+      0.114,
+      0.04,
+      0.048,
+      0.24,
+      0.148,
+      0.145,
+      0.06,
+      0.435,
+      0.05,
+      0.506,
+      0.913,
+      0.13,
+      0.14,
+      0.562,
+      0.215,
+      0.07
+    ]
+  },
+  {
+    "id": "AEG-9360",
+    "file": "026.mp4",
+    "modality": "video",
+    "verdict": "authentic",
+    "confidence": 0.71,
+    "time": "02:45",
+    "status": "Complete",
+    "is_demo": false,
+    "thumbnail_url": "/thumbnails/AEG-9360.jpg",
+    "duration_s": 12.9,
+    "total_frames": 322,
+    "results": {
+      "video": {
+        "p_synthetic": 0.293,
+        "max_p": 0.936,
+        "confidence": 0.71,
+        "frames_scored": 24,
+        "model": "EfficientNet-B0 + MobileNetV3-Small (Fine-tuned FF++)"
+      },
+      "rppg": {
+        "p_synthetic": 0.12,
+        "hr_bpm": 74.0,
+        "quality": 0.72
+      },
+      "syncnet": {
+        "p_synthetic": 0.28,
+        "offset": 0
+      },
+      "aasist": {
+        "p_synthetic": 0.26
+      }
+    },
+    "frame_scores": [
+      0.268,
+      0.098,
+      0.051,
+      0.929,
+      0.034,
+      0.84,
+      0.056,
+      0.936,
+      0.114,
+      0.04,
+      0.048,
+      0.24,
+      0.148,
+      0.145,
+      0.06,
+      0.435,
+      0.05,
+      0.506,
+      0.913,
+      0.13,
+      0.14,
+      0.562,
+      0.215,
+      0.07
+    ]
+  }
+]

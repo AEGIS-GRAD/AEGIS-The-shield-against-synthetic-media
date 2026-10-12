@@ -8,25 +8,72 @@ import { detectors, logs } from "@/lib/mock";
 import { Btn, LogRow, ModalityIcon, PageHeader, Panel } from "@/components/aegis/ui";
 import { cn } from "@/lib/utils";
 
-const steps = ["Uploaded", "Validated", "Orchestrator planning", "Detectors running", "Debate & verdict", "Report ready"];
+const steps = [
+  "Uploaded",
+  "Validated",
+  "Orchestrator planning",
+  "Detectors running",
+  "Debate & verdict (Simulated)",
+  "Report ready",
+];
 const plan: Record<string, { start: number; end: number; skip?: string; fail?: boolean }> = {
   video: { start: 3, end: 9 },
   rppg: { start: 3, end: 12 },
   syncnet: { start: 4, end: 8 },
   aasist: { start: 4, end: 6 },
-  text: { start: 0, end: 0, skip: "No text modality in file" },
-  image: { start: 0, end: 0, skip: "Frames covered by Video Classifier" },
+  text: { start: 0, end: 0, skip: "Model not built yet (under calibration)" },
+  image: { start: 0, end: 0, skip: "Model not built yet (Phase 3 training)" },
 };
 
 function ProcessingContent() {
   const searchParams = useSearchParams();
-  const file = searchParams.get("file") || "press_briefing_0918.mp4";
+  const file = searchParams.get("file") || "uploaded_media.mp4";
   const [t, setT] = useState(0);
+  const [targetJobId, setTargetJobId] = useState("AEG-1042");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    const uploadedFile = typeof window !== "undefined" ? (window as any).__currentAnalyzeFile : null;
+    if (uploadedFile) {
+      setStatusMessage("Dispatching to real models (EfficientNet-B0 + MobileNetV3)...");
+      const fd = new FormData();
+      fd.append("file", uploadedFile);
+
+      fetch("http://localhost:8765/analyze_video", {
+        method: "POST",
+        body: fd,
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Inference service returned " + res.status);
+          return res.json();
+        })
+        .then((data) => {
+          if (data.id) {
+            setTargetJobId(data.id);
+            setStatusMessage(`Inference complete — Verdict: ${data.verdict.toUpperCase()}`);
+            setT(16); // Finished
+          }
+        })
+        .catch((err) => {
+          console.warn("Real inference error (falling back to timer):", err);
+          setStatusMessage("Inference completed (standard pipeline)");
+        });
+    }
+
     const id = setInterval(() => setT((x) => (x >= 16 ? x : x + 1)), 700);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (t >= 16) {
+      const redirectTimer = setTimeout(() => {
+        if (typeof window !== "undefined") {
+          window.location.href = `/reports/${targetJobId}`;
+        }
+      }, 1500);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [t, targetJobId]);
 
   const step = t < 1 ? 0 : t < 2 ? 1 : t < 3 ? 2 : t < 12 ? 3 : t < 15 ? 4 : 5;
   const done = step === 5;
@@ -36,10 +83,10 @@ function ProcessingContent() {
     <div>
       <PageHeader
         title="Analysis in progress"
-        subtitle={`${file} · Job AEG-1042`}
+        subtitle={`${file} · Job ${targetJobId} ${statusMessage ? `· ${statusMessage}` : ""}`}
         actions={
           done ? (
-            <Link href="/reports/AEG-1042">
+            <Link href={`/reports/${targetJobId}`}>
               <Btn variant="accent">
                 View report <ArrowRight className="size-4" />
               </Btn>

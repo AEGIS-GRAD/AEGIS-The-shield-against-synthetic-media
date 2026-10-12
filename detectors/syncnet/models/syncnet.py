@@ -41,7 +41,7 @@ class SyncNetModel(nn.Module):
             nn.Conv2d(64, 192, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
             nn.BatchNorm2d(192),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=(3, 3), stride=(1, 2), padding=(1, 1)),
+            nn.MaxPool2d(kernel_size=(3, 3), stride=(1, 2)),
 
             nn.Conv2d(192, 384, kernel_size=(3, 3), padding=(1, 1)),
             nn.BatchNorm2d(384),
@@ -54,85 +54,75 @@ class SyncNetModel(nn.Module):
             nn.Conv2d(256, 256, kernel_size=(3, 3), padding=(1, 1)),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
+            nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2)),
 
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Conv2d(256, 512, kernel_size=(1, 1)),
+            nn.Conv2d(256, 512, kernel_size=(5, 4), padding=(0, 0)),
             nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
         )
 
         self.netfcaud = nn.Sequential(
             nn.Linear(512, 512),
             nn.BatchNorm1d(512),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Linear(512, 1024),
         )
 
-        # Video stream: takes (B, 15, H, W) representing 5 consecutive 3-channel lip frames
-        self.netcnnvid = nn.Sequential(
-            nn.Conv2d(15, 96, kernel_size=(5, 5), stride=(2, 2), padding=(1, 1)),
-            nn.BatchNorm2d(96),
+        # Video stream: 3D Lip CNN
+        self.netcnnlip = nn.Sequential(
+            nn.Conv3d(3, 96, kernel_size=(5, 7, 7), stride=(1, 2, 2), padding=0),
+            nn.BatchNorm3d(96),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2)),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2)),
 
-            nn.Conv2d(96, 256, kernel_size=(5, 5), stride=(2, 2), padding=(1, 1)),
-            nn.BatchNorm2d(256),
+            nn.Conv3d(96, 256, kernel_size=(1, 5, 5), stride=(1, 2, 2), padding=(0, 1, 1)),
+            nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
 
-            nn.Conv2d(256, 512, kernel_size=(3, 3), padding=(1, 1)),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(512, 512, kernel_size=(3, 3), padding=(1, 1)),
-            nn.BatchNorm2d(512),
+            nn.Conv3d(256, 256, kernel_size=(1, 3, 3), padding=(0, 1, 1)),
+            nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
 
-            nn.Conv2d(512, 512, kernel_size=(3, 3), padding=(1, 1)),
-            nn.BatchNorm2d(512),
+            nn.Conv3d(256, 256, kernel_size=(1, 3, 3), padding=(0, 1, 1)),
+            nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=(3, 3), stride=(2, 2)),
 
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Conv2d(512, 512, kernel_size=(1, 1)),
-            nn.BatchNorm2d(512),
+            nn.Conv3d(256, 256, kernel_size=(1, 3, 3), padding=(0, 1, 1)),
+            nn.BatchNorm3d(256),
+            nn.ReLU(inplace=True),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2)),
+
+            nn.Conv3d(256, 512, kernel_size=(1, 6, 6), padding=0),
+            nn.BatchNorm3d(512),
             nn.ReLU(inplace=True),
         )
 
-        self.netfcvid = nn.Sequential(
+        self.netfclip = nn.Sequential(
             nn.Linear(512, 512),
             nn.BatchNorm1d(512),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Linear(512, 1024),
         )
 
     def forward_aud(self, aud: torch.Tensor) -> torch.Tensor:
-        """Extracts 1024-dim audio feature embedding.
-
-        Args:
-            aud: Audio MFCC tensor of shape (B, 1, 13, 20).
-
-        Returns:
-            L2-normalized audio embedding of shape (B, 1024).
-        """
+        """Extracts 1024-dim audio feature embedding."""
         mid = self.netcnnaud(aud)
-        mid = mid.view((mid.size()[0], -1))
+        mid = mid.view((mid.size(0), -1))
         out = self.netfcaud(mid)
         return F.normalize(out, p=2, dim=1)
 
     def forward_vid(self, vid: torch.Tensor) -> torch.Tensor:
-        """Extracts 1024-dim video lip ROI feature embedding.
-
-        Args:
-            vid: Video frame tensor of shape (B, 15, H, W).
-
-        Returns:
-            L2-normalized video embedding of shape (B, 1024).
-        """
-        mid = self.netcnnvid(vid)
-        mid = mid.view((mid.size()[0], -1))
-        out = self.netfcvid(mid)
+        """Extracts 1024-dim video lip ROI feature embedding."""
+        if vid.dim() == 4 and vid.size(1) == 15:
+            # Convert (B, 15, H, W) -> (B, 3, 5, H, W)
+            b, _, h, w = vid.shape
+            vid = vid.view(b, 5, 3, h, w).permute(0, 2, 1, 3, 4)
+        if vid.size(-1) != 224 or vid.size(-2) != 224:
+            vid = F.interpolate(vid, size=(5, 224, 224), mode="trilinear", align_corners=False)
+        mid = self.netcnnlip(vid)
+        mid = mid.view((mid.size(0), -1))
+        out = self.netfclip(mid)
         return F.normalize(out, p=2, dim=1)
 
     def forward(
@@ -149,16 +139,7 @@ def load_syncnet_model(
     device: Optional[torch.device] = None,
     allow_download: bool = False,
 ) -> Tuple[SyncNetModel, torch.device]:
-    """Loads and initializes the SyncNet model on target device.
-
-    Args:
-        weights_path: Local path to syncnet checkpoint (.model or .pth).
-        device: PyTorch device (CPU or CUDA). Defaults to CUDA if available.
-        allow_download: If True, attempts to fetch weights from DEFAULT_WEIGHTS_URL if missing.
-
-    Returns:
-        Tuple of (initialized SyncNetModel in eval mode, torch.device).
-    """
+    """Loads and initializes the SyncNet model on target device."""
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -171,8 +152,8 @@ def load_syncnet_model(
             state_dict = torch.load(weights_path, map_location=device)
             if isinstance(state_dict, dict) and "state_dict" in state_dict:
                 state_dict = state_dict["state_dict"]
-            model.load_state_dict(state_dict, strict=False)
-            logger.info("SyncNet weights loaded successfully.")
+            model.load_state_dict(state_dict, strict=True)
+            logger.info("SyncNet weights loaded successfully with strict=True.")
             loaded = True
         except Exception as exc:
             logger.warning(f"Failed to load weights from {weights_path}: {exc}")
@@ -183,7 +164,7 @@ def load_syncnet_model(
             logger.info(f"Downloading SyncNet weights from {DEFAULT_WEIGHTS_URL} to {weights_path}...")
             urllib.request.urlretrieve(DEFAULT_WEIGHTS_URL, weights_path)
             state_dict = torch.load(weights_path, map_location=device)
-            model.load_state_dict(state_dict, strict=False)
+            model.load_state_dict(state_dict, strict=True)
             logger.info("SyncNet weights downloaded and loaded successfully.")
             loaded = True
         except Exception as exc:
@@ -191,7 +172,7 @@ def load_syncnet_model(
 
     if not loaded:
         logger.warning(
-            f"Weights not found at {weights_path}. SyncNet initialized with initialized parameters."
+            f"Weights not found at {weights_path}. SyncNet initialized with random parameters."
         )
 
     model.to(device)

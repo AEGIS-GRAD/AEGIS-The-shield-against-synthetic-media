@@ -442,16 +442,16 @@ class SyncNetPreprocessor:
             - aud_sequences: List of audio tensors each of shape (1, 13, 20), or None if no audio track.
             - has_audio: Boolean flag indicating presence of an audio track.
         """
+        # Fast exit for silent videos: check audio track before expensive face cropping
+        waveform = self.extract_audio_waveform(str(video_path))
+        if waveform is None or len(waveform) == 0:
+            return [], None, False
+
         frames, _ = self.extract_frames(str(video_path))
         if not frames:
             raise ValueError("No video frames could be extracted from input.")
 
         vid_sequences = self.extract_lip_sequences(frames)
-
-        waveform = self.extract_audio_waveform(str(video_path))
-        if waveform is None or len(waveform) == 0:
-            return vid_sequences, None, False
-
         aud_sequences = self.extract_audio_sequences(waveform, len(frames))
         if not aud_sequences:
             return vid_sequences, None, False

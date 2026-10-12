@@ -36,13 +36,14 @@ const WARN_THRESHOLD = 0.45;
 const HISTORY_WINDOW = 60;
 
 const DETECTOR_CFG = [
-  { key: "video", label: "Frame Classifier", model: "EfficientNet-B0", color: "#06b6d4", Icon: Film, base: 0.12, variance: 0.18 },
-  { key: "rppg", label: "rPPG Pulse", model: "CHROM", color: "#f43f5e", Icon: Activity, base: 0.10, variance: 0.14 },
+  { key: "video", label: "Frame Classifier", model: "MobileNetV3 Edge", color: "#06b6d4", Icon: Film, base: 0.12, variance: 0.18 },
+  { key: "rppg", label: "rPPG Pulse", model: "Forehead CHROM", color: "#f43f5e", Icon: Activity, base: 0.10, variance: 0.14 },
   { key: "aasist", label: "AASIST Audio", model: "GraphAttn", color: "#a855f7", Icon: Mic, base: 0.08, variance: 0.12 },
   { key: "syncnet", label: "SyncNet A-V", model: "TwoStream-CNN", color: "#14b8a6", Icon: Video, base: 0.09, variance: 0.16 },
 ];
 
 const CAMERA_FEEDS = [
+  { id: "WEBCAM", location: "Local Live Device (Task 3 rPPG)" },
   { id: "CAM-001", location: "Entrance Hall — Camera A" },
   { id: "CAM-002", location: "Corridor B — Camera 3" },
   { id: "CAM-003", location: "Control Room — Cam 2" },
@@ -343,6 +344,104 @@ export default function SurveillanceMonitor() {
   const [curTime, setCurTime] = useState("--:--:--");
   const [mounted, setMounted] = useState(false);
 
+  // ─── Webcam Mode States ──────────────────────────────────────────────────
+  const [webcamActive, setWebcamActive] = useState(false);
+  const [webcamConnected, setWebcamConnected] = useState(false);
+  const [feedMode, setFeedMode] = useState("backend"); // "backend" (MJPEG) | "browser" (getUserMedia)
+  const [webcamData, setWebcamData] = useState({
+    ready: false,
+    score: null,
+    hr_bpm: null,
+    snr_db: null,
+    window_sec: 0,
+    reason: "Idle",
+    fps: 0,
+    face_detected: false,
+  });
+  const videoElemRef = useRef(null);
+  const streamTrackRef = useRef(null);
+  const eventSourceRef = useRef(null);
+  const webcamDataRef = useRef(webcamData);
+  useEffect(() => { webcamDataRef.current = webcamData; }, [webcamData]);
+
+  // Connect to SSE stream when webcam is active
+  useEffect(() => {
+    if (!webcamActive) {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      setWebcamConnected(false);
+      if (streamTrackRef.current) {
+        streamTrackRef.current.getTracks().forEach(t => t.stop());
+        streamTrackRef.current = null;
+      }
+      return;
+    }
+
+    // Direct browser camera fallback if requested
+    if (feedMode === "browser") {
+      navigator.mediaDevices?.getUserMedia({ video: true })
+        .then(stream => {
+          streamTrackRef.current = stream;
+          if (videoElemRef.current) {
+            videoElemRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => {
+          console.warn("Direct browser webcam access warning:", err);
+        });
+    }
+
+    // Connect to Python rPPG service at localhost:8765/stream
+    const es = new EventSource("http://localhost:8765/stream");
+    eventSourceRef.current = es;
+
+    es.onopen = () => {
+      setWebcamConnected(true);
+    };
+
+    es.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        setWebcamData(d);
+        if (d.score !== null && d.score !== undefined) {
+          const s = Number(d.score);
+          const rScore = d.rppg_score !== null && d.rppg_score !== undefined ? Number(d.rppg_score) : s;
+          const vScore = d.mobilenet_score !== null && d.mobilenet_score !== undefined ? Number(d.mobilenet_score) : 0.08;
+          setScores(prev => ({
+            ...prev,
+            WEBCAM: s,
+            ...(selected === "WEBCAM" ? { [selected]: s } : {})
+          }));
+          if (selected === "WEBCAM") {
+            setDetScores(prev => ({
+              ...prev,
+              rppg: rScore,
+              video: vScore,
+            }));
+          } else {
+            setDetScores(prev => ({ ...prev, rppg: rScore }));
+          }
+        }
+      } catch (err) {
+        console.error("SSE parse error", err);
+      }
+    };
+
+    es.onerror = () => {
+      setWebcamConnected(false);
+    };
+
+    return () => {
+      es.close();
+      if (streamTrackRef.current) {
+        streamTrackRef.current.getTracks().forEach(t => t.stop());
+        streamTrackRef.current = null;
+      }
+    };
+  }, [webcamActive, feedMode, selected]);
+
   const alertIdRef = useRef(0);
   const prevScores = useRef({});
   const scoresRef = useRef(scores);
@@ -372,8 +471,12 @@ export default function SurveillanceMonitor() {
       setScores(prev => {
         const next = { ...prev };
         CAMERA_FEEDS.forEach(cam => {
-          const isInj = injecting && cam.id === injectCam;
-          next[cam.id] = nextScore(prev[cam.id], 0.12, 0.20, isInj);
+          if (cam.id === "WEBCAM" && webcamActive && webcamDataRef.current.score !== null) {
+            next["WEBCAM"] = Number(webcamDataRef.current.score);
+          } else if (cam.id !== "WEBCAM") {
+            const isInj = injecting && cam.id === injectCam;
+            next[cam.id] = nextScore(prev[cam.id], 0.12, 0.20, isInj);
+          }
         });
         // Threshold crossing alerts
         CAMERA_FEEDS.forEach(cam => {
@@ -412,8 +515,19 @@ export default function SurveillanceMonitor() {
         const mainScore = scoresRef.current[selected] || 0;
         const next = { ...prev };
         DETECTOR_CFG.forEach(d => {
-          const isInj = injecting && selected === injectCam;
-          next[d.key] = nextScore(prev[d.key], d.base + mainScore * 0.5, d.variance, isInj);
+          if (selected === "WEBCAM" && webcamActive) {
+            if (d.key === "rppg" && webcamDataRef.current.rppg_score !== null && webcamDataRef.current.rppg_score !== undefined) {
+              next["rppg"] = Number(webcamDataRef.current.rppg_score);
+            } else if (d.key === "video" && webcamDataRef.current.mobilenet_score !== null && webcamDataRef.current.mobilenet_score !== undefined) {
+              next["video"] = Number(webcamDataRef.current.mobilenet_score);
+            } else {
+              const isInj = injecting && selected === injectCam;
+              next[d.key] = nextScore(prev[d.key], d.base + mainScore * 0.3, d.variance, isInj);
+            }
+          } else {
+            const isInj = injecting && selected === injectCam;
+            next[d.key] = nextScore(prev[d.key], d.base + mainScore * 0.5, d.variance, isInj);
+          }
         });
         return next;
       });
@@ -489,6 +603,24 @@ export default function SurveillanceMonitor() {
 
         {/* Navigation & Controls */}
         <div className="flex items-center gap-2">
+          {/* Webcam Connect Button (Task 3 rPPG) */}
+          <button
+            onClick={() => {
+              const next = !webcamActive;
+              setWebcamActive(next);
+              if (next) setSelected("WEBCAM");
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+              webcamActive
+                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
+                : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
+            }`}
+            title="Connect Live Webcam (Task 3 Streaming rPPG Pipeline)"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">{webcamActive ? "WEBCAM ACTIVE" : "CONNECT WEBCAM"}</span>
+          </button>
+
           <Link
             href="/"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-all cursor-pointer"
@@ -524,28 +656,113 @@ export default function SurveillanceMonitor() {
             {isAlert && <div className="absolute inset-0 pointer-events-none bg-red-500/5 animate-pulse z-10" />}
             <div className="flex flex-col lg:flex-row">
 
-              {/* Camera canvas */}
-              <div className="relative flex-1 bg-[#060c14] min-h-[220px] lg:min-h-[280px]">
-                <FakeCameraFeed camId={selected} score={selScore} isAlert={isAlert} isWarning={isWarn} active={!paused} />
+              {/* Camera canvas / live webcam */}
+              <div className="relative flex-1 bg-[#060c14] min-h-[240px] lg:min-h-[300px] flex items-center justify-center overflow-hidden">
+                {selected === "WEBCAM" ? (
+                  <div className="relative w-full h-full min-h-[260px] flex items-center justify-center bg-black">
+                    {webcamConnected && feedMode === "backend" ? (
+                      <img
+                        src="http://localhost:8765/video_feed"
+                        alt="Live Webcam rPPG Feed"
+                        className="w-full h-full object-contain max-h-[460px]"
+                        onError={() => {
+                          setFeedMode("browser");
+                        }}
+                      />
+                    ) : feedMode === "browser" ? (
+                      <video
+                        ref={videoElemRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                        <Camera className="w-10 h-10 text-cyan-400 mb-2.5 animate-pulse" />
+                        <h4 className="text-sm font-bold text-white mb-1">Webcam Service Disconnected</h4>
+                        <p className="text-xs text-slate-400 max-w-md mb-3">
+                          Waiting for rPPG stream at <span className="font-mono text-cyan-300">http://localhost:8765/stream</span>
+                        </p>
+                        <div className="rounded-lg bg-slate-900 border border-slate-800 p-2.5 text-left font-mono text-[10px] text-slate-300 max-w-lg mb-3">
+                          <p className="text-slate-500 mb-0.5"># Run in PowerShell:</p>
+                          <code className="text-emerald-400 selection:bg-emerald-900 break-all">
+                            & "D:\Gpu-shit\nasa\Scripts\python.exe" -m uvicorn detectors.rppg.streaming.webcam_stream:app --port 8765
+                          </code>
+                        </div>
+                        <button
+                          onClick={() => setFeedMode("browser")}
+                          className="px-3 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono transition-all"
+                        >
+                          Switch to Direct Browser Webcam
+                        </button>
+                      </div>
+                    )}
 
-                {/* Alert badge */}
-                {isAlert && (
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-pulse">
-                    <ShieldAlert className="w-4 h-4 text-red-400" />
-                    <span className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">DEEPFAKE DETECTED</span>
+                    {/* Stream source mode toggle */}
+                    <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-black/80 backdrop-blur-md px-2 py-1 rounded-md border border-slate-700/60 text-[10px] font-mono">
+                      <span className="text-slate-400">FEED:</span>
+                      <button
+                        onClick={() => setFeedMode("backend")}
+                        className={`px-1.5 py-0.5 rounded transition-all ${feedMode === "backend" ? "bg-cyan-500/30 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"}`}
+                      >
+                        OpenCV + MTCNN
+                      </button>
+                      <span className="text-slate-600">|</span>
+                      <button
+                        onClick={() => setFeedMode("browser")}
+                        className={`px-1.5 py-0.5 rounded transition-all ${feedMode === "browser" ? "bg-cyan-500/30 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"}`}
+                      >
+                        Browser Cam
+                      </button>
+                    </div>
+
+                    {/* rPPG Live HUD overlay badge */}
+                    <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2">
+                      <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300">
+                        <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        LIVE WEBCAM
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-black/70 border border-slate-700 text-[10px] font-mono text-cyan-300">
+                        HR: {webcamData.hr_bpm ? `${webcamData.hr_bpm} BPM` : (webcamData.ready ? "Detecting" : "Warming up...")}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-black/70 border border-slate-700 text-[10px] font-mono text-slate-300">
+                        SNR: {webcamData.snr_db ? `${webcamData.snr_db} dB` : "--"}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-black/70 border border-slate-700 text-[10px] font-mono text-slate-400">
+                        Window: {webcamData.window_sec ? `${webcamData.window_sec.toFixed(1)}s` : "0.0s"}
+                      </span>
+                      {webcamData.face_detected && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-[9px] font-mono text-emerald-400">
+                          FACE LOCKED
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
+                ) : (
+                  <>
+                    <FakeCameraFeed camId={selected} score={selScore} isAlert={isAlert} isWarning={isWarn} active={!paused} />
 
-                {/* LIVE badge */}
-                <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2">
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-400/80 bg-black/50 px-2 py-0.5 rounded-full">
-                    LIVE · {CAMERA_FEEDS.find(c => c.id === selected)?.location}
-                  </span>
-                </div>
+                    {/* Alert badge */}
+                    {isAlert && (
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-pulse">
+                        <ShieldAlert className="w-4 h-4 text-red-400" />
+                        <span className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">DEEPFAKE DETECTED</span>
+                      </div>
+                    )}
+
+                    {/* LIVE badge */}
+                    <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2">
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-400/80 bg-black/50 px-2 py-0.5 rounded-full">
+                        LIVE · {CAMERA_FEEDS.find(c => c.id === selected)?.location}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Score sidebar */}
@@ -670,8 +887,20 @@ export default function SurveillanceMonitor() {
                     onClick={() => { setSelected(cam.id); setInjectCam(cam.id); }}
                     className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${isSel ? (bad ? "ring-2 ring-red-500 shadow-[0_0_16px_rgba(239,68,68,0.3)]" : "ring-2 ring-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.2)]") : "opacity-70 hover:opacity-100"}`}
                   >
-                    <div className="aspect-[4/3] bg-[#060c14]">
-                      <FakeCameraFeed camId={cam.id} score={s} isAlert={bad} isWarning={wrn} active={!paused} />
+                    <div className="aspect-[4/3] bg-[#060c14] flex items-center justify-center">
+                      {cam.id === "WEBCAM" ? (
+                        webcamActive && webcamConnected && feedMode === "backend" ? (
+                          <img src="http://localhost:8765/video_feed" alt="Webcam Thumb" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-2 text-center">
+                            <Camera className="w-6 h-6 text-emerald-400 mb-1" />
+                            <span className="text-[10px] font-mono text-emerald-300">WEBCAM</span>
+                            <span className="text-[8px] font-mono text-slate-400">{webcamActive ? (webcamConnected ? "STREAMING" : "CONNECTING") : "STANDBY"}</span>
+                          </div>
+                        )
+                      ) : (
+                        <FakeCameraFeed camId={cam.id} score={s} isAlert={bad} isWarning={wrn} active={!paused} />
+                      )}
                     </div>
                     <div className={`absolute bottom-0 left-0 right-0 px-1.5 py-1 flex items-center justify-between text-[9px] font-mono ${bad ? "bg-red-950/80 text-red-300" : wrn ? "bg-amber-950/80 text-amber-300" : "bg-black/60 text-slate-300"}`}>
                       <span>{cam.id}</span>

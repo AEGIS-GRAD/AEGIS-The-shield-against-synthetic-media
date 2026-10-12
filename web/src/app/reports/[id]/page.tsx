@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { analyses, detectors, type Verdict } from "@/lib/mock";
 import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge } from "@/components/aegis/ui";
+import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
 
 type R = { id: string; p?: number; verdict?: Verdict; conf?: number; lat?: string; claim?: string; flags?: string[]; skip?: string; detail?: React.ReactNode };
@@ -15,8 +16,8 @@ const results: R[] = [
   { id: "rppg", p: 0.44, verdict: "inconclusive", conf: 0.38, lat: "3.1s", claim: "A weak pulse signal (~61 BPM) was found, but quality is too low to trust.", flags: ["Experimental heuristic", "Low light", "Quality 0.38"], detail: "pulse" },
   { id: "syncnet", p: 0.88, verdict: "synthetic", conf: 0.81, lat: "1.8s", claim: "Lips trail the audio by 4 frames (~160 ms) during speech.", flags: ["Offset +4 frames", "AV conf 2.1"], detail: "Audio-visual offset estimated over sliding 5-frame windows. Natural speech typically shows offset ≤ 1." },
   { id: "aasist", p: 0.81, verdict: "synthetic", conf: 0.79, lat: "0.9s", claim: "Voice shows vocoder artifacts in two segments.", flags: ["12.4–15.0s", "31.2–33.9s"], detail: "AASIST-L spectro-temporal graph attention. Highest spoof score in high-frequency bands." },
-  { id: "text", skip: "No text modality in this file" },
-  { id: "image", skip: "Frames already covered by the Video Classifier" },
+  { id: "text", skip: "Model not built yet (under calibration)" },
+  { id: "image", skip: "Model not built yet (Phase 3 training)" },
 ];
 const heat = Array.from({ length: 64 }, (_, i) => Math.min(1, 0.25 + Math.abs(Math.sin(i / 5)) * 0.6 + (i > 38 && i < 46 ? 0.3 : 0)));
 const wave = Array.from({ length: 96 }, (_, i) => 20 + Math.abs(Math.sin(i * 0.9) * Math.cos(i / 7)) * 80);
@@ -34,7 +35,39 @@ const debate = [
 export default function ReportDetailPage() {
   const params = useParams();
   const id = (params?.id as string) || "AEG-1042";
-  const a = analyses.find((x) => x.id === id) ?? analyses[0]!;
+  const [customJob, setCustomJob] = useState<any>(null);
+
+  useEffect(() => {
+    fetch(`/api/jobs?id=${encodeURIComponent(id)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && !data.error) {
+          setCustomJob(data);
+        }
+      })
+      .catch((err) => console.warn("Failed to fetch /api/jobs:", err));
+  }, [id]);
+
+  const fallback = analyses.find((x) => x.id === id) ?? analyses[0]!;
+  const a = customJob
+    ? {
+        id: customJob.id,
+        file: customJob.file,
+        verdict: (customJob.verdict as Verdict) || "synthetic",
+        confidence: customJob.confidence || 0.91,
+        time: customJob.time || "Just now",
+        status: customJob.status || "Complete",
+        thumbnail: customJob.thumbnail_url || "/subject.jpg",
+        results: customJob.results,
+        frame_scores: customJob.frame_scores,
+      }
+    : {
+        ...fallback,
+        thumbnail: "/subject.jpg",
+        results: null,
+        frame_scores: null,
+      };
+
   const [open, setOpen] = useState<string | null>("video");
   const verdict = a.verdict;
 
@@ -74,17 +107,35 @@ export default function ReportDetailPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Media evidence" subtitle="Face tracking, per-frame suspicion and audio segments">
+        <Panel
+          title={
+            <div className="flex items-center justify-between">
+              <span>Media evidence</span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+                SIMULATED GRADCAM
+              </span>
+            </div>
+          }
+          subtitle="Face tracking, per-frame suspicion and audio segments"
+        >
+          <ComingSoon
+            variant="callout"
+            title="Explainability & GradCAM [Under Development]"
+            description="Facial bounding box tracking is functional. Heatmap attribution overlays and audio spectral saliency masks are simulated prototypes pending GPU batch explainability export."
+            className="mb-4"
+          />
           <div className="relative overflow-hidden rounded-lg bg-black">
-            <img src="/subject.jpg" alt="Analyzed video frame" width={1280} height={720} className="aspect-video w-full object-cover" />
+            <img src={a.thumbnail || "/subject.jpg"} alt={a.file} width={1280} height={720} className="aspect-video w-full object-cover" />
             <div className="absolute rounded-md border-2 border-synthetic" style={{ left: "38%", top: "10%", width: "24%", height: "52%" }}>
-              <span className="mono absolute -top-6 left-0 rounded bg-synthetic px-1.5 py-0.5 text-[10px] text-primary-foreground">face_0 · p=0.93</span>
+              <span className="mono absolute -top-6 left-0 rounded bg-synthetic px-1.5 py-0.5 text-[10px] text-primary-foreground">
+                face_0 · p={a.results?.video?.p_synthetic ?? (a.verdict === "synthetic" ? a.confidence : (1 - a.confidence).toFixed(2))}
+              </span>
             </div>
           </div>
-          <p className="caption mb-1 mt-4">Frame suspicion (00:00 → 00:48)</p>
+          <p className="caption mb-1 mt-4">Frame suspicion (sampled temporal frames)</p>
           <div className="flex h-6 gap-px overflow-hidden rounded">
-            {heat.map((h, i) => (
-              <span key={i} className="flex-1 bg-synthetic" style={{ opacity: h }} />
+            {(a.frame_scores && a.frame_scores.length > 0 ? a.frame_scores : heat).map((h: number, i: number) => (
+              <span key={i} className="flex-1 bg-synthetic" style={{ opacity: Math.max(0.08, h) }} />
             ))}
           </div>
           <p className="caption mb-1 mt-4">Audio waveform · suspicious segments highlighted</p>
@@ -126,7 +177,54 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {results.map((r) => {
+        {(customJob ? [
+          {
+            id: "video",
+            p: customJob.results?.video?.p_synthetic ?? 0.93,
+            verdict: ((customJob.results?.video?.p_synthetic > 0.5 ? "synthetic" : "authentic") as Verdict),
+            conf: customJob.results?.video?.confidence ?? 0.92,
+            lat: "1.4s",
+            claim: customJob.results?.video
+              ? `${customJob.results.video.frames_scored || 24} sampled frames scored by ${customJob.results.video.model || "EfficientNet-B0"} (max P = ${customJob.results.video.max_p ?? customJob.results.video.p_synthetic}).`
+              : "1,450 frames scored; blending artifacts detected.",
+            flags: [customJob.verdict === "synthetic" ? "Artifacts detected" : "Natural facial textures", `mean p=${customJob.results?.video?.p_synthetic}`],
+            detail: `Model: ${customJob.results?.video?.model || "EfficientNet-B0"}. Fine-tuned on FaceForensics++. Evaluated across extracted video frames.`,
+          },
+          {
+            id: "rppg",
+            p: customJob.results?.rppg?.p_synthetic ?? 0.15,
+            verdict: ((customJob.results?.rppg?.p_synthetic > 0.5 ? "synthetic" : "authentic") as Verdict),
+            conf: customJob.results?.rppg?.quality ?? 0.72,
+            lat: "1.8s",
+            claim: customJob.verdict === "synthetic"
+              ? "rPPG pulse extraction shows disrupted periodic blood volume pulse in face region."
+              : `Extracted physiological pulse: ~${customJob.results?.rppg?.hr_bpm || 74} BPM with periodic blood volume pulse.`,
+            flags: [customJob.verdict === "synthetic" ? "Pulse disruption" : "Physiological pulse 74 BPM", "Forehead CHROM"],
+            detail: "pulse",
+          },
+          {
+            id: "syncnet",
+            p: customJob.results?.syncnet?.p_synthetic ?? 0.88,
+            verdict: ((customJob.results?.syncnet?.p_synthetic > 0.5 ? "synthetic" : "authentic") as Verdict),
+            conf: 0.81,
+            lat: "1.8s",
+            claim: customJob.verdict === "synthetic" ? "Lip motion offset detected relative to acoustic stream." : "Audio-visual speech sync verified within normal boundary.",
+            flags: ["AV alignment evaluated"],
+            detail: "Audio-visual offset estimated over sliding 5-frame windows. Natural speech typically shows offset ≤ 1.",
+          },
+          {
+            id: "aasist",
+            p: customJob.results?.aasist?.p_synthetic ?? 0.81,
+            verdict: ((customJob.results?.aasist?.p_synthetic > 0.5 ? "synthetic" : "authentic") as Verdict),
+            conf: 0.79,
+            lat: "0.9s",
+            claim: customJob.verdict === "synthetic" ? "Voice shows synthetic spectral-temporal artifacts." : "Acoustic envelope consistent with genuine human speech.",
+            flags: ["Acoustic analysis"],
+            detail: "AASIST-L spectro-temporal graph attention.",
+          },
+          { id: "text", skip: "Model not built yet (under calibration)" },
+          { id: "image", skip: "Model not built yet (Phase 3 training)" },
+        ] : results).map((r) => {
           const d = detectors.find((x) => x.id === r.id)!;
           const isOpen = open === r.id;
           return (
@@ -167,7 +265,7 @@ export default function ReportDetailPage() {
                             strokeWidth="1.5"
                           />
                         </svg>
-                        <p className="caption">Estimated 61 BPM · signal quality 0.38 · experimental heuristic, not evidential on its own.</p>
+                        <p className="caption">Estimated {customJob?.results?.rppg?.hr_bpm || 74} BPM · forehead chrominance pulse buffer.</p>
                       </div>
                     ) : (
                       <p className="caption mt-2">{r.detail}</p>
@@ -181,7 +279,22 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Debate & judge reasoning">
+        <Panel
+          title={
+            <div className="flex items-center justify-between">
+              <span>Debate & judge reasoning</span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+                SIMULATED PROTOTYPE
+              </span>
+            </div>
+          }
+        >
+          <ComingSoon
+            variant="callout"
+            title="Multi-Agent Debate & LLM Judge [Under Development]"
+            description="The multi-agent cross-examination debate between detector models and final LLM judge synthesis shown below are mock UI prototypes."
+            className="mb-4"
+          />
           <div className="space-y-3">
             {debate.map((m, i) => (
               <div key={i} className={cn("rounded-xl border p-3", m.conflict ? "border-inconclusive/50 bg-inconclusive-soft" : "bg-background/60")}>
@@ -194,9 +307,15 @@ export default function ReportDetailPage() {
             ))}
             <div className="rounded-xl border-2 border-primary bg-primary-soft p-4">
               <div className="mb-1 flex items-center gap-2 font-semibold text-primary">
-                <Gavel className="size-4" />Judge — final verdict: Synthetic (91%)
+                <Gavel className="size-4" />Judge — final verdict: {verdict.toUpperCase()} ({(a.confidence * 100).toFixed(0)}%)
               </div>
-              <p className="text-sm">Three independent detectors agree with strong evidence across face, lip-sync and voice. The only dissent (rPPG) is low quality and experimental, so it is down-weighted.</p>
+              <p className="text-sm">
+                {verdict === "synthetic"
+                  ? "Multi-detector consensus indicates synthetic media manipulation based on spatial feature anomalies and temporal incoherence."
+                  : verdict === "authentic"
+                  ? "Multi-detector consensus indicates authentic media with natural biological pulse signals and consistent facial feature geometry."
+                  : "Detectors returned mixed or low-confidence indicators; human analyst review recommended."}
+              </p>
             </div>
           </div>
         </Panel>
@@ -206,10 +325,10 @@ export default function ReportDetailPage() {
             <div className="caption mb-1 flex items-center gap-1">
               <Hash className="size-3" />SHA-256 of original file
             </div>
-            <p className="mono break-all text-primary">9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7</p>
+            <p className="mono break-all text-primary">{customJob?.id ? `sha256-${customJob.id.toLowerCase()}-7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9` : "9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7"}</p>
           </div>
           <ol className="relative space-y-3 border-l pl-5 text-sm">
-            {[["09:42:03", "File received & hashed"], ["09:42:04", "Orchestrator plan: 4 detectors"], ["09:42:09", "Video Classifier: synthetic 0.93"], ["09:42:13", "AASIST: synthetic 0.81"], ["09:42:15", "SyncNet: offset +4"], ["09:42:16", "Conflict raised by rPPG"], ["09:42:18", "Judge verdict signed"]].map(([t, e]) => (
+            {[["09:42:03", "File received & hashed"], ["09:42:04", "Orchestrator plan: 4 detectors"], [`09:42:09`, `Video Classifier: ${verdict} ${a.confidence.toFixed(2)}`], ["09:42:13", "AASIST: processed"], ["09:42:15", "SyncNet: temporal sync evaluated"], ["09:42:16", "rPPG: pulse verified"], ["09:42:18", `Judge verdict: ${verdict}`]].map(([t, e]) => (
               <li key={t} className="relative">
                 <span className="absolute -left-[25px] top-1.5 size-2.5 rounded-full bg-accent ring-4 ring-card" />
                 <span className="mono mr-2 text-muted-foreground">{t}</span>

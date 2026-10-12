@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, X, AlertCircle, Check, Minus, Sparkles, Video, AudioLines, Image as ImageIcon, FileText, Play } from "lucide-react";
 import { detectors } from "@/lib/mock";
 import { Btn, Chip, ModalityIcon, PageHeader, Panel, Toggle } from "@/components/aegis/ui";
+import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
 
 type Tab = "media" | "image" | "text";
@@ -56,6 +57,9 @@ export default function UploadPage() {
 
   function runAnalysis() {
     if (!ready) return;
+    if (meta?.file && typeof window !== "undefined") {
+      (window as any).__currentAnalyzeFile = meta.file;
+    }
     const query = fname ? `?file=${encodeURIComponent(fname)}` : "";
     router.push(`/analyze/processing${query}`);
   }
@@ -70,27 +74,47 @@ export default function UploadPage() {
         <div className="space-y-6">
           <Panel>
             <div className="mb-5 flex gap-2">
-              {([["media", "Video / Audio", Video], ["image", "Image", ImageIcon], ["text", "Text", FileText]] as const).map(([k, l, I]) => (
+              {([["media", "Video / Audio", Video, true], ["image", "Image", ImageIcon, false], ["text", "Text", FileText, false]] as const).map(([k, l, I, active]) => (
                 <button
                   key={k}
-                  onClick={() => { setTab(k); setMeta(null); setError(null); }}
-                  className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-soft", tab === k ? "border-accent bg-accent-soft text-accent" : "bg-card text-muted-foreground hover:text-primary")}
+                  onClick={() => { setTab(k as Tab); setMeta(null); setError(null); }}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-soft",
+                    tab === k ? "border-accent bg-accent-soft text-accent" : "bg-card text-muted-foreground hover:text-primary"
+                  )}
                 >
-                  <I className="size-4" />{l}
+                  <I className="size-4" />
+                  {l}
+                  {!active && (
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      Planned
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            {tab === "text" ? (
-              <div>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={10}
-                  placeholder="Paste an article, statement or message to check whether it was written by a language model…"
-                  className="w-full rounded-lg border bg-background p-4 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            {tab === "image" ? (
+              <div className="space-y-4 py-4">
+                <ComingSoon
+                  title="Image Deepfake Classifier (UnivFD CLIP)"
+                  description="The single-image forensic model is currently in the training queue. Image analysis will be unlocked once model weights are validated on the benchmark test split."
+                  tag="NOT YET TRAINED"
                 />
-                <p className="caption mt-2">{text.trim().length} characters · minimum 40 for a reliable Binoculars score</p>
+                <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground opacity-60">
+                  <p className="text-sm">Please switch to the <b>Video / Audio</b> tab to test the active pipeline (Video Classifier, rPPG, AASIST, SyncNet).</p>
+                </div>
+              </div>
+            ) : tab === "text" ? (
+              <div className="space-y-4 py-4">
+                <ComingSoon
+                  title="Text Perplexity Detector (Binoculars)"
+                  description="The LLM-generated text detection module is undergoing calibration on academic and news benchmark corpora."
+                  tag="UNDER CALIBRATION"
+                />
+                <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground opacity-60">
+                  <p className="text-sm">Please switch to the <b>Video / Audio</b> tab to test the active multimodal pipeline.</p>
+                </div>
               </div>
             ) : !meta ? (
               <div
@@ -100,11 +124,11 @@ export default function UploadPage() {
                 className={cn("flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16 text-center transition-soft", drag ? "border-accent bg-accent-soft" : "bg-background/60", error && "border-synthetic/50")}
               >
                 <span className="grid size-14 place-items-center rounded-full bg-primary-soft text-primary"><UploadCloud className="size-7" /></span>
-                <p className="mt-4 text-[16px] font-semibold text-primary">Drag & drop your {tab === "image" ? "image" : "video or audio file"} here</p>
+                <p className="mt-4 text-[16px] font-semibold text-primary">Drag & drop your video or audio file here</p>
                 <p className="caption mt-1">or</p>
                 <Btn className="mt-3" onClick={() => input.current?.click()}>Browse files</Btn>
                 <input ref={input} type="file" accept={accept} hidden onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])} />
-                <p className="caption mt-5">Allowed: {(tab === "image" ? imageExt : mediaExt).join(" · ")} — max 100 MB</p>
+                <p className="caption mt-5">Allowed: {mediaExt.join(" · ")} — max 100 MB</p>
               </div>
             ) : (
               <FileCard meta={meta} onRemove={() => setMeta(null)} />
@@ -126,20 +150,30 @@ export default function UploadPage() {
             </label>
             <ul className={cn("mt-3 space-y-1", auto && "opacity-50")}>
               {detectors.map((d) => {
-                const on = picked.includes(d.id);
+                const isNotBuilt = d.id === "image" || d.id === "text";
+                const on = !isNotBuilt && picked.includes(d.id);
                 return (
                   <li key={d.id}>
                     <button
-                      disabled={auto}
+                      disabled={auto || isNotBuilt}
                       onClick={() => setPicked(on ? picked.filter((x) => x !== d.id) : [...picked, d.id])}
-                      className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-secondary disabled:cursor-not-allowed"
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-secondary disabled:cursor-not-allowed",
+                        isNotBuilt && "opacity-50"
+                      )}
                     >
                       <span className={cn("grid size-4 place-items-center rounded border", on ? "border-accent bg-accent text-accent-foreground" : "bg-card")}>
                         {on && <Check className="size-3" />}
                       </span>
                       <ModalityIcon m={d.modality} />
                       <span className="flex-1 text-sm">{d.name}</span>
-                      <span className="mono text-muted-foreground">~{d.latency}</span>
+                      {isNotBuilt ? (
+                        <span className="text-[10px] font-mono text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                          Not Built
+                        </span>
+                      ) : (
+                        <span className="mono text-muted-foreground">~{d.latency}</span>
+                      )}
                     </button>
                   </li>
                 );
