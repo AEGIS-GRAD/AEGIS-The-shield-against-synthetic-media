@@ -29,8 +29,7 @@ build/
 *.log
 *.db
 eval/fixtures/
-security/tests/fixtures/*.json
-
+security/fixtures/
 security/tests/fixtures/*.json
 security/transport/certs/
 

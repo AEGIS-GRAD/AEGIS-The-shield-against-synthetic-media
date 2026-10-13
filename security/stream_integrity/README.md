@@ -37,10 +37,10 @@ Each `Anomaly` has `position` (frame index in arrival order), `kind`, `sequence_
 
 ## Command line
 
-Validate a manifest from `eval/scripts/generate_attack_streams.py`:
+Validate a manifest from `security/attacks/generate_attack_streams.py`:
 
 ```bash
-python security/stream_integrity/stream_validator.py eval/fixtures/tampered_streams/replay_carried/manifest.csv --fps 30
+python security/stream_integrity/stream_validator.py security/fixtures/tampered_streams/replay_carried/manifest.csv --fps 30
 python security/stream_integrity/stream_validator.py <manifest.csv> --fps 30 --json   # one JSON object per anomaly
 ```
 

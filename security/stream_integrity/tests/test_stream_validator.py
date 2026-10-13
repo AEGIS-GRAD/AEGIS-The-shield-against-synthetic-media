@@ -5,6 +5,7 @@ import sys
 
 import pytest
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from stream_validator import (
     DUPLICATE, GAP, OUT_OF_ORDER, TIMESTAMP_JUMP, TIMESTAMP_REGRESSION,
     StreamValidator, validate_manifest,
@@ -13,7 +14,7 @@ from stream_validator import (
 FPS = 30
 INTERVAL = 1000 / FPS
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-GENERATOR = os.path.join(REPO_ROOT, "eval", "scripts", "generate_attack_streams.py")
+GENERATOR = os.path.join(REPO_ROOT, "security", "attacks", "generate_attack_streams.py")
 
 
 def run(frames, **kwargs):
