@@ -283,9 +283,23 @@ sequenceDiagram
 ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_context.load_cert_chain(certfile=server_cert, keyfile=server_key)
 ssl_context.load_verify_locations(cafile=ca_cert)
-# CRITICAL: This line rejects any client that does not present a cert signed by our CA
-ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+# In PROD mode: Enforces client cert signed by our CA
+# In DEV mode: Allows permissive client verification for local browser/test rigs
+if AEGIS_SECURITY_PROFILE == "prod":
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+else:
+    ssl_context.verify_mode = ssl.CERT_OPTIONAL
 ```
+
+#### Dual-Profile Operation Modes:
+| Subsystem | `PROD` Mode (Security Pentest / Evaluation) | `DEV` Mode (AI & Web Team Sandbox) |
+| :--- | :--- | :--- |
+| **mTLS Mode** | `CERT_REQUIRED` | `CERT_OPTIONAL` |
+| **Cryptographic Hash Chain** | Sever connection instantly on break | Log `[AUDIT_WARN]`, broadcast event, keep stream alive |
+| **Continuous PRNU** | Sever connection instantly on $\text{PCE} < 50.0$ | Log `[AUDIT_WARN]`, broadcast event, keep stream alive |
+| **Telemetry Action** | `action="SOCKET_SEVERED"` | `action="AUDIT_LOGGED"` |
+| **Primary Purpose** | 100% pentest compliance & advisor defense | Unhindered AI model benchmarking & UI dev |
 
 ---
 

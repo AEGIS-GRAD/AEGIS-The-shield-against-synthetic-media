@@ -33,6 +33,21 @@ PRNU_PCE_THRESHOLD = float(os.environ.get("AEGIS_PRNU_PCE_THRESHOLD", "50.0"))
 PRNU_CHECK_INTERVAL = int(os.environ.get("AEGIS_PRNU_CHECK_INTERVAL", "1"))
 PRNU_BOOTSTRAP_FRAMES = int(os.environ.get("AEGIS_PRNU_BOOTSTRAP_FRAMES", "15"))
 
+# Security Profile: "prod" (strict zero-trust enforce) vs "dev" (permissive sandbox for Web/AI teams)
+AEGIS_SECURITY_PROFILE = os.environ.get("AEGIS_SECURITY_PROFILE", "prod").lower()
+
+def set_security_profile(profile: str):
+    global AEGIS_SECURITY_PROFILE
+    AEGIS_SECURITY_PROFILE = profile.lower()
+
+try:
+    from .telemetry import telemetry_hub, telemetry_app, TELEMETRY_PORT
+except ImportError:
+    try:
+        from telemetry import telemetry_hub, telemetry_app, TELEMETRY_PORT
+    except ImportError:
+        from security.gateway.ingestion.telemetry import telemetry_hub, telemetry_app, TELEMETRY_PORT
+
 
 class StreamRateLimiter:
     """
@@ -188,9 +203,32 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
 
             # DoS Defense 3: Token-Bucket High-Frequency Flood Limiter
             if not rate_limiter.allow_frame():
-                print(f"[!] DoS DEFENSE: Frame flood detected on {camera_id} (exceeded {MAX_STREAM_FPS} fps cap). Shedding connection.")
-                break
-            
+                if AEGIS_SECURITY_PROFILE == "prod":
+                    print(f"[!] DoS DEFENSE: Frame flood detected on {camera_id} (exceeded {MAX_STREAM_FPS} fps cap). Shedding connection.")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": -1,
+                        "status": "COMPROMISED",
+                        "threat_type": "FRAME_FLOOD",
+                        "profile": "prod",
+                        "action": "SOCKET_SEVERED",
+                        "detail": f"Frame rate exceeded {MAX_STREAM_FPS} FPS cap"
+                    })
+                    break
+                else:
+                    print(f"[*] DEV AUDIT: Frame rate alert on {camera_id} (exceeded {MAX_STREAM_FPS} fps cap). Passing through in dev mode.")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": -1,
+                        "status": "AUDIT_WARNING",
+                        "threat_type": "FRAME_FLOOD",
+                        "profile": "dev",
+                        "action": "AUDIT_LOGGED",
+                        "detail": f"Frame rate alert (exceeded {MAX_STREAM_FPS} FPS cap)"
+                    })
+
             try:
                 payload = json.loads(line.decode('utf-8'))
                 seq = payload['sequence_number']
@@ -206,19 +244,70 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
             # 1. Validate Timestamp and Sequence (Catch Replay/Drop attacks)
             anomalies = stream_validator.check(seq, ts)
             if anomalies:
-                print(f"[!] INTEGRITY COMPROMISED (Network Attack) on {camera_id}:")
-                for a in anomalies:
-                    print(f"    -> {a.kind}: {a.detail}")
-                print(f"[*] SEVERING CONNECTION to {camera_id}")
-                break # Drop connection instantly
+                anomaly_details = [f"{a.kind}: {a.detail}" for a in anomalies]
+                if AEGIS_SECURITY_PROFILE == "prod":
+                    print(f"[!] INTEGRITY COMPROMISED (Network Attack) on {camera_id}:")
+                    for a in anomalies:
+                        print(f"    -> {a.kind}: {a.detail}")
+                    print(f"[*] SEVERING CONNECTION to {camera_id}")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "status": "COMPROMISED",
+                        "threat_type": "SEQUENCE_ANOMALY",
+                        "profile": "prod",
+                        "action": "SOCKET_SEVERED",
+                        "detail": "; ".join(anomaly_details)
+                    })
+                    break  # Drop connection instantly in prod mode
+                else:
+                    print(f"[*] DEV AUDIT: Sequence anomaly on {camera_id} at seq {seq} ({'; '.join(anomaly_details)}). Passing through in dev mode.")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "status": "AUDIT_WARNING",
+                        "threat_type": "SEQUENCE_ANOMALY",
+                        "profile": "dev",
+                        "action": "AUDIT_LOGGED",
+                        "detail": "; ".join(anomaly_details)
+                    })
                 
             # 2. Validate Cryptographic Hash Chain (Catch Deepfake Splicing)
             if not hash_validator.validate_frame(frame_bytes, expected_hash):
-                print(f"[!] INTEGRITY COMPROMISED (Splicing Attack) on {camera_id}: Hash mismatch at seq {seq}")
-                print(f"[*] Expected Hash: {expected_hash}")
-                print(f"[*] Server Calculated Hash (from client frame): {hash_validator.current_hash}")
-                print(f"[*] SEVERING CONNECTION to {camera_id}")
-                break # Drop connection instantly
+                if AEGIS_SECURITY_PROFILE == "prod":
+                    print(f"[!] INTEGRITY COMPROMISED (Splicing Attack) on {camera_id}: Hash mismatch at seq {seq}")
+                    print(f"[*] Expected Hash: {expected_hash}")
+                    print(f"[*] Server Calculated Hash (from client frame): {hash_validator.current_hash}")
+                    print(f"[*] SEVERING CONNECTION to {camera_id}")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "hash": expected_hash,
+                        "calculated_hash": hash_validator.current_hash,
+                        "status": "COMPROMISED",
+                        "threat_type": "HASH_CHAIN_BREAK",
+                        "profile": "prod",
+                        "action": "SOCKET_SEVERED",
+                        "detail": f"Cryptographic hash chain broken at seq {seq}"
+                    })
+                    break  # Drop connection instantly in prod mode
+                else:
+                    print(f"[*] DEV AUDIT: Hash mismatch on {camera_id} at seq {seq}. Passing through in dev mode.")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "hash": expected_hash,
+                        "calculated_hash": hash_validator.current_hash,
+                        "status": "AUDIT_WARNING",
+                        "threat_type": "HASH_CHAIN_BREAK",
+                        "profile": "dev",
+                        "action": "AUDIT_LOGGED",
+                        "detail": f"Cryptographic hash chain broken at seq {seq}"
+                    })
 
             # 3. Validate Physical Sensor PRNU Fingerprint (Catch AI Generative Media & Foreign Sensor Injections)
             width = payload.get('width')
@@ -227,15 +316,53 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                 prnu_validator.verify_frame, camera_id, frame_bytes, seq, width, height
             )
             if not is_prnu_valid:
-                print(f"[!] INTEGRITY COMPROMISED (Hardware Sensor Mismatch / PRNU Splice) on {camera_id}:")
-                print(f"    -> {prnu_msg}")
-                print(f"[*] SEVERING CONNECTION to {camera_id}")
-                break # Drop connection instantly
-                
-            if pce > 0:
-                print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}) from {camera_id}.")
+                if AEGIS_SECURITY_PROFILE == "prod":
+                    print(f"[!] INTEGRITY COMPROMISED (Hardware Sensor Mismatch / PRNU Splice) on {camera_id}:")
+                    print(f"    -> {prnu_msg}")
+                    print(f"[*] SEVERING CONNECTION to {camera_id}")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "hash": expected_hash,
+                        "prnu_pce": round(pce, 2),
+                        "status": "COMPROMISED",
+                        "threat_type": "PRNU_SENSOR_MISMATCH",
+                        "profile": "prod",
+                        "action": "SOCKET_SEVERED",
+                        "detail": prnu_msg
+                    })
+                    break  # Drop connection instantly in prod mode
+                else:
+                    print(f"[*] DEV AUDIT: PRNU sensor mismatch on {camera_id} at seq {seq} (PCE={pce:.2f}). Passing through in dev mode.")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(),
+                        "camera_id": camera_id,
+                        "seq": seq,
+                        "hash": expected_hash,
+                        "prnu_pce": round(pce, 2),
+                        "status": "AUDIT_WARNING",
+                        "threat_type": "PRNU_SENSOR_MISMATCH",
+                        "profile": "dev",
+                        "action": "AUDIT_LOGGED",
+                        "detail": prnu_msg
+                    })
             else:
-                print(f"[OK] Frame {seq} mathematically verified from {camera_id}.")
+                if pce > 0:
+                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}) from {camera_id}.")
+                else:
+                    print(f"[OK] Frame {seq} mathematically verified from {camera_id}.")
+                await telemetry_hub.broadcast({
+                    "timestamp": time.time(),
+                    "camera_id": camera_id,
+                    "seq": seq,
+                    "hash": expected_hash,
+                    "prnu_pce": round(pce, 2) if pce > 0 else 0.0,
+                    "status": "VALID",
+                    "profile": AEGIS_SECURITY_PROFILE,
+                    "action": "FORWARDED",
+                    "detail": f"Frame {seq} mathematically verified"
+                })
             
     except Exception as e:
         print(f"[-] Connection error with {camera_id}: {e}")
@@ -259,9 +386,13 @@ async def start_server():
         print(f"FATAL: Certificates not found in {cert_dir}. Run generate_certs.py first.")
         sys.exit(1)
 
-    # Configure zero-trust mTLS context
+    # Configure mTLS context based on active security profile
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    context.verify_mode = ssl.CERT_REQUIRED
+    if AEGIS_SECURITY_PROFILE == "prod":
+        context.verify_mode = ssl.CERT_REQUIRED
+    else:
+        context.verify_mode = ssl.CERT_OPTIONAL
+
     context.load_cert_chain(certfile=server_cert, keyfile=server_key)
     context.load_verify_locations(cafile=client_ca)
 
@@ -274,14 +405,48 @@ async def start_server():
     loaded_count = load_camera_baselines_from_dir(baselines_dir)
 
     print(f"[AEGIS GATEWAY] Asynchronous Ingestion Server starting on {HOST}:{PORT}")
+    print(f"[AEGIS GATEWAY] Security Profile: {AEGIS_SECURITY_PROFILE.upper()} ({'Strict Zero-Trust Enforce' if AEGIS_SECURITY_PROFILE == 'prod' else 'Permissive AI/Web Sandbox'})")
     print(f"[AEGIS GATEWAY] DoS Hardened: Concurrency Cap={MAX_CONCURRENT_STREAMS}, Max/IP={MAX_STREAMS_PER_IP}, Max FPS={MAX_STREAM_FPS}")
     print(f"[AEGIS GATEWAY] PRNU Forensics: PCE Threshold={PRNU_PCE_THRESHOLD}, Check Interval={PRNU_CHECK_INTERVAL}, Enrolled Baselines={loaded_count}")
-    print("[AEGIS GATEWAY] Enforcing SSL.CERT_REQUIRED (mTLS). Awaiting cameras...")
+    print(f"[AEGIS GATEWAY] Ingestion Ready (mTLS mode: {'CERT_REQUIRED' if AEGIS_SECURITY_PROFILE == 'prod' else 'CERT_OPTIONAL'}). Awaiting cameras...")
+
+    # Launch telemetry SSE server on port 8444 concurrently if enabled and uvicorn is available
+    telemetry_task = None
+    if os.environ.get("AEGIS_DISABLE_TELEMETRY", "0") != "1":
+        try:
+            import uvicorn
+            telemetry_config = uvicorn.Config(
+                telemetry_app,
+                host=HOST,
+                port=TELEMETRY_PORT,
+                log_level="warning"
+            )
+            telemetry_server = uvicorn.Server(telemetry_config)
+            print(f"[AEGIS GATEWAY] Live Telemetry SSE Broadcaster active on http://{HOST}:{TELEMETRY_PORT}/telemetry/stream")
+            telemetry_task = asyncio.create_task(telemetry_server.serve())
+        except Exception as e:
+            print(f"[AEGIS GATEWAY] Note: Telemetry SSE server could not be started: {e}")
+
     async with server:
-        await server.serve_forever()
+        if telemetry_task:
+            await asyncio.gather(server.serve_forever(), telemetry_task)
+        else:
+            await server.serve_forever()
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="AEGIS Asynchronous Live Ingestion Gateway")
+    parser.add_argument(
+        "--profile",
+        choices=["prod", "dev"],
+        default=None,
+        help="Security profile: 'prod' (strict zero-trust enforce) or 'dev' (permissive AI/Web sandbox)"
+    )
+    args, _ = parser.parse_known_args()
+    if args.profile:
+        set_security_profile(args.profile)
+
     try:
         asyncio.run(start_server())
     except KeyboardInterrupt:

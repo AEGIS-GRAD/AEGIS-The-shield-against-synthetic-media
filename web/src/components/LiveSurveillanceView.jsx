@@ -96,6 +96,32 @@ export default function LiveSurveillanceView() {
   const [fps, setFps] = useState(29.8);
   const [backendStatus, setBackendStatus] = useState("checking");
 
+  // SecDevOps Gateway Telemetry state
+  const [liveHash, setLiveHash] = useState(null);
+  const [livePce, setLivePce] = useState(null);
+  const [gatewayConnected, setGatewayConnected] = useState(false);
+
+  useEffect(() => {
+    let es = null;
+    try {
+      es = new EventSource("http://localhost:8444/telemetry/stream");
+      es.onopen = () => setGatewayConnected(true);
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.seq !== undefined) {
+            if (data.hash) setLiveHash(data.hash);
+            if (data.prnu_pce !== undefined) setLivePce(data.prnu_pce);
+          }
+        } catch (_) {}
+      };
+      es.onerror = () => setGatewayConnected(false);
+    } catch (_) {}
+    return () => {
+      if (es) es.close();
+    };
+  }, []);
+
   // Alert & Evidence Escalation States
   const [alertThreshold, setAlertThreshold] = useState(0.65);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -608,7 +634,7 @@ export default function LiveSurveillanceView() {
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 z-20 text-white">
                 <div className="flex items-center gap-2 text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>Hash Chain: <code className="text-cyan-300">{selectedCam.hashChainId}</code></span>
+                  <span>Hash Chain: <code className="text-cyan-300">{liveHash ? `${liveHash.slice(0, 8)}...${liveHash.slice(-4)}` : selectedCam.hashChainId}</code></span>
                 </div>
                 <span className="text-slate-300">
                   Total Frames: <strong className="text-white font-bold">{processedFrames.toLocaleString()}</strong>
@@ -618,7 +644,7 @@ export default function LiveSurveillanceView() {
           </div>
 
           {/* Camera Details Card */}
-          <div className="p-4 rounded-xl bg-white border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono shadow-xs">
+          <div className="p-4 rounded-xl bg-white border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono shadow-xs">
             <div>
               <span className="text-slate-500 block text-[10px] uppercase font-sans font-bold">Node Host</span>
               <span className="text-slate-900 font-bold">{selectedCam.edgeNode}</span>
@@ -628,8 +654,12 @@ export default function LiveSurveillanceView() {
               <span className="text-slate-900 font-bold">{selectedCam.location}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-sans font-bold">Verification Method</span>
-              <span className="text-emerald-700 font-bold">Sliding-Window EMA</span>
+              <span className="text-slate-500 block text-[10px] uppercase font-sans font-bold">PRNU Sensor</span>
+              <span className="text-cyan-700 font-bold">{livePce !== null ? `PCE ${livePce.toFixed(1)}` : "Enrolled"}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 block text-[10px] uppercase font-sans font-bold">Gateway Telemetry</span>
+              <span className={gatewayConnected ? "text-emerald-700 font-bold" : "text-slate-600 font-bold"}>{gatewayConnected ? "LIVE CONNECTED" : "STANDALONE"}</span>
             </div>
           </div>
         </div>

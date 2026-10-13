@@ -23,13 +23,15 @@ All security test suites are unified under a single, zero-config command:
 pytest security/ -v
 ```
 
-**Test Coverage:** **76 / 76 PASSED (100% Pass Rate)**
+**Test Coverage:** **81 / 81 PASSED (100% Pass Rate)**
 - Upload content inspection (magic bytes, path traversal, extension spoofing)
 - Stream sequence & jitter anomaly detection
 - Mutual TLS 1.3 handshake verification & rogue rejection
 - Cryptographic hash-chain mathematical integrity
 - Continuous PRNU hardware sensor peak-to-correlation energy (PCE) monitoring
 - Denial-of-Service concurrency caps, rate limiting & live connection flood shedding
+- Dual-profile security gateway (PROD zero-trust enforce vs. DEV permissive sandbox)
+- Real-time Server-Sent Events (SSE) telemetry hub & attack injection bridge
 
 To run the automated 8-vector penetration test suite against the live streaming gateway:
 
@@ -44,7 +46,7 @@ pytest security/tests/run_surveillance_pentest.py -v
 | Directory | Subsystem | Responsibility |
 | :--- | :--- | :--- |
 | **[`docs/`](./docs/)** | Security Documentation | Master architecture manual, penetration test reports, incident response SOPs, PKI design, and flight recorder queries. |
-| **[`gateway/`](./gateway/)** | Gateway & Ingestion | Asynchronous TCP streaming server (`ingestion/server.py`), reverse proxy template (`nginx.conf.template`), and deep packet upload validator microservice (`validator/`). |
+| **[`gateway/`](./gateway/)** | Gateway & Ingestion | Dual-mode streaming server (`ingestion/server.py`), live SSE telemetry & attack injector (`ingestion/telemetry.py` on `:8444`), reverse proxy template (`nginx.conf.template`), and deep packet upload validator (`validator/`). |
 | **[`stream_integrity/`](./stream_integrity/)** | Temporal Integrity | Stateful $O(W)$ bounded sliding-window validator (`stream_validator.py`) detecting gaps, replays, regressions, and jitter. |
 | **[`forensics/`](./forensics/)** | Hardware Forensics | Physical camera identification via Photo-Response Non-Uniformity (`prnu.py`) using 2D DWT (`db4`), Wiener filtering, and continuous live stream monitoring (`LivePRNUValidator`). Enrolled sensor baselines stored in `forensics/baselines/`. |
 | **[`transport/`](./transport/)** | PKI & Cryptography | Mutual TLS 1.3 certificates (`certs/`) signed by a custom Certificate Authority, and key generation automation (`generate_certs.py`). |

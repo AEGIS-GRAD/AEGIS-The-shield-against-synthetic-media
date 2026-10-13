@@ -331,7 +331,7 @@ export default function LivePage() {
               <div>
                 <b>Backend rPPG service not running.</b> Run the following in PowerShell to start the OpenCV pipeline:
                 <code className="block mt-1 font-mono text-[11px] text-accent">
-                  & "D:\Gpu-shit\nasa\Scripts\python.exe" -m uvicorn detectors.rppg.streaming.webcam_stream:app --port 8765
+                  {'& "D:\\Gpu-shit\\nasa\\Scripts\\python.exe" -m uvicorn detectors.rppg.streaming.webcam_stream:app --port 8765'}
                 </code>
               </div>
               <button

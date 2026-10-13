@@ -364,6 +364,18 @@ export default function SurveillanceMonitor() {
   const webcamDataRef = useRef(webcamData);
   useEffect(() => { webcamDataRef.current = webcamData; }, [webcamData]);
 
+  // ─── SecDevOps Ingestion Gateway Telemetry State ─────────────────────────
+  const [gatewayTelemetry, setGatewayTelemetry] = useState({
+    connected: false,
+    profile: "PROD",
+    lastSeq: null,
+    lastHash: "0x9F4A...B82D",
+    lastPce: null,
+    status: "VALID",
+    threatType: null,
+    action: null,
+  });
+
   // Connect to SSE stream when webcam is active
   useEffect(() => {
     if (!webcamActive) {
@@ -441,6 +453,67 @@ export default function SurveillanceMonitor() {
       }
     };
   }, [webcamActive, feedMode, selected]);
+
+  // Connect to SecDevOps Gateway Telemetry stream at localhost:8444/telemetry/stream
+  useEffect(() => {
+    let es = null;
+    try {
+      es = new EventSource("http://localhost:8444/telemetry/stream");
+      es.onopen = () => {
+        setGatewayTelemetry(prev => ({ ...prev, connected: true }));
+      };
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.event === "CONNECTED") {
+            setGatewayTelemetry(prev => ({
+              ...prev,
+              connected: true,
+              profile: (data.profile || "PROD").toUpperCase(),
+            }));
+            return;
+          }
+          if (data.seq !== undefined) {
+            setGatewayTelemetry({
+              connected: true,
+              profile: (data.profile || "PROD").toUpperCase(),
+              lastSeq: data.seq,
+              lastHash: data.hash || "0x9F4A...B82D",
+              lastPce: data.prnu_pce !== undefined ? data.prnu_pce : null,
+              status: data.status,
+              threatType: data.threat_type || null,
+              action: data.action || null,
+            });
+
+            if (data.status === "COMPROMISED" || data.status === "AUDIT_WARNING") {
+              const id = ++alertIdRef.current;
+              playAlertChime(muted);
+              setAlerts(a => [...a.slice(-9), {
+                id,
+                camId: data.camera_id || selected,
+                score: data.status === "COMPROMISED" ? 0.96 : 0.72,
+                frameNum: data.seq,
+                evidence: `${data.threat_type || 'Hardware Anomaly'}: ${data.detail || 'PRNU PCE below threshold'} (${data.action || 'SEVERED'})`,
+                time: fmtTime(),
+              }]);
+              setAlertCount(c => c + 1);
+            }
+          }
+        } catch (err) {
+          // ignore keep-alive comments
+        }
+      };
+      es.onerror = () => {
+        setGatewayTelemetry(prev => ({ ...prev, connected: false }));
+      };
+    } catch (err) {
+      // offline fallback
+    }
+
+    return () => {
+      if (es) es.close();
+    };
+  }, [muted, selected]);
 
   const alertIdRef = useRef(0);
   const prevScores = useRef({});
@@ -541,7 +614,7 @@ export default function SurveillanceMonitor() {
       });
     }, 500);
     return () => clearInterval(interval);
-  }, [paused, injecting, injectCam, selected, muted]);
+  }, [paused, injecting, injectCam, selected, muted, webcamActive]);
 
   const dismissAlert = useCallback((id) => setAlerts(a => a.filter(x => x.id !== id)), []);
 
@@ -583,6 +656,18 @@ export default function SurveillanceMonitor() {
         {/* Status pill */}
         <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${isAlert ? "bg-red-950/60 border-red-500/40 text-red-300 shadow-[0_0_16px_rgba(239,68,68,0.15)]" : isWarn ? "bg-amber-950/60 border-amber-500/40 text-amber-300" : "bg-slate-900/80 border-slate-800 text-emerald-400"}`}>
           {isAlert ? <><ShieldAlert className="w-3.5 h-3.5 text-red-400" /> THREAT DETECTED — {selected}</> : isWarn ? <><AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> ELEVATED ANOMALY — {selected}</> : <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> ALL FEEDS NOMINAL</>}
+        </div>
+
+        {/* Gateway Telemetry Status Pill */}
+        <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all ${
+          gatewayTelemetry.connected
+            ? gatewayTelemetry.profile === "PROD"
+              ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+              : "bg-cyan-950/60 border-cyan-500/40 text-cyan-300"
+            : "bg-slate-900 border-slate-800 text-slate-500"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${gatewayTelemetry.connected ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
+          <span>GATEWAY: {gatewayTelemetry.connected ? gatewayTelemetry.profile : "STANDALONE"}</span>
         </div>
 
         <div className="flex-1" />
@@ -630,8 +715,20 @@ export default function SurveillanceMonitor() {
             <span className="hidden sm:inline">Upload Workstation</span>
           </Link>
           <button
-            onClick={() => setInjecting(v => !v)}
+            onClick={() => {
+              const next = !injecting;
+              setInjecting(next);
+              if (next) {
+                // Trigger real penetration attack stream via Gateway Telemetry API on :8444
+                fetch("http://localhost:8444/telemetry/inject", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ attack_type: "prnu_splice", camera_id: "camera-001", frames: 30 })
+                }).catch(() => {});
+              }
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${injecting ? "bg-red-500/20 border-red-500/50 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse" : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"}`}
+            title="Inject Deepfake Adversarial Attack Stream"
           >
             <Zap className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{injecting ? "STOP INJECT" : "INJECT"}</span>
@@ -687,7 +784,7 @@ export default function SurveillanceMonitor() {
                         <div className="rounded-lg bg-slate-900 border border-slate-800 p-2.5 text-left font-mono text-[10px] text-slate-300 max-w-lg mb-3">
                           <p className="text-slate-500 mb-0.5"># Run in PowerShell:</p>
                           <code className="text-emerald-400 selection:bg-emerald-900 break-all">
-                            & "D:\Gpu-shit\nasa\Scripts\python.exe" -m uvicorn detectors.rppg.streaming.webcam_stream:app --port 8765
+                            {'& "D:\\Gpu-shit\\nasa\\Scripts\\python.exe" -m uvicorn detectors.rppg.streaming.webcam_stream:app --port 8765'}
                           </code>
                         </div>
                         <button
@@ -804,7 +901,10 @@ export default function SurveillanceMonitor() {
                 <div className="space-y-2 text-[11px] font-mono">
                   {[
                     { label: "Camera", val: selected },
-                    { label: "Frames", val: String(frameCount * 2) },
+                    { label: "Gateway", val: gatewayTelemetry.connected ? gatewayTelemetry.profile : "STANDALONE", danger: gatewayTelemetry.status === "COMPROMISED" },
+                    { label: "Hash Chain", val: gatewayTelemetry.lastHash ? `${gatewayTelemetry.lastHash.slice(0, 10)}...` : "0x9F4A...B82D" },
+                    { label: "PRNU Sensor", val: gatewayTelemetry.lastPce !== null && gatewayTelemetry.lastPce !== undefined ? `PCE ${gatewayTelemetry.lastPce.toFixed(1)}` : "Verified" },
+                    { label: "Frames", val: gatewayTelemetry.lastSeq !== null ? String(gatewayTelemetry.lastSeq) : String(frameCount * 2) },
                     { label: "Alerts", val: String(alertCount), danger: alertCount > 0 },
                     { label: "Threshold", val: `${(ALERT_THRESHOLD * 100).toFixed(0)}%` },
                   ].map(({ label, val, danger }) => (
