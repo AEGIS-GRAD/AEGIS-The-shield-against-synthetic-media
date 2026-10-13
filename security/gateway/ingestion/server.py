@@ -11,6 +11,12 @@ from typing import Dict, Set, Optional, Tuple
 # Add paths for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from stream_integrity.stream_validator import StreamValidator
+from forensics.prnu import (
+    LivePRNUValidator,
+    get_camera_baseline,
+    load_camera_baselines_from_dir,
+    register_camera_baseline,
+)
 
 HOST = '127.0.0.1'
 PORT = 8443
@@ -21,6 +27,11 @@ MAX_STREAMS_PER_IP = int(os.environ.get("AEGIS_MAX_STREAMS_PER_IP", "5"))
 STREAM_IDLE_TIMEOUT = float(os.environ.get("AEGIS_STREAM_IDLE_TIMEOUT", "10.0"))
 MAX_STREAM_FPS = float(os.environ.get("AEGIS_MAX_STREAM_FPS", "60.0"))
 BURST_CAPACITY = float(os.environ.get("AEGIS_STREAM_BURST_CAPACITY", "30.0"))
+
+# PRNU Hardware Fingerprinting Parameters
+PRNU_PCE_THRESHOLD = float(os.environ.get("AEGIS_PRNU_PCE_THRESHOLD", "50.0"))
+PRNU_CHECK_INTERVAL = int(os.environ.get("AEGIS_PRNU_CHECK_INTERVAL", "1"))
+PRNU_BOOTSTRAP_FRAMES = int(os.environ.get("AEGIS_PRNU_BOOTSTRAP_FRAMES", "15"))
 
 
 class StreamRateLimiter:
@@ -149,6 +160,18 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
     # Initialize validators and DoS rate limiter for this stream
     stream_validator = StreamValidator(fps=30)
     hash_validator = LiveHashChainValidator()
+    prnu_validator = LivePRNUValidator(
+        level=2,
+        wavelet="db4",
+        pce_threshold=PRNU_PCE_THRESHOLD,
+        check_interval=PRNU_CHECK_INTERVAL,
+        bootstrap_frames=PRNU_BOOTSTRAP_FRAMES,
+        target_shape=(240, 320)
+    )
+    enrolled_base = get_camera_baseline(camera_id)
+    if enrolled_base is not None:
+        prnu_validator.enroll_baseline(camera_id, enrolled_base)
+
     rate_limiter = StreamRateLimiter(max_fps=MAX_STREAM_FPS, burst_capacity=BURST_CAPACITY)
 
     try:
@@ -196,8 +219,23 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                 print(f"[*] Server Calculated Hash (from client frame): {hash_validator.current_hash}")
                 print(f"[*] SEVERING CONNECTION to {camera_id}")
                 break # Drop connection instantly
+
+            # 3. Validate Physical Sensor PRNU Fingerprint (Catch AI Generative Media & Foreign Sensor Injections)
+            width = payload.get('width')
+            height = payload.get('height')
+            is_prnu_valid, pce, prnu_msg = await asyncio.to_thread(
+                prnu_validator.verify_frame, camera_id, frame_bytes, seq, width, height
+            )
+            if not is_prnu_valid:
+                print(f"[!] INTEGRITY COMPROMISED (Hardware Sensor Mismatch / PRNU Splice) on {camera_id}:")
+                print(f"    -> {prnu_msg}")
+                print(f"[*] SEVERING CONNECTION to {camera_id}")
+                break # Drop connection instantly
                 
-            print(f"[OK] Frame {seq} mathematically verified from {camera_id}.")
+            if pce > 0:
+                print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}) from {camera_id}.")
+            else:
+                print(f"[OK] Frame {seq} mathematically verified from {camera_id}.")
             
     except Exception as e:
         print(f"[-] Connection error with {camera_id}: {e}")
@@ -231,8 +269,13 @@ async def start_server():
         handle_camera_stream, HOST, PORT, ssl=context, limit=1024 * 1024 * 10 # 10 MB limit for huge frame payloads
     )
 
+    # Pre-load enrolled camera PRNU baselines
+    baselines_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'forensics', 'baselines')
+    loaded_count = load_camera_baselines_from_dir(baselines_dir)
+
     print(f"[AEGIS GATEWAY] Asynchronous Ingestion Server starting on {HOST}:{PORT}")
     print(f"[AEGIS GATEWAY] DoS Hardened: Concurrency Cap={MAX_CONCURRENT_STREAMS}, Max/IP={MAX_STREAMS_PER_IP}, Max FPS={MAX_STREAM_FPS}")
+    print(f"[AEGIS GATEWAY] PRNU Forensics: PCE Threshold={PRNU_PCE_THRESHOLD}, Check Interval={PRNU_CHECK_INTERVAL}, Enrolled Baselines={loaded_count}")
     print("[AEGIS GATEWAY] Enforcing SSL.CERT_REQUIRED (mTLS). Awaiting cameras...")
     async with server:
         await server.serve_forever()
