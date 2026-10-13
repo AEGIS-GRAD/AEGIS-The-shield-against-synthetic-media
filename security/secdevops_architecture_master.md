@@ -20,7 +20,6 @@
    - 3.6 [Upload Hardening & Sidecar Inspection](#36-upload-hardening--sidecar-inspection)
 4. [DevOps, Containerization & Observability](#4-devops-containerization--observability)
 5. [Incident Response & Wazuh SIEM Routing](#5-incident-response--wazuh-siem-routing)
-6. [Codebase Reorganization & Clean Refactoring Blueprint](#6-codebase-reorganization--clean-refactoring-blueprint)
 
 ---
 
@@ -512,54 +511,3 @@ Every alert emitted over WebSockets to the Next.js UI contains full forensic pro
   "containment_action": "SOCKET_SEVERED"
 }
 ```
-
----
-
-# 6. Codebase Reorganization & Clean Refactoring Blueprint
-
-### 6.1 Honest Critique of Current Layout (Why It Felt Messy)
-1. **Scattered PRNU code**: `prnu.py` exists in `security/forensics/`, but a duplicate `prnu_extractor.py` was placed inside `security/gateway/validator/app/`.
-2. **Validator Microservice Nesting**: The FastAPI upload validator is deeply nested under `security/gateway/validator/`, even though it is an independent Docker microservice.
-3. **Stream Integrity Separation**: `stream_validator.py` is in `security/stream_integrity/`, but the live ingestion server that uses it is in `security/gateway/ingestion/`.
-4. **Scattered Tests**: Tests were split between `security/tests/`, `security/gateway/validator/tests/`, and `security/stream_integrity/tests/`.
-
-### 6.2 The Clean Target Architecture (Proposed Reorganization)
-Here is the clean, professional architecture to propose to your team:
-
-```text
-security/
-├── api_gateway/                 # Clean Nginx gateway definitions
-│   ├── nginx.conf.template
-│   └── README.md
-│
-├── upload_validator/            # Distinct upload sidecar microservice
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/ (main.py, config.py, magic_bytes.py, path_safety.py)
-│   └── tests/
-│
-├── live_ingestion/              # Unified Live Streaming Ingestion
-│   ├── server.py                # Asynchronous mTLS Ingestion Server
-│   ├── stream_validator.py      # Sequence & Jitter Integrity
-│   ├── hash_chain.py            # Recursive SHA-256 State Machine
-│   └── rate_limiter.py          # Token-bucket & Concurrency Manager
-│
-├── forensics/                   # Physical Camera Forensics
-│   ├── prnu.py                  # DWT + Wiener Filter Noise Extractor
-│   └── pce_evaluator.py         # 2D FFT Correlation Engine
-│
-├── pki/                         # Cryptography & Device Credentials
-│   ├── certs/ (ca, server, client)
-│   └── generate_certs.py
-│
-├── telemetry/                   # Prometheus & Logging
-│   └── prometheus.yml
-│
-└── tests/                       # Centralized Integration Test Suite
-    ├── test_dos_hardening.py
-    ├── test_harness_integration.py
-    └── test_prnu_forensics.py
-```
-
-*Note: This reorganization can be executed in a single refactoring sprint once the current sprint deliverables are finalized.*
-
