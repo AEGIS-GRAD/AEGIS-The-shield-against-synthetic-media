@@ -129,7 +129,8 @@ AEGIS-The-shield-against-synthetic-media/
 │   │
 │   ├── forensics/                           # Physical hardware forensics
 │   │   ├── hash_chain.py                    # Standalone recursive SHA-256 state machine
-│   │   └── prnu.py                          # 2D Wavelet DWT (db4) + Wiener filter PRNU extractor
+│   │   ├── prnu.py                          # 2D Wavelet DWT (db4) + Wiener filter PRNU extractor & LivePRNUValidator
+│   │   └── baselines/                       # Enrolled camera hardware sensor baselines (*.npy)
 │   │
 │   ├── transport/                           # Cryptographic PKI & mTLS primitives
 │   │   ├── generate_certs.py                # Automated script generating CA, Server, Client certs
@@ -362,6 +363,14 @@ In our automated test harness (`test_harness_integration.py`):
 - **Spliced Foreign Camera Frame PCE**: **$15.54$** (Flat correlation floor).
 - **Calibrated Operational Threshold**: **$50.0$**.  
   *(A difference of over 6,000x separation, guaranteeing near-zero false alarms).*
+
+#### 4. Continuous Streaming Ingestion PRNU Validator (`LivePRNUValidator`)
+In real-time live video ingestion (`security/gateway/ingestion/server.py`), PRNU verification operates as a continuous sensor-physics firewall:
+1. **Asynchronous Non-Blocking Execution**: To preserve line-rate frame ingestion without stalling the async event loop, 2D Wavelet DWT and FFT phase correlation execute in dedicated worker threads via `asyncio.to_thread`.
+2. **Dual Enrollment Strategy**:
+   - *Pre-Enrolled Baselines*: Enrolled camera fingerprints (`security/forensics/baselines/<camera_id>.npy`) are loaded during server initialization and mapped to the camera's mTLS Common Name.
+   - *Dynamic Session Bootstrapping*: If a camera connects without a prior offline baseline, the first $N$ frames (default $N=15$) are accumulated to establish the camera's baseline pattern dynamically.
+3. **Continuous Sampling & Rejection Threshold**: Frames are sampled according to `AEGIS_PRNU_CHECK_INTERVAL` (default: every frame). If an attacker injects foreign or AI-generated frames whose Peak-to-Correlation Energy drops below $50.0$, the gateway immediately severs the TCP connection to protect downstream surveillance pipelines.
 
 ---
 
