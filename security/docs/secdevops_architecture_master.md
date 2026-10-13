@@ -98,7 +98,14 @@ AEGIS-The-shield-against-synthetic-media/
 │
 ├── security/                                # [CORE SECDEVOPS SUBSYSTEM ROOT]
 │   ├── README.md                            # Quick-start entry point & test summary
-│   ├── secdevops_architecture_master.md     # [THIS DOCUMENT] The Master Architecture Specification
+│   │
+│   ├── docs/                                # Central Security Documentation Catalog
+│   │   ├── secdevops_architecture_master.md # [THIS DOCUMENT] The Master Architecture Specification
+│   │   ├── pen_test_surveillance_pipeline.md # Live surveillance pipeline penetration test report
+│   │   ├── incident_response_workflow.md    # NIST SP 800-61 Rev. 2 SOP & Wazuh SIEM routing
+│   │   ├── device_authentication_design.md  # Hardware root-of-trust & zero-trust mTLS 1.3 spec
+│   │   ├── pen_test_log.md                  # Historical REST API penetration testing evidence
+│   │   └── flight_recorder_cookbook.sql     # Forensic SQL queries for flight_recorder.db
 │   │
 │   ├── gateway/
 │   │   ├── README.md                        # Documentation for gateway architecture & DoS limits
@@ -160,7 +167,8 @@ AEGIS-The-shield-against-synthetic-media/
 │       ├── test_live_ingestion.py           # End-to-end mTLS live TCP stream ingestion test
 │       ├── test_mtls.py                     # TLS handshake protocol verification
 │       ├── test_prnu.py                     # Physical sensor PCE correlation test
-│       └── test_stream_dos_hardening.py     # Flood simulation, token-bucket, & concurrency tests
+│       ├── test_stream_dos_hardening.py     # Flood simulation, token-bucket, & concurrency tests
+│       └── run_surveillance_pentest.py      # Automated 8-vector live penetration test runner
 │
 ├── eval/                                    # [EXTERNAL] Evaluation Suite
 │   └── scripts/
@@ -169,60 +177,72 @@ AEGIS-The-shield-against-synthetic-media/
 ├── orchestrator/app/                        # [EXTERNAL] Runtime Security Storage
 │   └── flight_recorder.db                   # SQLite immutable audit database (WAL mode)
 │
-└── docs/                                    # [EXTERNAL] Architectural & Operational SOPs
-    ├── incident_response_workflow.md        # NIST SP 800-61 Rev. 2 SOP & Wazuh SIEM routing
-    ├── flight_recorder_cookbook.sql         # SQL recipes for querying forensic flight recorder
-    ├── pen_test_log.md                      # Penetration testing log and defense evidence
-    └── device_authentication_design.md      # PKI mTLS design document
+└── docs/                                    # [EXTERNAL] Root Architectural Documentation
+    ├── AEGIS Edge Model Architecture Design.pdf # Edge neural network hardware design
+    ├── edge_model_design.md                 # MobileNetV3 INT8 edge detection pipeline
+    ├── orchestrator_design.md               # Asynchronous microservice orchestration spec
+    ├── codebase_inventory.md                # System-wide repository asset inventory
+    ├── month1_ai_track_summary.md           # Model benchmarks and training summary
+    ├── LIMITATIONS.md                       # Known technical boundaries and constraints
+    └── failure_notes.md                     # Lessons learned and post-mortem logs
 ```
 
 ---
 
-### 2.2 Internal Security Subsystem Breakdown (`security/`)
+### 2.2 Security Documentation Catalog (`security/docs/`)
 
-| File Path | Subsystem | Core Role | Why It Exists |
+| File Path | Category | Core Role | Why It Exists |
 | :--- | :--- | :--- | :--- |
-| [`security/README.md`](./README.md) | Entry Point | Subsystem Gateway | Quick overview, test commands, and architectural index. |
-| [`security/secdevops_architecture_master.md`](./secdevops_architecture_master.md) | Documentation | Master Architecture Specification | Definitive specification, mathematical proofs, and system guide. |
-| [`security/gateway/ingestion/server.py`](./gateway/ingestion/server.py) | Streaming Perimeter | Asynchronous mTLS TCP Server | Enforces device auth, DoS rate-limits, and hash checks before passing frames to AI. |
-| [`security/gateway/nginx.conf.template`](./gateway/nginx.conf.template) | Reverse Proxy | Perimeter Gateway Config | Nginx ingress enforcing API keys, SSL termination, and routing to upload validator. |
-| [`security/gateway/validator/app/magic_bytes.py`](./gateway/validator/app/magic_bytes.py) | Upload Defense | Header Sniffer | Clients lie about file extensions; this inspects raw bytes (`\x89PNG`, `ftyp`, `RIFF`). |
-| [`security/gateway/validator/app/path_safety.py`](./gateway/validator/app/path_safety.py) | Upload Defense | Directory Traversal Neutralizer | Prevents attackers from using `../../` to overwrite system files or access unauthorized paths. |
-| [`security/gateway/validator/app/main.py`](./gateway/validator/app/main.py) | Upload Defense | Sidecar FastAPI Proxy | Intercepts multipart video and JSON audio before they reach internal AI models. |
-| [`security/gateway/validator/app/config.py`](./gateway/validator/app/config.py) | Upload Defense | Environment Configuration | Defines upload caps (100MB), timeouts, and upstream detector URLs. |
-| [`security/stream_integrity/stream_validator.py`](./stream_integrity/stream_validator.py) | Temporal Integrity | Stateful Stream Anomaly Engine | Detects frame drops, replays, sequence jumps, and network jitter in constant memory. |
-| [`security/forensics/prnu.py`](./forensics/prnu.py) | Hardware Forensics | Sensor Noise Extraction & PCE | Differentiates authentic camera footage from AI-generated video via sensor imperfections. |
-| [`security/forensics/hash_chain.py`](./forensics/hash_chain.py) | Cryptographic Forensics | SHA-256 Recursive Binding | Standalone module computing live frame hash chains. |
-| [`security/transport/generate_certs.py`](./transport/generate_certs.py) | Cryptography (PKI) | Zero-Dependency CA Generator | Programmatically mints X.509 certificates with SAN (Subject Alternative Names) for mTLS. |
-| [`security/transport/mtls_client.py`](./transport/mtls_client.py) | PKI / Testing | Camera Client Simulator | Test script simulating authentic camera vs rogue device connections. |
-| [`security/transport/mtls_server.py`](./transport/mtls_server.py) | PKI / Testing | mTLS Server Simulator | Reference server verifying SSL handshake and certificate extraction. |
-| [`security/attacks/generate_attack_streams.py`](./attacks/generate_attack_streams.py) | Red-Team Harness | Adversary Attack Simulator | Synthesizes 9 ground-truth attack streams across 5 categories to stress-test defenses. |
-| [`security/fixtures/tampered_streams/`](./fixtures/tampered_streams/) | Test Fixtures | Ground-Truth Attack Datasets | Stored locally for regression testing of temporal validation, PRNU, and hash-chaining. |
-| [`security/telemetry/prometheus.yml`](./telemetry/prometheus.yml) | Observability / DevOps | Metrics Scrape Config | Polls latency, error rates, and detector utilization every 5 seconds. |
-| [`security/tests/test_stream_dos_hardening.py`](./tests/test_stream_dos_hardening.py) | Quality Assurance | DoS Flood Simulation Suite | Proves that the server sheds excess connection blasts and maintains 100% stability. |
-| [`security/tests/test_harness_integration.py`](./tests/test_harness_integration.py) | Quality Assurance | Multi-Attack Harness Suite | Runs the server against all 5 attack stream types (PRNU, auth bypass, splicing, etc.). |
-| [`security/tests/test_cyber_fortress.py`](./tests/test_cyber_fortress.py) | Quality Assurance | E2E Security Regression Suite | Validates mTLS handshake, StreamValidator anomalies, and hash chain integrity together. |
-| [`security/tests/test_mtls.py`](./tests/test_mtls.py) | Quality Assurance | mTLS Protocol Test Suite | Verifies that valid client certs connect and unauthenticated rogue clients are severed. |
-| [`security/tests/test_hash_chain.py`](./tests/test_hash_chain.py) | Quality Assurance | Cryptographic Hash Chain Test | Tests recursive SHA-256 calculation and detects injected/dropped frames. |
-| [`security/tests/test_live_ingestion.py`](./tests/test_live_ingestion.py) | Quality Assurance | Live TCP Streaming Test | Connects live client over mTLS and streams mathematically verified frames. |
-| [`security/tests/test_prnu.py`](./tests/test_prnu.py) | Quality Assurance | PRNU Unit Test Suite | Validates DWT decomposition, residual extraction, and PCE cross-correlation math. |
+| [`secdevops_architecture_master.md`](./secdevops_architecture_master.md) | Architecture | Master Technical Manual | Definitive specification, mathematical proofs, and system guide. |
+| [`pen_test_surveillance_pipeline.md`](./pen_test_surveillance_pipeline.md) | Pen-Test Audit | Live Gateway Pen-Test Report | Dynamic penetration test report covering 8 real-time exploit vectors (NIST SP 800-115). |
+| [`incident_response_workflow.md`](./incident_response_workflow.md) | SecOps SOP | NIST SP 800-61 Rev. 2 Playbook | Defines Wazuh SIEM rules (`100201`–`100204`), SLAs, and automated socket-severing playbooks. |
+| [`device_authentication_design.md`](./device_authentication_design.md) | PKI Spec | Device Authentication Architecture | Detailed specification for the private Certificate Authority, X.509 issuance, and mTLS. |
+| [`pen_test_log.md`](./pen_test_log.md) | Historical Audit | Initial REST API Pen-Test Log | Verifies gateway resilience against unauthorized requests (403) and oversized payloads (413). |
+| [`flight_recorder_cookbook.sql`](./flight_recorder_cookbook.sql) | Forensic Data | Forensic Audit Query Recipes | SQL queries for querying `flight_recorder.db` to reconstruct security incidents and trace tampered streams. |
 
 ---
 
-### 2.3 External SecDevOps Assets Across the Repository
+### 2.3 Internal Security Subsystem Breakdown (`security/`)
+
+| File Path | Subsystem | Core Role | Why It Exists |
+| :--- | :--- | :--- | :--- |
+| [`security/README.md`](../README.md) | Entry Point | Subsystem Gateway | Quick overview, test commands, and architectural index. |
+| [`security/gateway/ingestion/server.py`](../gateway/ingestion/server.py) | Streaming Perimeter | Asynchronous mTLS TCP Server | Enforces device auth, DoS rate-limits, and hash checks before passing frames to AI. |
+| [`security/gateway/nginx.conf.template`](../gateway/nginx.conf.template) | Reverse Proxy | Perimeter Gateway Config | Nginx ingress enforcing API keys, SSL termination, and routing to upload validator. |
+| [`security/gateway/validator/app/magic_bytes.py`](../gateway/validator/app/magic_bytes.py) | Upload Defense | Header Sniffer | Clients lie about file extensions; this inspects raw bytes (`\x89PNG`, `ftyp`, `RIFF`). |
+| [`security/gateway/validator/app/path_safety.py`](../gateway/validator/app/path_safety.py) | Upload Defense | Directory Traversal Neutralizer | Prevents attackers from using `../../` to overwrite system files or access unauthorized paths. |
+| [`security/gateway/validator/app/main.py`](../gateway/validator/app/main.py) | Upload Defense | Sidecar FastAPI Proxy | Intercepts multipart video and JSON audio before they reach internal AI models. |
+| [`security/gateway/validator/app/config.py`](../gateway/validator/app/config.py) | Upload Defense | Environment Configuration | Defines upload caps (100MB), timeouts, and upstream detector URLs. |
+| [`security/stream_integrity/stream_validator.py`](../stream_integrity/stream_validator.py) | Temporal Integrity | Stateful Stream Anomaly Engine | Detects frame drops, replays, sequence jumps, and network jitter in constant memory. |
+| [`security/forensics/prnu.py`](../forensics/prnu.py) | Hardware Forensics | Sensor Noise Extraction & PCE | Differentiates authentic camera footage from AI-generated video via sensor imperfections. |
+| [`security/forensics/hash_chain.py`](../forensics/hash_chain.py) | Cryptographic Forensics | SHA-256 Recursive Binding | Standalone module computing live frame hash chains. |
+| [`security/transport/generate_certs.py`](../transport/generate_certs.py) | Cryptography (PKI) | Zero-Dependency CA Generator | Programmatically mints X.509 certificates with SAN (Subject Alternative Names) for mTLS. |
+| [`security/transport/mtls_client.py`](../transport/mtls_client.py) | PKI / Testing | Camera Client Simulator | Test script simulating authentic camera vs rogue device connections. |
+| [`security/transport/mtls_server.py`](../transport/mtls_server.py) | PKI / Testing | mTLS Server Simulator | Reference server verifying SSL handshake and certificate extraction. |
+| [`security/attacks/generate_attack_streams.py`](../attacks/generate_attack_streams.py) | Red-Team Harness | Adversary Attack Simulator | Synthesizes 9 ground-truth attack streams across 5 categories to stress-test defenses. |
+| [`security/fixtures/tampered_streams/`](../fixtures/tampered_streams/) | Test Fixtures | Ground-Truth Attack Datasets | Stored locally for regression testing of temporal validation, PRNU, and hash-chaining. |
+| [`security/telemetry/prometheus.yml`](../telemetry/prometheus.yml) | Observability / DevOps | Metrics Scrape Config | Polls latency, error rates, and detector utilization every 5 seconds. |
+| [`security/tests/run_surveillance_pentest.py`](../tests/run_surveillance_pentest.py) | Security QA | 8-Vector Penetration Test Runner | Automated red-team exploit runner executing live attacks against the ingestion gateway. |
+| [`security/tests/test_stream_dos_hardening.py`](../tests/test_stream_dos_hardening.py) | Quality Assurance | DoS Flood Simulation Suite | Proves that the server sheds excess connection blasts and maintains 100% stability. |
+| [`security/tests/test_harness_integration.py`](../tests/test_harness_integration.py) | Quality Assurance | Multi-Attack Harness Suite | Runs the server against all 5 attack stream types (PRNU, auth bypass, splicing, etc.). |
+| [`security/tests/test_cyber_fortress.py`](../tests/test_cyber_fortress.py) | Quality Assurance | E2E Security Regression Suite | Validates mTLS handshake, StreamValidator anomalies, and hash chain integrity together. |
+| [`security/tests/test_mtls.py`](../tests/test_mtls.py) | Quality Assurance | mTLS Protocol Test Suite | Verifies that valid client certs connect and unauthenticated rogue clients are severed. |
+| [`security/tests/test_hash_chain.py`](../tests/test_hash_chain.py) | Quality Assurance | Cryptographic Hash Chain Test | Tests recursive SHA-256 calculation and detects injected/dropped frames. |
+| [`security/tests/test_live_ingestion.py`](../tests/test_live_ingestion.py) | Quality Assurance | Live TCP Streaming Test | Connects live client over mTLS and streams mathematically verified frames. |
+| [`security/tests/test_prnu.py`](../tests/test_prnu.py) | Quality Assurance | PRNU Unit Test Suite | Validates DWT decomposition, residual extraction, and PCE cross-correlation math. |
+
+---
+
+### 2.4 External SecDevOps Assets Across the Repository
 
 | External File Path | Subsystem / Role | Why It Is Part of SecDevOps |
 | :--- | :--- | :--- |
-| [`docker-compose.yml`](../docker-compose.yml) | Infrastructure as Code | Configures `aegis_net` network isolation, cgroup memory ceilings (1–4GB), `wazuh_agent`, `api_gateway`, and `gateway_validator`. |
-| [`.github/workflows/ci-gateway.yml`](../.github/workflows/ci-gateway.yml) | CI/CD Automation | Automatically triggers the upload validator test suite on any pull request touching gateway code. |
-| [`.github/workflows/ci-docker-check.yml`](../.github/workflows/ci-docker-check.yml) | CI/CD Automation | Automatically validates Compose configuration, boots the multi-container stack, and runs E2E tests in GitHub Actions. |
-| [`eval/scripts/generate_attack_streams.py`](../eval/scripts/generate_attack_streams.py) | Legacy Proxy | Backward-compatible shim redirecting legacy callers to `security/attacks/generate_attack_streams.py`. |
-| [`docs/incident_response_workflow.md`](../docs/incident_response_workflow.md) | Security Operations SOP | Official SOP following NIST SP 800-61 Rev. 2 & ISO/IEC 27037; defines Wazuh rules (`100201`–`100204`), SLAs, and alert schemas. |
-| [`docs/flight_recorder_cookbook.sql`](../docs/flight_recorder_cookbook.sql) | Forensic Data Operations | SQL queries for querying `flight_recorder.db` to reconstruct security incidents and trace tampered streams. |
-| [`docs/pen_test_log.md`](../docs/pen_test_log.md) | Security Audit Evidence | Verifies gateway resilience against unauthorized requests (403), 500MB payload floods (413), and path traversal attempts. |
-| [`docs/device_authentication_design.md`](../docs/device_authentication_design.md) | PKI Architecture Spec | Detailed specification for the private Certificate Authority, X.509 issuance, and camera enrollment. |
+| [`docker-compose.yml`](../../docker-compose.yml) | Infrastructure as Code | Configures `aegis_net` network isolation, cgroup memory ceilings (1–4GB), `wazuh_agent`, `api_gateway`, and `gateway_validator`. |
+| [`.github/workflows/ci-gateway.yml`](../../.github/workflows/ci-gateway.yml) | CI/CD Automation | Automatically triggers the upload validator test suite on any pull request touching gateway code. |
+| [`.github/workflows/ci-docker-check.yml`](../../.github/workflows/ci-docker-check.yml) | CI/CD Automation | Automatically validates Compose configuration, boots the multi-container stack, and runs E2E tests in GitHub Actions. |
+| [`eval/scripts/generate_attack_streams.py`](../../eval/scripts/generate_attack_streams.py) | Legacy Proxy | Backward-compatible shim redirecting legacy callers to `security/attacks/generate_attack_streams.py`. |
 | `orchestrator/app/flight_recorder.db` | Operational Database | Runtime SQLite database operating in WAL mode, recording all stream verifications, anomaly scores, and SIEM dispatches. |
-| [`LocalDocs/TRANSPORT_SECURITY.md`](../LocalDocs/TRANSPORT_SECURITY.md) | Legacy Documentation | Internal architecture notes on transport-layer encryption and stream integrity. |
+| [`LocalDocs/TRANSPORT_SECURITY.md`](../../LocalDocs/TRANSPORT_SECURITY.md) | Legacy Documentation | Internal architecture notes on transport-layer encryption and stream integrity. |
 
 ---
 
