@@ -7,7 +7,7 @@ established; callers must never turn that into an "authentic" verdict.
 
 This only inspects frame metadata. An attacker who rewrites sequence numbers
 and timestamps to look continuous ("forged" streams in
-eval/scripts/generate_attack_streams.py) passes these checks by design; content
+security/attacks/generate_attack_streams.py) passes these checks by design; content
 checks such as frame hash-chaining are needed to catch that.
 
 Usage:
@@ -16,7 +16,7 @@ Usage:
         for anomaly in validator.check(frame.sequence_number, frame.timestamp_ms):
             raise_alert(anomaly)
 
-    python stream_validator.py eval/fixtures/tampered_streams/replay_carried/manifest.csv --fps 30
+    python stream_validator.py security/fixtures/tampered_streams/replay_carried/manifest.csv --fps 30
 """
 import argparse
 import csv

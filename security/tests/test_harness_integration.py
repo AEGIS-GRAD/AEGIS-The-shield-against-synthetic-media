@@ -17,6 +17,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 HOST = '127.0.0.1'
 PORT = 8443
 
+SECURITY_FIXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'fixtures', 'tampered_streams'))
+EVAL_FIXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'eval', 'fixtures', 'tampered_streams'))
+FIXTURES_DIR = SECURITY_FIXTURES if os.path.exists(SECURITY_FIXTURES) else EVAL_FIXTURES
+
 def run_server():
     server_script = os.path.join(os.path.dirname(__file__), '..', 'gateway', 'ingestion', 'server.py')
     return subprocess.Popen([sys.executable, server_script])
@@ -49,7 +53,7 @@ def stream_scenario(scenario_name, index_row, context, clean_hashes):
     print(f"\n[SCENARIO] {scenario_name}")
     print(f"  -> Description: {index_row['description']}")
     
-    scenario_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'eval', 'fixtures', 'tampered_streams', scenario_name)
+    scenario_dir = os.path.join(FIXTURES_DIR, scenario_name)
     stream_path = os.path.join(scenario_dir, 'stream.mkv')
     manifest_path = os.path.join(scenario_dir, 'manifest.csv')
     
@@ -224,14 +228,14 @@ def test_harness_integration():
     context.load_cert_chain(certfile=client_cert, keyfile=client_key)
     context.check_hostname = False
 
-    index_path = os.path.join(os.path.dirname(__file__), '..', '..', 'eval', 'fixtures', 'tampered_streams', 'index.csv')
+    index_path = os.path.join(FIXTURES_DIR, 'index.csv')
     if not os.path.exists(index_path):
-        print("[FATAL] Attack fixtures not found. Run eval/scripts/generate_attack_streams.py first.")
+        print("[FATAL] Attack fixtures not found. Run security/attacks/generate_attack_streams.py first.")
         server_proc.kill()
         sys.exit(1)
 
     print("[SYSTEM] Generating true hardware hashes from clean reference stream...")
-    clean_hashes = read_clean_hashes(os.path.join(os.path.dirname(__file__), '..', '..', 'eval', 'fixtures', 'tampered_streams', 'clean'))
+    clean_hashes = read_clean_hashes(os.path.join(FIXTURES_DIR, 'clean'))
 
     all_passed = True
     with open(index_path, 'r') as f:

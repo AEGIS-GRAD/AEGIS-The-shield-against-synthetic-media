@@ -63,6 +63,12 @@ def run_cyber_fortress_test():
     print("\n=======================================================")
     print("  ALL CYBER DEFENSES ACTIVATED. FORTRESS IS SECURE.")
     print("=======================================================")
+    return True
+
+
+def test_cyber_fortress():
+    assert run_cyber_fortress_test() is True
+
 
 if __name__ == "__main__":
     run_cyber_fortress_test()
