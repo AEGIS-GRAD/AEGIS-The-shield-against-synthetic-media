@@ -8,7 +8,7 @@ AEGIS is a monorepo for a deepfake/synthetic-media detection system, built as a 
 
 1. **`orchestrator/`** — rule-based planning agent (FastAPI). Decides which detectors to invoke for a given input (modality, has_audio), dispatches to them concurrently, aggregates their scores into a verdict, and logs everything to SQLite. Will eventually be replaced by an LLM-driven agent (see `debate/`), but the rule-based version is the current baseline all future work is measured against.
 2. **`detectors/`** — one FastAPI microservice per model: `video-classifier` (EfficientNet-B0 on FF++), `rppg` (CHROM heartbeat-consistency), `aasist` (audio voice-spoofing), `syncnet` (audio-visual lip sync). `dire/` and `binoculars/` exist as unimplemented stub containers (image/text modalities) in `docker-compose.yml`.
-3. **`debate/`**, **`engine/`** — planned Month 2 layers (multi-agent arbitration/explainability, hardware-aware quantization/export). Currently stub containers with no code.
+3. **`debate/`**, **`engine/`** — planned Month 2 layers. `debate/` houses the multi-agent arbitration protocol, claim/evidence schemas, disagreement detection engine, and court-admissible forensic reporting; `engine/` is the hardware-aware quantization/export container.
 4. **`security/`** — the ingestion gateway (`nginx` + `gateway_validator` FastAPI sidecar) that sits in front of the orchestrator, plus the Wazuh SIEM agent and Prometheus/Grafana telemetry config.
 5. **`web/`** — Next.js frontend for uploading media and viewing detector results.
 6. **`shared/`** — cross-service API contracts, threat model, and docs that are the source of truth for inter-service behavior (see below).

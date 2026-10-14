@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AEGISClaimEvidenceSchema",
+  "description": "Formal claim and forensic evidence schema for the AEGIS Debate & Arbitration Protocol.",
+  "type": "object",
+  "properties": {
+    "claim_id": {
+      "type": "string",
+      "description": "UUID or unique identifier for the specific claim instance."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Correlation UUID matching the parent ingestion/orchestration job."
+    },
+    "detector_id": {
+      "type": "string",
+      "enum": ["video-classifier", "rppg", "syncnet", "aasist", "external"],
+      "description": "The detector service producing this forensic claim."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Version identifier of the detector model (e.g. 'efficientnet-b0-v1.0', 'rppg-chrom-v1.0', 'syncnet-v1.3')."
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["spatial_pixel", "physiological_bvp", "audiovisual_sync", "audio_acoustic", "metadata_integrity"],
+      "description": "The biological, physical, or algorithmic modality domain of the evidence."
+    },
+    "polarity": {
+      "type": "string",
+      "enum": ["AUTHENTIC", "SYNTHETIC", "INCONCLUSIVE", "NOT_APPLICABLE"],
+      "description": "Forensic polarity assertion of this detector signal."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Normalized confidence score where 0.0 = Authentic, 1.0 = Synthetic/Deepfake."
+    },
+    "raw_score": {
+      "type": "number",
+      "description": "Unnormalized raw metric or logit from model inference (e.g., frame offset, spectral purity, logit)."
+    },
+    "claim": {
+      "type": "string",
+      "description": "Human-readable forensic claim summarizing the primary finding."
+    },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Diagnostic and heuristic flags triggered during feature extraction or scoring."
+    },
+    "observational_metrics": {
+      "type": "object",
+      "description": "Domain-specific quantitative metrics extracted from the input media.",
+      "properties": {
+        "spatial": {
+          "type": "object",
+          "properties": {
+            "sampled_frames": { "type": "integer" },
+            "max_frame_anomaly": { "type": "number" },
+            "frame_variance": { "type": "number" },
+            "suspicious_frame_ratio": { "type": "number" }
+          }
+        },
+        "physiological": {
+          "type": "object",
+          "properties": {
+            "estimated_bpm": { "type": "number" },
+            "spectral_purity": { "type": "number" },
+            "skin_ratio": { "type": "number" },
+            "snr_db": { "type": "number" }
+          }
+        },
+        "audiovisual": {
+          "type": "object",
+          "properties": {
+            "optimal_offset_frames": { "type": "integer" },
+            "offset_ms": { "type": "number" },
+            "min_distance": { "type": "number" },
+            "sync_confidence": { "type": "number" }
+          }
+        }
+      }
+    },
+    "attenuation_factors": {
+      "type": "object",
+      "description": "Environmental and quality discount factors applied to this claim (1.0 = nominal, < 1.0 = degraded).",
+      "properties": {
+        "luminance_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "duration_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "occlusion_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "compression_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    "operating_conditions": {
+      "type": "object",
+      "description": "Environmental context observed during processing.",
+      "properties": {
+        "duration_seconds": { "type": "number" },
+        "mean_luminance": { "type": "number" },
+        "face_detected": { "type": "boolean" },
+        "audio_present": { "type": "boolean" }
+      }
+    },
+    "coverage_gap": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if the detector could not evaluate due to missing prerequisites (e.g. silent video, occluded face)."
+    },
+    "evidence_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 digest of the raw features, frame crops, or intermediate tensors for court admissibility."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of claim generation."
+    }
+  },
+  "required": [
+    "job_id",
+    "detector_id",
+    "model_version",
+    "domain",
+    "polarity",
+    "confidence",
+    "claim",
+    "flags"
+  ]
+}
