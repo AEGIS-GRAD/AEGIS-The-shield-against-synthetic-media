@@ -7,8 +7,6 @@ eval/data/
 .vscode/
 .idea/
 *.pt
-*.pth
-*.onnx
 .DS_Store
 .agents/
 AEGIS_Project_Proposal.pdf
