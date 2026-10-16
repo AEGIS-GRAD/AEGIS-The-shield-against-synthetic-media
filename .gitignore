@@ -7,6 +7,7 @@ eval/data/
 .vscode/
 .idea/
 *.pt
+detectors/aasist/weights/
 .DS_Store
 .agents/
 AEGIS_Project_Proposal.pdf
@@ -26,7 +27,10 @@ out/
 build/
 *.log
 *.db
-eval/fixtures/
+eval/fixtures/*
+!eval/fixtures/judge/
+eval/fixtures/judge/*
+!eval/fixtures/judge/*.json
 security/fixtures/
 security/tests/fixtures/*.json
 security/transport/certs/

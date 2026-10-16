@@ -1,0 +1,1384 @@
+[
+  {
+    "case_id": "m1-case-001",
+    "sample_path": "eval/data/video_subset/real/296.mp4",
+    "filename": "296.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4026,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-001",
+        "modality": "video",
+        "confidence": 0.0,
+        "raw_score": 0.0,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.00.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-001",
+        "modality": "video",
+        "confidence": 0.4744,
+        "raw_score": 0.7372,
+        "score": 0.7372,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-001",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '296.mp4' (real). video-classifier=0.00, rppg=0.74, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-002",
+    "sample_path": "eval/data/video_subset/real/146.mp4",
+    "filename": "146.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.5126,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-002",
+        "modality": "video",
+        "confidence": 0.238,
+        "raw_score": 0.238,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.24.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-002",
+        "modality": "video",
+        "confidence": 0.7774,
+        "raw_score": 0.8887,
+        "score": 0.8887,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-002",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '146.mp4' (real). video-classifier=0.24, rppg=0.89, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-003",
+    "sample_path": "eval/data/video_subset/real/863.mp4",
+    "filename": "863.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4369,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-003",
+        "modality": "video",
+        "confidence": 0.077,
+        "raw_score": 0.077,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.08.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-003",
+        "modality": "video",
+        "confidence": 0.5618,
+        "raw_score": 0.7809,
+        "score": 0.7809,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-003",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '863.mp4' (real). video-classifier=0.08, rppg=0.78, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-004",
+    "sample_path": "eval/data/video_subset/real/992.mp4",
+    "filename": "992.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4813,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-004",
+        "modality": "video",
+        "confidence": 0.2123,
+        "raw_score": 0.2123,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.21.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-004",
+        "modality": "video",
+        "confidence": 0.586,
+        "raw_score": 0.793,
+        "score": 0.793,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-004",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '992.mp4' (real). video-classifier=0.21, rppg=0.79, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-005",
+    "sample_path": "eval/data/video_subset/real/379.mp4",
+    "filename": "379.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.476,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-005",
+        "modality": "video",
+        "confidence": 0.2857,
+        "raw_score": 0.2857,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.29.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-005",
+        "modality": "video",
+        "confidence": 0.3592,
+        "raw_score": 0.6796,
+        "score": 0.6796,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-005",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '379.mp4' (real). video-classifier=0.29, rppg=0.68, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-006",
+    "sample_path": "eval/data/video_subset/fake/FaceShifter_761_766.mp4",
+    "filename": "FaceShifter_761_766.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4674,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-006",
+        "modality": "video",
+        "confidence": 0.2634,
+        "raw_score": 0.2634,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.26.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-006",
+        "modality": "video",
+        "confidence": 0.3448,
+        "raw_score": 0.6724,
+        "score": 0.6724,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-006",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceShifter_761_766.mp4' (fake). video-classifier=0.26, rppg=0.67, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-007",
+    "sample_path": "eval/data/video_subset/fake/DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4",
+    "filename": "DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4906,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-007",
+        "modality": "video",
+        "confidence": 0.2555,
+        "raw_score": 0.2555,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.26.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-007",
+        "modality": "video",
+        "confidence": 0.5542,
+        "raw_score": 0.7771,
+        "score": 0.7771,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-007",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4' (fake). video-classifier=0.26, rppg=0.78, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-008",
+    "sample_path": "eval/data/video_subset/fake/NeuralTextures_076_079.mp4",
+    "filename": "NeuralTextures_076_079.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4258,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN",
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-008",
+        "modality": "video",
+        "confidence": 0.0635,
+        "raw_score": 0.0635,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.06.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-008",
+        "modality": "video",
+        "confidence": 0.5048,
+        "raw_score": 0.7524,
+        "score": 0.7524,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-008",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'NeuralTextures_076_079.mp4' (fake). video-classifier=0.06, rppg=0.75, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-009",
+    "sample_path": "eval/data/video_subset/fake/FaceShifter_705_707.mp4",
+    "filename": "FaceShifter_705_707.mp4",
+    "category": "borderline_one_sided",
+    "is_known_disagreement": false,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.5753,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-009",
+        "modality": "video",
+        "confidence": 0.5407,
+        "raw_score": 0.5407,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.54.",
+          "flags": [
+            "borderline_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-009",
+        "modality": "video",
+        "confidence": 0.5334,
+        "raw_score": 0.7667,
+        "score": 0.7667,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-009",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceShifter_705_707.mp4' (fake). video-classifier=0.54, rppg=0.77, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-010",
+    "sample_path": "eval/data/video_subset/real/067.mp4",
+    "filename": "067.mp4",
+    "category": "borderline_one_sided",
+    "is_known_disagreement": false,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.6002,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-010",
+        "modality": "video",
+        "confidence": 0.6111,
+        "raw_score": 0.6111,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.61.",
+          "flags": [
+            "borderline_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-010",
+        "modality": "video",
+        "confidence": 0.56,
+        "raw_score": 0.78,
+        "score": 0.78,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-010",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '067.mp4' (real). video-classifier=0.61, rppg=0.78, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-011",
+    "sample_path": "eval/data/video_subset/fake/FaceShifter_892_112.mp4",
+    "filename": "FaceShifter_892_112.mp4",
+    "category": "borderline_one_sided",
+    "is_known_disagreement": false,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.528,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-011",
+        "modality": "video",
+        "confidence": 0.4375,
+        "raw_score": 0.4375,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.44.",
+          "flags": [
+            "borderline_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-011",
+        "modality": "video",
+        "confidence": 0.4046,
+        "raw_score": 0.7023,
+        "score": 0.7023,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-011",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceShifter_892_112.mp4' (fake). video-classifier=0.44, rppg=0.70, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-012",
+    "sample_path": "eval/data/video_subset/fake/FaceSwap_507_418.mp4",
+    "filename": "FaceSwap_507_418.mp4",
+    "category": "borderline_one_sided",
+    "is_known_disagreement": false,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4124,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-012",
+        "modality": "video",
+        "confidence": 0.2499,
+        "raw_score": 0.2499,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.25.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-012",
+        "modality": "video",
+        "confidence": 0.0704,
+        "raw_score": 0.4648,
+        "score": 0.4648,
+        "verdict": "authentic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 72.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 72.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-012",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceSwap_507_418.mp4' (fake). video-classifier=0.25, rppg=0.46, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-013",
+    "sample_path": "eval/data/video_subset/real/721.mp4",
+    "filename": "721.mp4",
+    "category": "gap_or_degraded",
+    "is_known_disagreement": false,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4466,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-013",
+        "modality": "video",
+        "confidence": 0.1857,
+        "raw_score": 0.1857,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.19.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-013",
+        "modality": "video",
+        "confidence": 0.3694,
+        "raw_score": 0.6847,
+        "score": 0.6847,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-013",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '721.mp4' (real). video-classifier=0.19, rppg=0.68, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-014",
+    "sample_path": "eval/data/video_subset/fake/FaceShifter_526_436.mp4",
+    "filename": "FaceShifter_526_436.mp4",
+    "category": "gap_or_degraded",
+    "is_known_disagreement": false,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.523,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-014",
+        "modality": "video",
+        "confidence": 0.2999,
+        "raw_score": 0.2999,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.30.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-014",
+        "modality": "video",
+        "confidence": 0.7082,
+        "raw_score": 0.8541,
+        "score": 0.8541,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-014",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceShifter_526_436.mp4' (fake). video-classifier=0.30, rppg=0.85, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-015",
+    "sample_path": "eval/data/video_subset/fake/FaceShifter_817_827.mp4",
+    "filename": "FaceShifter_817_827.mp4",
+    "category": "gap_or_degraded",
+    "is_known_disagreement": false,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.4731,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-015",
+        "modality": "video",
+        "confidence": 0.3055,
+        "raw_score": 0.3055,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.31.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-015",
+        "modality": "video",
+        "confidence": 0.2862,
+        "raw_score": 0.6431,
+        "score": 0.6431,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-015",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample 'FaceShifter_817_827.mp4' (fake). video-classifier=0.31, rppg=0.64, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-016",
+    "sample_path": "eval/data/video_subset/real/159.mp4",
+    "filename": "159.mp4",
+    "category": "consensus",
+    "is_known_disagreement": false,
+    "true_label": "real",
+    "month1_baseline_verdict": "AUTHENTIC",
+    "month1_baseline_score": 0.3421,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-016",
+        "modality": "video",
+        "confidence": 0.1818,
+        "raw_score": 0.1818,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.18.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-016",
+        "modality": "video",
+        "confidence": 0.474,
+        "raw_score": 0.263,
+        "score": 0.263,
+        "verdict": "authentic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 72.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 72.0 BPM.",
+          "flags": []
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-016",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 5.0,
+      "mean_luminance": 80.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Month 1 sample '159.mp4' (real). video-classifier=0.18, rppg=0.26, syncnet=0.50."
+  },
+  {
+    "case_id": "m1-case-017",
+    "sample_path": "eval/data/synthesized/face_swap_high_spatial.mp4",
+    "filename": "face_swap_high_spatial.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "fake",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.52,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-017",
+        "modality": "video",
+        "confidence": 0.92,
+        "raw_score": 0.92,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.92.",
+          "flags": [
+            "high_fake_probability"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-017",
+        "modality": "video",
+        "confidence": 0.7,
+        "raw_score": 0.15,
+        "score": 0.15,
+        "verdict": "authentic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 72.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 72.0 BPM.",
+          "flags": [
+            "nominal_pulse_70_bpm"
+          ]
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-017",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 6.0,
+      "mean_luminance": 95.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Rule 3 Face-Swap scenario: high spatial manipulation overrides authentic host body pulse."
+  },
+  {
+    "case_id": "m1-case-018",
+    "sample_path": "eval/fixtures/edge_cases/dim_light.mp4",
+    "filename": "dim_light.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.55,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-018",
+        "modality": "video",
+        "confidence": 0.22,
+        "raw_score": 0.22,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.22.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-018",
+        "modality": "video",
+        "confidence": 0.38,
+        "raw_score": 0.88,
+        "score": 0.88,
+        "verdict": "synthetic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 0.5,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": [
+            "low_light_attenuation"
+          ]
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-018",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 7.0,
+      "mean_luminance": 25.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Rule 1 Low-light scenario: rPPG synthetic signal discounted under low luminance."
+  },
+  {
+    "case_id": "m1-case-019",
+    "sample_path": "eval/data/synthesized/foreign_dubbed_news.mp4",
+    "filename": "foreign_dubbed_news.mp4",
+    "category": "disagreement_polarity_inversion",
+    "is_known_disagreement": true,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.58,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-019",
+        "modality": "video",
+        "confidence": 0.18,
+        "raw_score": 0.18,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.18.",
+          "flags": [
+            "authentic_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-019",
+        "modality": "video",
+        "confidence": 0.6,
+        "raw_score": 0.2,
+        "score": 0.2,
+        "verdict": "authentic",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 72.0,
+        "latency_ms": 4000,
+        "input_quality": 1.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 72.0 BPM.",
+          "flags": [
+            "nominal_pulse_72_bpm"
+          ]
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-019",
+        "confidence": 0.9,
+        "raw_score": -5.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "sync_offset_detected",
+            "audio_visual_mismatch"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 8.0,
+      "mean_luminance": 110.0,
+      "face_detected": true,
+      "audio_present": true
+    },
+    "description": "Rule 4 Dubbing scenario: SyncNet lip-desync ruled as translation dubbing; visual authenticity prevails."
+  },
+  {
+    "case_id": "m1-case-020",
+    "sample_path": "eval/fixtures/edge_cases/short_clip.mp4",
+    "filename": "short_clip.mp4",
+    "category": "fully_degraded",
+    "is_known_disagreement": false,
+    "true_label": "real",
+    "month1_baseline_verdict": "UNCERTAIN",
+    "month1_baseline_score": 0.5,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "video-classifier": {
+        "job_id": "m1-case-020",
+        "modality": "video",
+        "confidence": 0.5,
+        "raw_score": 0.5,
+        "latency_ms": 5000,
+        "model": "efficientnet-b0",
+        "model_version": "efficientnet-b0-v1.0",
+        "evidence": {
+          "claim": "Frame-level analysis computed synthetic probability of 0.50.",
+          "flags": [
+            "borderline_frames"
+          ]
+        }
+      },
+      "rppg": {
+        "job_id": "m1-case-020",
+        "modality": "video",
+        "confidence": 0.0,
+        "raw_score": 0.5,
+        "score": 0.5,
+        "verdict": "inconclusive",
+        "model": "rppg-chrom",
+        "model_version": "rppg-chrom-v1.0",
+        "estimated_bpm": 0.0,
+        "latency_ms": 4000,
+        "input_quality": 0.0,
+        "evidence": {
+          "claim": "BVP pulse signal extracted via CHROM with estimated heart rate of 0.0 BPM.",
+          "flags": [
+            "insufficient_duration"
+          ]
+        }
+      },
+      "syncnet": {
+        "job_id": "m1-case-020",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 6000,
+        "model": "syncnet",
+        "model_version": "syncnet-v1.3",
+        "evidence": {
+          "claim": "Lip-sync analysis evaluated audiovisual correlation.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": 1.1,
+      "mean_luminance": 30.0,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Rule 5 Degraded video: insufficient signal across all modalities forces INTEGRITY_UNKNOWN."
+  }
+]
