@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -154,3 +154,35 @@ class CourtAdmissibleVerdict(BaseModel):
     siem_alert_tier: str  # "P1_CRITICAL" | "P2_ELEVATED" | "P4_INFORMATIONAL"
     evidence_manifest_hash: str  # SHA-256 digest of all considered inputs & claims
     signed_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class CrossExaminationFinding(BaseModel):
+    detector_id: str
+    check_category: str  # "operating_constraint" | "known_failure_mode" | "borderline_dropped" | "coverage_gap"
+    severity: str  # "HIGH" | "MEDIUM" | "LOW" | "INFO"
+    finding: str
+    rule_reference: Optional[str] = None
+    source: str  # "capability_manifest" | "limitations_doc" | "operating_conditions" | "guardrail"
+
+
+class DebateRound(BaseModel):
+    round_number: int
+    round_name: str
+    summary: str
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+class JudgeReport(BaseModel):
+    job_id: str
+    verdict: CourtAdmissibleVerdict
+    judge_mode: str  # "expert_deterministic_judge" | "llm_agentic_judge"
+    rounds: List[DebateRound] = Field(default_factory=list)
+    cross_examination_findings: List[CrossExaminationFinding] = Field(default_factory=list)
+    guards_applied: List[str] = Field(default_factory=list)
+    llm_model: Optional[str] = None
+    llm_fallback_used: bool = False
+    llm_fallback_reason: Optional[str] = None
+    prompt_version: Optional[str] = None
+    debate_transcript_hash: str
+    adjudication_latency_ms: float
+    generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
