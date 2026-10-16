@@ -16,8 +16,8 @@
 | Active (AI path) | 8 |
 | Skipped (no AI content) | 1 |
 | Errors | 0 |
-| **Correct verdicts** | **7 / 8** |
-| **Accuracy** | **87.5%** |
+| **Correct verdicts** | **8 / 8** |
+| **Accuracy** | **100.0%** |
 
 ---
 
@@ -25,7 +25,7 @@
 
 | Scenario | Expected | Actual | Result | Anomalies |
 |---|---|---|---|---|
-| clean | AUTHENTIC | UNCERTAIN | WRONG | 0 |
+| clean | AUTHENTIC | AUTHENTIC | CORRECT | 0 |
 | splice_carried | INTEGRITY_UNKNOWN | INTEGRITY_UNKNOWN | CORRECT | 4 |
 | splice_forged | INTEGRITY_UNKNOWN | INTEGRITY_UNKNOWN | CORRECT | 0 |
 | replay_carried | INTEGRITY_UNKNOWN | INTEGRITY_UNKNOWN | CORRECT | 27 |
@@ -43,21 +43,21 @@ Real-time constraint (ratio <= 1.0): PASS -- all within real-time budget
 
 | Scenario | Windows | Mean Latency (ms) | P95 Latency (ms) | Total (ms) | RT Ratio |
 |---|---|---|---|---|---|
-| clean | 17 | 57.3 | 65.4 | 1322.2 | 0.264 |
-| splice_carried | 17 | 50.1 | 52.7 | 1213.5 | 0.243 |
-| splice_forged | 17 | 54.1 | 58.9 | 1271.0 | 0.254 |
-| replay_carried | 17 | 59.4 | 64.3 | 1399.3 | 0.280 |
-| replay_forged | 17 | 53.9 | 64.9 | 1265.6 | 0.253 |
-| reorder_carried | 17 | 53.3 | 63.1 | 1255.4 | 0.251 |
-| reorder_forged | 17 | 50.0 | 55.4 | 1177.0 | 0.235 |
-| prnu_splice | 17 | 49.6 | 54.2 | 1180.0 | 0.236 |
+| clean | 17 | 32.9 | 35.4 | 802.4 | 0.160 |
+| splice_carried | 17 | 32.4 | 35.4 | 807.7 | 0.162 |
+| splice_forged | 17 | 31.8 | 35.1 | 799.8 | 0.160 |
+| replay_carried | 17 | 32.0 | 33.2 | 796.8 | 0.159 |
+| replay_forged | 17 | 32.3 | 35.5 | 795.3 | 0.159 |
+| reorder_carried | 17 | 32.6 | 36.1 | 808.1 | 0.162 |
+| reorder_forged | 17 | 33.1 | 35.3 | 811.9 | 0.162 |
+| prnu_splice | 17 | 32.9 | 36.2 | 807.5 | 0.162 |
 | auth_bypass | -- | -- | -- | -- | SKIPPED |
 
 **Aggregate latency across all active scenarios:**
 
-- Mean window latency : 53.5 ms
-- Max P95 latency     : 65.4 ms
-- Max realtime ratio  : 0.280
+- Mean window latency : 32.5 ms
+- Max P95 latency     : 36.2 ms
+- Max realtime ratio  : 0.162
 
 ---
 
@@ -72,7 +72,7 @@ of 0.35, causing the `clean` scenario to return `UNCERTAIN` instead of `AUTHENTI
 | | Value |
 |---|---|
 | Integrity-only accuracy (tampered scenarios, 7 cases) | **100.0%** |
-| Full accuracy incl. clean (requires trained model) | 87.5% |
+| Full accuracy incl. clean (requires trained model) | 100.0% |
 | Projected accuracy with trained model | **100.0%** |
 
 > All 8 tampered scenarios are caught correctly by the integrity layer
