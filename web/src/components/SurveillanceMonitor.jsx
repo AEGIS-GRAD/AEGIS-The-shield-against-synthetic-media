@@ -28,6 +28,7 @@ import {
   ArrowLeft,
   Upload,
 } from "lucide-react";
+import LiveAlertDetailModal from "./LiveAlertDetailModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -295,17 +296,23 @@ function FakeCameraFeed({ camId, score, isAlert, isWarning, active = true }) {
 }
 
 // ─── Alert Toast ──────────────────────────────────────────────────────────────
-
-function AlertToast({ alerts, onDismiss }) {
+ 
+function AlertToast({ alerts, onDismiss, onSelectAlert }) {
   if (!alerts.length) return null;
   return (
     <div className="fixed top-16 right-4 z-[100] flex flex-col gap-2 w-96">
       {alerts.slice(-3).map((a) => (
-        <div key={a.id} className="flex items-start gap-3 p-3.5 rounded-xl border border-red-500/60 bg-red-950/95 backdrop-blur-xl shadow-2xl shadow-red-900/50 animate-in slide-in-from-right duration-300">
+        <div
+          key={a.id}
+          onClick={() => onSelectAlert && onSelectAlert(a)}
+          className="flex items-start gap-3 p-3.5 rounded-xl border border-red-500/60 bg-red-950/95 backdrop-blur-xl shadow-2xl shadow-red-900/50 animate-in slide-in-from-right duration-300 cursor-pointer hover:bg-red-900/90 transition-all group"
+        >
           <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 animate-pulse" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-black text-red-300 font-mono uppercase tracking-wider">CRITICAL THREAT — {a.camId}</p>
+              <p className="text-xs font-black text-red-300 font-mono uppercase tracking-wider group-hover:text-white transition-colors">
+                CRITICAL THREAT — {a.camId}
+              </p>
               <span className="text-[10px] text-red-400/80 font-mono">{a.time}</span>
             </div>
             <p className="text-[11px] text-red-200 font-mono mt-1 font-bold">
@@ -314,8 +321,18 @@ function AlertToast({ alerts, onDismiss }) {
             <p className="text-[10px] text-red-300/90 font-mono mt-0.5 bg-red-900/60 p-1.5 rounded border border-red-800/60">
               👉 {a.evidence || `PRNU fingerprint mismatch detected at frame #${a.frameNum || 1402}`}
             </p>
+            <span className="inline-block mt-1 text-[9px] font-mono text-cyan-300/90 underline">
+              Click to inspect fused evidence &amp; judge reasoning →
+            </span>
           </div>
-          <button onClick={() => onDismiss(a.id)} className="text-red-400/60 hover:text-red-300 transition-colors cursor-pointer p-0.5">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss(a.id);
+            }}
+            className="text-red-400/60 hover:text-red-300 transition-colors cursor-pointer p-0.5"
+            title="Dismiss notification"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -326,12 +343,13 @@ function AlertToast({ alerts, onDismiss }) {
 
 // ─── Main SurveillanceMonitor ─────────────────────────────────────────────────
 
-export default function SurveillanceMonitor() {
+export default function SurveillanceMonitor({ embedded = false }) {
   const [scores, setScores] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, 0.12])));
   const [history, setHistory] = useState(() => Object.fromEntries(CAMERA_FEEDS.map(c => [c.id, Array(HISTORY_WINDOW).fill(0.12)])));
   const [detScores, setDetScores] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, 0.1])));
   const [detHist, setDetHist] = useState(() => Object.fromEntries(DETECTOR_CFG.map(d => [d.key, Array(40).fill(0.1)])));
   const [alerts, setAlerts] = useState([]);
+  const [selectedAlert, setSelectedAlert] = useState(null);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [selected, setSelected] = useState("CAM-001");
@@ -488,6 +506,7 @@ export default function SurveillanceMonitor() {
             if (data.status === "COMPROMISED" || data.status === "AUDIT_WARNING") {
               const id = ++alertIdRef.current;
               playAlertChime(muted);
+              const pceVal = data.prnu_pce !== undefined ? Number(data.prnu_pce) : 18.2;
               setAlerts(a => [...a.slice(-9), {
                 id,
                 camId: data.camera_id || selected,
@@ -495,6 +514,26 @@ export default function SurveillanceMonitor() {
                 frameNum: data.seq,
                 evidence: `${data.threat_type || 'Hardware Anomaly'}: ${data.detail || 'PRNU PCE below threshold'} (${data.action || 'SEVERED'})`,
                 time: fmtTime(),
+                verdict: "INTEGRITY_UNKNOWN",
+                integritySignals: {
+                  hash_chain_ok: data.threat_type !== "hash_mismatch",
+                  last_hash: data.hash || "0x9F4A...B82D",
+                  prnu_ok: pceVal >= 50.0,
+                  prnu_pce: pceVal,
+                  prnu_threshold: 50.0,
+                  anomalies: [
+                    data.detail || `${data.threat_type || 'Hardware Anomaly'} detected at frame #${data.seq}`,
+                    `Gateway Enforcement: Connection ${data.action || 'SEVERED'}`,
+                  ],
+                },
+                aiSignals: {
+                  mobilenet_score: scoresRef.current[selected] || 0.45,
+                  rppg_score: detScoresRef.current.rppg || 0.38,
+                  hr_bpm: webcamDataRef.current.hr_bpm || 74,
+                  syncnet_score: detScoresRef.current.syncnet || 0.32,
+                  face_detected: true,
+                },
+                manifestHash: `0x${Array.from({ length: 64 }, (_, i) => ((i * 23 + data.seq) % 16).toString(16)).join("")}`,
               }]);
               setAlertCount(c => c + 1);
             }
@@ -558,13 +597,33 @@ export default function SurveillanceMonitor() {
           if (now >= ALERT_THRESHOLD && was < ALERT_THRESHOLD) {
             const id = ++alertIdRef.current;
             playAlertChime(muted);
+            const isHardwareSever = injecting;
             setAlerts(a => [...a.slice(-9), {
               id,
               camId: cam.id,
               score: now,
               frameNum: currentFrame,
               evidence: `PRNU mismatch & rPPG pulse disruption detected at frame #${currentFrame}`,
-              time: fmtTime()
+              time: fmtTime(),
+              verdict: isHardwareSever ? "INTEGRITY_UNKNOWN" : "SYNTHETIC",
+              integritySignals: {
+                hash_chain_ok: !isHardwareSever,
+                last_hash: isHardwareSever ? "0x3C1E...7A41 [BROKEN]" : "0x9F4A...B82D",
+                prnu_ok: !isHardwareSever,
+                prnu_pce: isHardwareSever ? 17.6 : 84.2,
+                prnu_threshold: 50.0,
+                anomalies: isHardwareSever
+                  ? ["Hardware PRNU PCE 17.6 < 50.0 threshold", "Sequence gap detected at segment boundary"]
+                  : [],
+              },
+              aiSignals: {
+                mobilenet_score: now,
+                rppg_score: detScoresRef.current.rppg || 0.72,
+                hr_bpm: webcamDataRef.current.hr_bpm || 82,
+                syncnet_score: detScoresRef.current.syncnet || 0.65,
+                face_detected: true,
+              },
+              manifestHash: `0x${Array.from({ length: 64 }, (_, i) => ((i * 31 + currentFrame) % 16).toString(16)).join("")}`,
             }]);
             setAlertCount(c => c + 1);
           }
@@ -629,12 +688,28 @@ export default function SurveillanceMonitor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080c13] text-slate-100 flex flex-col select-none overflow-x-hidden">
-      {/* Alert Toasts */}
-      <AlertToast alerts={alerts} onDismiss={dismissAlert} />
+    <div className={`flex flex-col select-none overflow-x-hidden ${embedded ? "rounded-xl border border-border bg-card text-foreground" : "min-h-screen bg-[#080c13] text-slate-100"}`}>
+      {/* Alert Toasts with clickable inspection */}
+      <AlertToast
+        alerts={alerts}
+        onDismiss={dismissAlert}
+        onSelectAlert={(a) => setSelectedAlert(a)}
+      />
+
+      {/* Fused Alert Detail Modal */}
+      {selectedAlert && (
+        <LiveAlertDetailModal
+          alert={selectedAlert}
+          onClose={() => setSelectedAlert(null)}
+          onAcknowledge={(alertId) => {
+            dismissAlert(alertId);
+            setSelectedAlert(null);
+          }}
+        />
+      )}
 
       {/* ── Header ── */}
-      <header className={`flex-shrink-0 h-14 flex items-center px-4 gap-4 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl sticky top-0 z-50 transition-all ${isAlert ? "shadow-[0_1px_0_0_rgba(239,68,68,0.25)]" : ""}`}>
+      <header className={`flex-shrink-0 h-14 flex items-center px-4 gap-4 border-b ${embedded ? "border-border bg-card/90" : "border-slate-800/80 bg-slate-950/90"} backdrop-blur-xl sticky top-0 z-50 transition-all ${isAlert ? "shadow-[0_1px_0_0_rgba(239,68,68,0.25)]" : ""}`}>
         {/* Brand */}
         <div className="flex items-center gap-2.5">
           <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${isAlert ? "bg-red-500/20 border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.35)]" : "bg-cyan-500/15 border-cyan-500/30"}`}>
@@ -842,10 +917,42 @@ export default function SurveillanceMonitor() {
 
                     {/* Alert badge */}
                     {isAlert && (
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-pulse">
+                      <button
+                        onClick={() => {
+                          const existingAlert = alerts.find(a => a.camId === selected) || {
+                            id: 999,
+                            camId: selected,
+                            score: selScore,
+                            frameNum: frameCount * 2,
+                            time: fmtTime(),
+                            verdict: injecting ? "INTEGRITY_UNKNOWN" : "SYNTHETIC",
+                            integritySignals: {
+                              hash_chain_ok: !injecting,
+                              last_hash: injecting ? "0x3C1E...7A41 [BROKEN]" : "0x9F4A...B82D",
+                              prnu_ok: !injecting,
+                              prnu_pce: injecting ? 17.6 : 84.2,
+                              prnu_threshold: 50.0,
+                              anomalies: injecting ? ["Hardware PRNU PCE 17.6 < 50.0 baseline", "Frame hash mismatch at segment start"] : [],
+                            },
+                            aiSignals: {
+                              mobilenet_score: selScore,
+                              rppg_score: detScores.rppg || 0.72,
+                              hr_bpm: webcamData.hr_bpm || 82,
+                              syncnet_score: detScores.syncnet || 0.65,
+                              face_detected: true,
+                            },
+                            manifestHash: `0x${Array.from({ length: 64 }, (_, i) => ((i * 31 + frameCount * 2) % 16).toString(16)).join("")}`,
+                          };
+                          setSelectedAlert(existingAlert);
+                        }}
+                        className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 backdrop-blur-sm z-20 animate-pulse cursor-pointer hover:bg-red-900 transition-colors shadow-lg shadow-red-950/50"
+                        title="Click to inspect fused alert details & evidence"
+                      >
                         <ShieldAlert className="w-4 h-4 text-red-400" />
-                        <span className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">DEEPFAKE DETECTED</span>
-                      </div>
+                        <span className="text-xs font-bold text-red-300 font-mono uppercase tracking-wider">
+                          DEEPFAKE DETECTED (INSPECT EVIDENCE)
+                        </span>
+                      </button>
                     )}
 
                     {/* LIVE badge */}

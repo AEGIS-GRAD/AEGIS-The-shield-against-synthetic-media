@@ -14,6 +14,7 @@ import {
   Camera,
   Activity,
   Radio,
+  Zap,
 } from "lucide-react";
 import {
   CartesianGrid,
@@ -30,6 +31,7 @@ import { cameras } from "@/lib/mock";
 import { Chip, ConfidenceMeter, PageHeader, Panel } from "@/components/aegis/ui";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
+import LiveAlertDetailModal from "@/components/LiveAlertDetailModal";
 
 type Cam = (typeof cameras)[number] | {
   id: string;
@@ -69,6 +71,34 @@ export default function LivePage() {
   const [grid, setGrid] = useState<1 | 4 | 9>(9);
   const [sel, setSel] = useState<Cam>(cameras[6]!);
   const [tick, setTick] = useState(0);
+  const [activeAlert, setActiveAlert] = useState<any>(null);
+  const [injecting, setInjecting] = useState(false);
+  const [injectFeedback, setInjectFeedback] = useState<string | null>(null);
+
+  const handleInjectAttack = async () => {
+    const next = !injecting;
+    setInjecting(next);
+    if (next) {
+      try {
+        setInjectFeedback("Injecting attack...");
+        const res = await fetch("http://localhost:8444/telemetry/inject", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attack_type: "prnu_splice", camera_id: sel.id || "camera-001", frames: 30 }),
+        });
+        if (res.ok) {
+          setInjectFeedback("Attack payload dispatched to gateway (:8444)");
+        } else {
+          setInjectFeedback("Gateway responded with status " + res.status);
+        }
+      } catch (err) {
+        setInjectFeedback("Adversarial payload simulated (Gateway :8444 offline)");
+      }
+      setTimeout(() => setInjectFeedback(null), 4000);
+    } else {
+      setInjectFeedback(null);
+    }
+  };
 
   // ─── Webcam Mode States ──────────────────────────────────────────────────
   const [webcamMode, setWebcamMode] = useState(false);
@@ -199,6 +229,21 @@ export default function LivePage() {
         }
         actions={
           <div className="flex items-center gap-3">
+            {/* Adversarial Attack Injection Button */}
+            <button
+              onClick={handleInjectAttack}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-soft cursor-pointer",
+                injecting
+                  ? "bg-synthetic-soft text-synthetic-ink border-synthetic/40 shadow-sm animate-pulse"
+                  : "bg-card text-muted-foreground hover:bg-secondary hover:text-primary"
+              )}
+              title="Inject Deepfake Adversarial Attack Stream (PRNU Splice test on Gateway :8444)"
+            >
+              <Zap className={cn("size-3.5", injecting ? "text-synthetic animate-bounce" : "text-amber-500")} />
+              {injecting ? "Stop Inject" : "Inject Attack"}
+            </button>
+
             {/* Webcam Toggle Button */}
             <button
               onClick={() => {
@@ -238,6 +283,15 @@ export default function LivePage() {
           </div>
         }
       />
+      {injectFeedback && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 px-3.5 py-2 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <Zap className="size-3.5 text-amber-600 dark:text-amber-400" />
+            <span>{injectFeedback}</span>
+          </div>
+          <span className="text-[10px] font-mono uppercase text-amber-700 dark:text-amber-400">Target: {sel.id}</span>
+        </div>
+      )}
 
       {/* Grid of feeds */}
       <div className={cn("grid gap-4", grid === 1 ? "grid-cols-1" : grid === 4 ? "md:grid-cols-2" : "md:grid-cols-3")}>
@@ -399,10 +453,44 @@ export default function LivePage() {
           {!isWebcamSel && suspect && (
             <div className="mt-3 flex flex-wrap gap-2">
               {anomalies.map((a) => (
-                <Chip key={a.i} tone="bad">
-                  <AlertTriangle className="mr-1 size-3" />
-                  {a.label} · {series[a.i]!.t}
-                </Chip>
+                <button
+                  key={a.i}
+                  onClick={() => {
+                    setActiveAlert({
+                      id: 800 + a.i,
+                      camId: sel.id,
+                      score: 0.88,
+                      frameNum: 1420 + a.i * 12,
+                      time: `Just now (${series[a.i]?.t || '-12s'})`,
+                      verdict: "INTEGRITY_UNKNOWN",
+                      integritySignals: {
+                        hash_chain_ok: false,
+                        last_hash: "0x3C1E...7A41 [SEVERED]",
+                        prnu_ok: false,
+                        prnu_pce: 18.2,
+                        prnu_threshold: 50.0,
+                        anomalies: [
+                          `${a.label} detected at timestamp ${series[a.i]?.t || '-12s'}`,
+                          "Hardware PRNU PCE 18.2 < 50.0 baseline (Sensor Splice)",
+                        ],
+                      },
+                      aiSignals: {
+                        mobilenet_score: 0.85,
+                        rppg_score: 0.72,
+                        hr_bpm: 84,
+                        syncnet_score: 0.68,
+                        face_detected: true,
+                      },
+                      manifestHash: `0x${Array.from({ length: 64 }, (_, idx) => ((idx * 19 + a.i * 7) % 16).toString(16)).join("")}`,
+                    });
+                  }}
+                  className="inline-flex cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <Chip tone="bad">
+                    <AlertTriangle className="mr-1 size-3" />
+                    {a.label} · {series[a.i]!.t} (Inspect Evidence →)
+                  </Chip>
+                </button>
               ))}
               <Chip tone="bad">Synthetic face replacement</Chip>
             </div>
@@ -527,6 +615,15 @@ export default function LivePage() {
           </ul>
         </Panel>
       </div>
+
+      {/* Fused Alert Detail Modal for Live Surveillance */}
+      {activeAlert && (
+        <LiveAlertDetailModal
+          alert={activeAlert}
+          onClose={() => setActiveAlert(null)}
+          onAcknowledge={() => setActiveAlert(null)}
+        />
+      )}
     </div>
   );
 }

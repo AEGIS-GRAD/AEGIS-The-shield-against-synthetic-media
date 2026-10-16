@@ -118,9 +118,9 @@ export default function WorkstationHeader({
 
           {/* Live Surveillance nav link */}
           <Link
-            href="/surveillance"
+            href="/live"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 transition-all"
-            title="Open Live Surveillance Monitor"
+            title="Open Live Surveillance Stream"
           >
             <Camera className="w-3.5 h-3.5 text-cyan-600" />
             <span className="hidden sm:inline">Live Surveillance</span>

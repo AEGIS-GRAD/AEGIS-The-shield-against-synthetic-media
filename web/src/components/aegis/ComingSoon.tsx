@@ -38,19 +38,19 @@ export function ComingSoon({
     return (
       <div
         className={cn(
-          "flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-950/20 p-3.5 text-xs text-amber-200/90 backdrop-blur-sm",
+          "flex items-start gap-3 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-950/20 p-3.5 text-xs text-amber-900 dark:text-amber-200/90 backdrop-blur-sm",
           className
         )}
       >
-        <Construction className="size-4 shrink-0 text-amber-400 mt-0.5" />
+        <Construction className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
         <div className="flex-1 space-y-0.5">
-          <div className="font-semibold text-amber-300 flex items-center gap-2">
+          <div className="font-semibold text-amber-950 dark:text-amber-300 flex items-center gap-2">
             <span>{title}</span>
-            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-200/70 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">
               {tag}
             </span>
           </div>
-          <p className="text-[11px] text-amber-200/80 leading-relaxed">{description}</p>
+          <p className="text-[11px] text-amber-800 dark:text-amber-200/80 leading-relaxed">{description}</p>
         </div>
       </div>
     );
