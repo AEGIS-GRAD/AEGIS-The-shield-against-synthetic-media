@@ -17,6 +17,12 @@ from forensics.prnu import (
     load_camera_baselines_from_dir,
     register_camera_baseline,
 )
+try:
+    from forensics.evidence_vault import SurveillanceEvidenceVault
+except ImportError:
+    from security.forensics.evidence_vault import SurveillanceEvidenceVault
+
+evidence_vault = SurveillanceEvidenceVault()
 
 HOST = '127.0.0.1'
 PORT = 8443
@@ -229,6 +235,7 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "detail": f"Frame rate alert (exceeded {MAX_STREAM_FPS} FPS cap)"
                     })
 
+            t_frame_start = time.perf_counter()
             try:
                 payload = json.loads(line.decode('utf-8'))
                 seq = payload['sequence_number']
@@ -245,6 +252,25 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
             anomalies = stream_validator.check(seq, ts)
             if anomalies:
                 anomaly_details = [f"{a.kind}: {a.detail}" for a in anomalies]
+                incident_id = None
+                try:
+                    inc = await asyncio.to_thread(
+                        evidence_vault.store_incident,
+                        camera_id=camera_id,
+                        threat_type="SEQUENCE_ANOMALY",
+                        sequence_number=seq,
+                        timestamp_ms=ts,
+                        primary_frame_bytes=frame_bytes,
+                        telemetry={"anomalies": anomaly_details},
+                        reasoning_narrative=f"Sequence anomaly detected: {'; '.join(anomaly_details)}",
+                        severity="CRITICAL" if AEGIS_SECURITY_PROFILE == "prod" else "WARNING",
+                        width=payload.get("width"),
+                        height=payload.get("height"),
+                    )
+                    incident_id = inc.incident_id
+                except Exception as inc_err:
+                    print(f"[-] Evidence vault error: {inc_err}")
+
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Network Attack) on {camera_id}:")
                     for a in anomalies:
@@ -258,7 +284,8 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "SEQUENCE_ANOMALY",
                         "profile": "prod",
                         "action": "SOCKET_SEVERED",
-                        "detail": "; ".join(anomaly_details)
+                        "detail": "; ".join(anomaly_details),
+                        "incident_id": incident_id,
                     })
                     break  # Drop connection instantly in prod mode
                 else:
@@ -271,11 +298,34 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "SEQUENCE_ANOMALY",
                         "profile": "dev",
                         "action": "AUDIT_LOGGED",
-                        "detail": "; ".join(anomaly_details)
+                        "detail": "; ".join(anomaly_details),
+                        "incident_id": incident_id,
                     })
                 
             # 2. Validate Cryptographic Hash Chain (Catch Deepfake Splicing)
             if not hash_validator.validate_frame(frame_bytes, expected_hash):
+                incident_id = None
+                try:
+                    inc = await asyncio.to_thread(
+                        evidence_vault.store_incident,
+                        camera_id=camera_id,
+                        threat_type="HASH_CHAIN_BREAK",
+                        sequence_number=seq,
+                        timestamp_ms=ts,
+                        primary_frame_bytes=frame_bytes,
+                        telemetry={
+                            "expected_hash": expected_hash,
+                            "calculated_hash": hash_validator.current_hash,
+                        },
+                        reasoning_narrative=f"Cryptographic hash chain broken at sequence #{seq}. Calculated hash differs from client expected hash.",
+                        severity="CRITICAL" if AEGIS_SECURITY_PROFILE == "prod" else "WARNING",
+                        width=payload.get("width"),
+                        height=payload.get("height"),
+                    )
+                    incident_id = inc.incident_id
+                except Exception as inc_err:
+                    print(f"[-] Evidence vault error: {inc_err}")
+
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Splicing Attack) on {camera_id}: Hash mismatch at seq {seq}")
                     print(f"[*] Expected Hash: {expected_hash}")
@@ -291,7 +341,8 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "HASH_CHAIN_BREAK",
                         "profile": "prod",
                         "action": "SOCKET_SEVERED",
-                        "detail": f"Cryptographic hash chain broken at seq {seq}"
+                        "detail": f"Cryptographic hash chain broken at seq {seq}",
+                        "incident_id": incident_id,
                     })
                     break  # Drop connection instantly in prod mode
                 else:
@@ -306,7 +357,8 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "HASH_CHAIN_BREAK",
                         "profile": "dev",
                         "action": "AUDIT_LOGGED",
-                        "detail": f"Cryptographic hash chain broken at seq {seq}"
+                        "detail": f"Cryptographic hash chain broken at seq {seq}",
+                        "incident_id": incident_id,
                     })
 
             # 3. Validate Physical Sensor PRNU Fingerprint (Catch AI Generative Media & Foreign Sensor Injections)
@@ -316,6 +368,29 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                 prnu_validator.verify_frame, camera_id, frame_bytes, seq, width, height
             )
             if not is_prnu_valid:
+                incident_id = None
+                try:
+                    inc = await asyncio.to_thread(
+                        evidence_vault.store_incident,
+                        camera_id=camera_id,
+                        threat_type="PRNU_SENSOR_MISMATCH",
+                        sequence_number=seq,
+                        timestamp_ms=ts,
+                        primary_frame_bytes=frame_bytes,
+                        telemetry={
+                            "prnu_pce": round(pce, 2),
+                            "prnu_threshold": PRNU_PCE_THRESHOLD,
+                            "hash": expected_hash,
+                        },
+                        reasoning_narrative=f"Hardware PRNU sensor mismatch: {prnu_msg}",
+                        severity="CRITICAL" if AEGIS_SECURITY_PROFILE == "prod" else "WARNING",
+                        width=width,
+                        height=height,
+                    )
+                    incident_id = inc.incident_id
+                except Exception as inc_err:
+                    print(f"[-] Evidence vault error: {inc_err}")
+
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Hardware Sensor Mismatch / PRNU Splice) on {camera_id}:")
                     print(f"    -> {prnu_msg}")
@@ -330,7 +405,8 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "PRNU_SENSOR_MISMATCH",
                         "profile": "prod",
                         "action": "SOCKET_SEVERED",
-                        "detail": prnu_msg
+                        "detail": prnu_msg,
+                        "incident_id": incident_id,
                     })
                     break  # Drop connection instantly in prod mode
                 else:
@@ -345,13 +421,15 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "threat_type": "PRNU_SENSOR_MISMATCH",
                         "profile": "dev",
                         "action": "AUDIT_LOGGED",
-                        "detail": prnu_msg
+                        "detail": prnu_msg,
+                        "incident_id": incident_id,
                     })
             else:
+                proc_ms = (time.perf_counter() - t_frame_start) * 1000.0
                 if pce > 0:
-                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}) from {camera_id}.")
+                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}, {proc_ms:.1f}ms) from {camera_id}.")
                 else:
-                    print(f"[OK] Frame {seq} mathematically verified from {camera_id}.")
+                    print(f"[OK] Frame {seq} mathematically verified ({proc_ms:.1f}ms) from {camera_id}.")
                 await telemetry_hub.broadcast({
                     "timestamp": time.time(),
                     "camera_id": camera_id,
@@ -361,7 +439,8 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                     "status": "VALID",
                     "profile": AEGIS_SECURITY_PROFILE,
                     "action": "FORWARDED",
-                    "detail": f"Frame {seq} mathematically verified"
+                    "detail": f"Frame {seq} mathematically verified",
+                    "processing_ms": round(proc_ms, 2),
                 })
             
     except Exception as e:
