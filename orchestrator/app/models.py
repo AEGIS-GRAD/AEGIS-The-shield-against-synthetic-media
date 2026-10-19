@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from typing import Optional, List, Any, Dict
+
 
 
 class InputMetadata(BaseModel):
@@ -41,3 +43,15 @@ class OrchestrationResponse(BaseModel):
     plan: Optional[dict] = None
     fallback: Optional[bool] = False
     fallback_reason: Optional[str] = None
+
+    # ── NEW: Judge-Agent fields ──────────────────────────────────────────────
+    judge_verdict: Optional[str] = None            # JudgeVerdictClass string value
+    judge_score: Optional[float] = None            # calibrated score from CourtAdmissibleVerdict
+    judge_mode: Optional[str] = None               # "expert_deterministic_judge" | "llm_agentic_judge"
+    siem_alert_tier: Optional[str] = None          # "P1_CRITICAL" | "P2_ELEVATED" | "P4_INFORMATIONAL"
+    debate_transcript: Optional[List[Dict[str, Any]]] = None  # list of DebateRound.model_dump()
+    forensic_justification: Optional[str] = None
+    debate_transcript_hash: Optional[str] = None
+    guards_applied: Optional[List[str]] = None
+    cross_examination_findings: Optional[List[Dict[str, Any]]] = None
+    adjudication_latency_ms: Optional[float] = None

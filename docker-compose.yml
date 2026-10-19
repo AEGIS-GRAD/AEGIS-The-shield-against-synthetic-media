@@ -76,6 +76,7 @@ services:
     volumes:
       - ./orchestrator:/app
       - ./capability_manifests:/capability_manifests:ro
+      - ./debate:/repo/debate:ro  # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
     networks:
       - aegis_net
     environment:
@@ -84,12 +85,14 @@ services:
       - DETECTOR_RPPG_URL=http://detector_rppg:8000
       - DETECTOR_AASIST_URL=http://detector_aasist:8000
       - DETECTOR_SYNCNET_URL=http://detector_syncnet:8000
+      - PYTHONPATH=/app/app:/repo  # /repo/debate/__init__.py → `import debate` resolves correctly
+      - AEGIS_JUDGE_MODE=${AEGIS_JUDGE_MODE:-deterministic}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s           # extra time for debate package import on first boot
     depends_on:
       - mediamtx
 
