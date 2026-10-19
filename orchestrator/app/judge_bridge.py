@@ -54,11 +54,23 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
     Converts List[DetectorResult] into the raw_responses dict that
     debate.claim_wrapper.wrap_video_detector_outputs() expects.
 
-    The debate layer expects the original JSON a detector returned from /detect.
-    DetectorResult already carries all required fields; we just reconstruct the dict.
+    The debate layer only has adapters for the three video-modal detectors.
+    Audio-only detectors (e.g. 'aasist') are silently skipped here — they still
+    appear in raw_results on the OrchestrationResponse but are not passed to the
+    JudgeAgent which would raise ValueError for unknown detector IDs.
     """
+    # Detectors the debate/claim_wrapper layer knows how to handle.
+    # Any detector NOT in this set is excluded from the judge's input.
+    DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet"}
+
     raw: Dict[str, Optional[Dict[str, Any]]] = {}
     for r in results:
+        if r.detector not in DEBATE_KNOWN_DETECTORS:
+            logger.debug(
+                f"Detector '{r.detector}' has no debate adapter — excluded from JudgeAgent input "
+                f"(still present in raw_results on the OrchestrationResponse)."
+            )
+            continue
         if r.status != "ok" or r.confidence is None:
             raw[r.detector] = None
             continue
@@ -78,6 +90,7 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
         # raw_score IS P(synthetic) in DetectorResult, so we expose it as `score` here
         # to satisfy the debate layer's expected schema and suppress the legacy-fallback warning.
         if r.detector == "rppg":
+
             entry["score"] = r.raw_score  # P(synthetic) — what claim_wrapper._adapt_rppg() reads
         raw[r.detector] = entry
     return raw
