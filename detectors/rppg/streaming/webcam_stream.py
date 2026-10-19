@@ -55,6 +55,12 @@ except ImportError:
     except ImportError:
         from detectors.rppg.streaming.streaming import StreamingRPPG, roi_mean_rgb, RPPGResult
 
+try:
+    from security.fusion.feed_fusion import FeedFusionEngine
+except ImportError:
+    sys.path.insert(0, str(REPO_ROOT))
+    from security.fusion.feed_fusion import FeedFusionEngine
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. Face Detection Initialization (MTCNN / Haar Cascade)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -240,10 +246,15 @@ class WebcamPipeline:
         self.running = False
         self.thread: Optional[threading.Thread] = None
 
+        self.fusion_engine = FeedFusionEngine()
         self.latest_frame_jpeg: Optional[bytes] = None
         self.latest_result: dict = {
             "ready": False,
             "score": None,
+            "verdict": "UNCERTAIN",
+            "combined_score": None,
+            "integrity_score": 0.0,
+            "integrity_ok": True,
             "mobilenet_score": None,
             "rppg_score": None,
             "hr_bpm": None,
@@ -355,19 +366,36 @@ class WebcamPipeline:
                 else:
                     calibrated_rppg_score = 0.10  # default warming up
 
-                # 4. Combine MobileNet visual classifier & rPPG physiological pulse
-                combined_score = float(round(0.65 * cur_mobilenet_score + 0.35 * calibrated_rppg_score, 4))
+                # 4. Combine MobileNet visual classifier & rPPG physiological pulse into content anomaly
+                ai_content_score = float(round(0.65 * cur_mobilenet_score + 0.35 * calibrated_rppg_score, 4))
+
+                # Fuse with feed integrity (local webcam device feed integrity is intact)
+                fusion_res = self.fusion_engine.fuse(
+                    hash_chain_ok=True,
+                    integrity_anomalies=[],
+                    prnu_ok=True,
+                    ai_score=ai_content_score,
+                    details={"source": "local_webcam", "hr_bpm": hr_val, "snr_db": snr_val},
+                )
+
+                combined_score = float(round(fusion_res.combined_score, 4))
+                verdict = fusion_res.verdict
 
                 payload = {
                     "ready": bool(res.ready),
                     "score": combined_score,
+                    "verdict": verdict,
+                    "combined_score": combined_score,
+                    "integrity_score": fusion_res.integrity_score,
+                    "integrity_ok": fusion_res.integrity_ok,
                     "mobilenet_score": float(round(cur_mobilenet_score, 4)),
                     "rppg_score": calibrated_rppg_score,
                     "hr_bpm": hr_val,
                     "snr_db": snr_val,
                     "window_sec": float(round(res.window_sec, 2)),
-                    "reason": "Tracking authentic pulse & face" if res.ready and combined_score < 0.4 else str(res.reason),
+                    "reason": f"Fused Verdict: {verdict} ({'Authentic pulse & face' if verdict == 'AUTHENTIC' else str(res.reason)})",
                     "face_detected": bool(face_found),
+                    "evidence": fusion_res.evidence,
                     "t": float(round(t_stream, 2)),
                     "camera_online": True,
                     "fps": float(round(cur_fps, 1)),
@@ -380,7 +408,7 @@ class WebcamPipeline:
 
                 if last_face_box:
                     x1, y1, x2, y2 = last_face_box
-                    is_auth = combined_score < 0.45
+                    is_auth = verdict == "AUTHENTIC"
                     box_color = (0, 220, 100) if is_auth else (0, 60, 240)
                     cv2.rectangle(vis_frame, (x1, y1), (x2, y2), box_color, 2)
 
@@ -394,11 +422,11 @@ class WebcamPipeline:
                 # Top HUD Bar
                 cv2.rectangle(vis_frame, (0, 0), (w, 38), (10, 15, 22), -1)
                 auth_pct = (1.0 - combined_score) * 100.0
-                hud_status = "WARMING UP..." if not res.ready else f"AUTHENTIC ({auth_pct:.0f}%)" if combined_score < 0.45 else f"SUSPECT ({(combined_score*100):.0f}%)"
+                hud_status = "WARMING UP..." if not res.ready else f"{verdict} ({auth_pct:.0f}% Auth)"
                 hr_txt = f"{hr_val:.0f} BPM" if hr_val else "--"
-                mob_txt = f"MobileNet: {(cur_mobilenet_score*100):.1f}% fake"
+                mob_txt = f"MobileNet: {(cur_mobilenet_score*100):.1f}%"
 
-                cv2.putText(vis_frame, f"AEGIS | {hud_status} | {mob_txt} | HR: {hr_txt}", (12, 24),
+                cv2.putText(vis_frame, f"AEGIS FUSED | {hud_status} | {mob_txt} | HR: {hr_txt}", (12, 24),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.52, (255, 255, 255), 1, cv2.LINE_AA)
 
                 ok_enc, jpeg = cv2.imencode(".jpg", vis_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])

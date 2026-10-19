@@ -43,21 +43,21 @@ Real-time constraint (ratio <= 1.0): PASS -- all within real-time budget
 
 | Scenario | Windows | Mean Latency (ms) | P95 Latency (ms) | Total (ms) | RT Ratio |
 |---|---|---|---|---|---|
-| clean | 17 | 32.9 | 35.4 | 802.4 | 0.160 |
-| splice_carried | 17 | 32.4 | 35.4 | 807.7 | 0.162 |
-| splice_forged | 17 | 31.8 | 35.1 | 799.8 | 0.160 |
-| replay_carried | 17 | 32.0 | 33.2 | 796.8 | 0.159 |
-| replay_forged | 17 | 32.3 | 35.5 | 795.3 | 0.159 |
-| reorder_carried | 17 | 32.6 | 36.1 | 808.1 | 0.162 |
-| reorder_forged | 17 | 33.1 | 35.3 | 811.9 | 0.162 |
-| prnu_splice | 17 | 32.9 | 36.2 | 807.5 | 0.162 |
+| clean | 17 | 55.3 | 60.2 | 1229.5 | 0.246 |
+| splice_carried | 17 | 54.3 | 58.9 | 1206.0 | 0.241 |
+| splice_forged | 17 | 50.7 | 57.7 | 1153.9 | 0.231 |
+| replay_carried | 17 | 49.3 | 54.6 | 1137.2 | 0.227 |
+| replay_forged | 17 | 49.0 | 50.8 | 1119.6 | 0.224 |
+| reorder_carried | 17 | 53.1 | 66.4 | 1197.4 | 0.239 |
+| reorder_forged | 17 | 47.6 | 50.7 | 1103.9 | 0.221 |
+| prnu_splice | 17 | 53.6 | 61.8 | 1198.4 | 0.240 |
 | auth_bypass | -- | -- | -- | -- | SKIPPED |
 
 **Aggregate latency across all active scenarios:**
 
-- Mean window latency : 32.5 ms
-- Max P95 latency     : 36.2 ms
-- Max realtime ratio  : 0.162
+- Mean window latency : 51.6 ms
+- Max P95 latency     : 66.4 ms
+- Max realtime ratio  : 0.246
 
 ---
 
