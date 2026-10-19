@@ -20,7 +20,7 @@ The prototype replaces Month 1's naive mathematical weighted average (`aggregate
 | **Unresolved Conflicts Defaulted to "Authentic"** | **4 cases** (catastrophic false-authentic) | **0 cases** (100% prevented by Guard 1) | Hard forensic integrity enforced |
 | **Single-Witness Uncorroborated "Authentic"** | Permitted without checks | **0 cases** (downgraded by Guard 2) | Tamper-proof cross-modal corroboration |
 | **Precedence Matrix Rules Triggered** | 0 (no rules existed) | **4 rules triggered** | Low-light, Face-swap, Short clip, Dubbing |
-| **Average Arbitration Latency** | < 1 ms (simple math) | **0.37 ms** (full 3-round audit) | Negligible overhead for court-admissible audit |
+| **Average Arbitration Latency** | < 1 ms (simple math) | **0.3 ms** (full 3-round audit) | Negligible overhead for court-admissible audit |
 
 ---
 
@@ -78,7 +78,7 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
 {
   "job_id": "m1-case-001",
   "verdict": {
-    "verdict_id": "vrd-a1404ead971f",
+    "verdict_id": "vrd-1ab6178d2dff",
     "job_id": "m1-case-001",
     "final_verdict": "INTEGRITY_UNKNOWN",
     "calibrated_score": 0.2564,
@@ -117,7 +117,7 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
     ],
     "siem_alert_tier": "P2_ELEVATED",
     "evidence_manifest_hash": "9ea2a60e7584230681992291e450db60f871d2169be1dccba11add04fa7c7eb9",
-    "signed_timestamp": "2026-10-19T03:23:09.974362+00:00"
+    "signed_timestamp": "2026-10-19T19:50:10.494014+00:00"
   },
   "judge_mode": "expert_deterministic_judge",
   "rounds": [
@@ -254,8 +254,8 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
   "llm_fallback_reason": null,
   "prompt_version": null,
   "debate_transcript_hash": "763ea19788143c92dcfdb9983b03ec413c02631d5d3b52795514f938663c1bec",
-  "adjudication_latency_ms": 1.07,
-  "generated_at": "2026-10-19T03:23:09.974362+00:00"
+  "adjudication_latency_ms": 0.57,
+  "generated_at": "2026-10-19T19:50:10.494205+00:00"
 }
 ```
 

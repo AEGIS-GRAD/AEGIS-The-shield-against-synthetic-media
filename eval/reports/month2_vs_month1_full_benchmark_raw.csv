@@ -1,0 +1,49 @@
+section,id,parameter1,parameter2,parameter3,m1_metric,m2_metric,delta_or_status
+planner,P-01,standard,20.0s,"baseline: clean video with audio, nothin",video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-02,standard,10.0s,baseline: audio-only file,aasist,aasist,cost_delta:0.0ms
+planner,P-03,standard,10.0s,"baseline: single image, no audio/video d",video-classifier,video-classifier,cost_delta:0.0ms
+planner,P-04,standard,20.0s,EDGE CASE: silent video — AASIST and Syn,video-classifier+rppg,rppg,cost_delta:-420.9ms
+planner,P-05,standard,20.0s,EDGE CASE: clip under 2s — rPPG needs mi,video-classifier+rppg+aasist+syncnet,video-classifier+rppg+aasist+syncnet,cost_delta:0.0ms
+planner,P-06,standard,20.0s,EDGE CASE: heavily occluded face — rPPG/,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-07,standard,20.0s,EDGE CASE: poorly lit clip — below min_l,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-08,high,10.0s,"combined: silent AND short clip, high ri",video-classifier+rppg,video-classifier+rppg,cost_delta:0.0ms
+planner,P-09,standard,20.0s,combined: occluded face AND poorly lit —,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-10,standard,6.0s,"budget pressure: all 4 eligible, but bud",video-classifier+rppg+aasist+syncnet,video-classifier+rppg+aasist+syncnet,cost_delta:0.0ms
+planner,P-11,low,3.0s,very tight budget + low risk — should pi,video-classifier+rppg+aasist+syncnet,video-classifier+rppg+aasist+syncnet,cost_delta:0.0ms
+planner,P-12,high,60.0s,generous budget + high risk — should fav,video-classifier+rppg+aasist+syncnet,rppg+syncnet+video-classifier,cost_delta:0.0ms
+planner,P-13,low,20.0s,"silent video, low risk — compare plan ag",video-classifier+rppg,rppg,cost_delta:-420.9ms
+planner,P-14,high,20.0s,"silent video, high risk — should the pla",video-classifier+rppg,rppg,cost_delta:-420.9ms
+planner,P-15,high,20.0s,"worst case: silent, too short, occluded,",video-classifier+rppg,video-classifier,cost_delta:0.0ms
+planner,P-16,standard,20.0s,low resolution only — tests min_resoluti,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-17,standard,20.0s,long clip near max_duration_s boundary —,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+planner,P-18,high,10.0s,"very short audio clip, high risk — only ",aasist,,cost_delta:-234.8ms
+planner,P-19,standard,20.0s,borderline face visibility — exactly at ,video-classifier+rppg+aasist+syncnet,rppg,cost_delta:-2979.7ms
+judge,m1-case-001,296.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.40),INTEGRITY_UNKNOWN(0.26),CORRECT
+judge,m1-case-002,146.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.51),INTEGRITY_UNKNOWN(0.46),CORRECT
+judge,m1-case-003,863.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.44),INTEGRITY_UNKNOWN(0.32),CORRECT
+judge,m1-case-004,992.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.48),INTEGRITY_UNKNOWN(0.41),CORRECT
+judge,m1-case-005,379.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.48),INTEGRITY_UNKNOWN(0.42),CORRECT
+judge,m1-case-006,FaceShifter_761_766.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.47),INTEGRITY_UNKNOWN(0.41),PREVENTED_FALSE_AUTH
+judge,m1-case-007,DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.49),INTEGRITY_UNKNOWN(0.44),PREVENTED_FALSE_AUTH
+judge,m1-case-008,NeuralTextures_076_079.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.43),INTEGRITY_UNKNOWN(0.30),PREVENTED_FALSE_AUTH
+judge,m1-case-009,FaceShifter_705_707.mp4,FAKE,P1_CRITICAL,UNCERTAIN(0.58),SYNTHETIC(0.77),PREVENTED_FALSE_AUTH
+judge,m1-case-010,067.mp4,REAL,P1_CRITICAL,UNCERTAIN(0.60),SYNTHETIC(0.78),CORRECT
+judge,m1-case-011,FaceShifter_892_112.mp4,FAKE,P1_CRITICAL,UNCERTAIN(0.53),SYNTHETIC(0.70),PREVENTED_FALSE_AUTH
+judge,m1-case-012,FaceSwap_507_418.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.41),INTEGRITY_UNKNOWN(0.25),PREVENTED_FALSE_AUTH
+judge,m1-case-013,721.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.45),INTEGRITY_UNKNOWN(0.36),CORRECT
+judge,m1-case-014,FaceShifter_526_436.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.52),INTEGRITY_UNKNOWN(0.49),PREVENTED_FALSE_AUTH
+judge,m1-case-015,FaceShifter_817_827.mp4,FAKE,P2_ELEVATED,UNCERTAIN(0.47),INTEGRITY_UNKNOWN(0.31),PREVENTED_FALSE_AUTH
+judge,m1-case-016,159.mp4,REAL,P4_INFORMATIONAL,AUTHENTIC(0.34),AUTHENTIC(0.21),CORRECT
+judge,m1-case-017,face_swap_high_spatial.mp4,FAKE,P1_CRITICAL,UNCERTAIN(0.52),SYNTHETIC(0.85),PREVENTED_FALSE_AUTH
+judge,m1-case-018,dim_light.mp4,REAL,P4_INFORMATIONAL,UNCERTAIN(0.55),AUTHENTIC(0.23),CORRECT
+judge,m1-case-019,foreign_dubbed_news.mp4,REAL,P4_INFORMATIONAL,UNCERTAIN(0.58),AUTHENTIC(0.25),CORRECT
+judge,m1-case-020,short_clip.mp4,REAL,P2_ELEVATED,UNCERTAIN(0.50),INTEGRITY_UNKNOWN(0.50),CORRECT
+surveillance,clean,EVALUATED,ratio:0.177,p95:77.48ms,UNCERTAIN (DEFAULT AUTHENTIC),AUTHENTIC,PASS
+surveillance,splice_carried,EVALUATED,ratio:0.157,p95:50.21ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,splice_forged,EVALUATED,ratio:0.164,p95:54.6ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,replay_carried,EVALUATED,ratio:0.158,p95:52.16ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,replay_forged,EVALUATED,ratio:0.163,p95:58.06ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,reorder_carried,EVALUATED,ratio:0.161,p95:57.23ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,reorder_forged,EVALUATED,ratio:0.16,p95:52.49ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,prnu_splice,EVALUATED,ratio:0.156,p95:50.43ms,UNCERTAIN (DEFAULT AUTHENTIC),INTEGRITY_UNKNOWN,PASS
+surveillance,auth_bypass,SKIPPED,ratio:0.0,p95:0.0ms,SKIPPED,SKIPPED,PASS
