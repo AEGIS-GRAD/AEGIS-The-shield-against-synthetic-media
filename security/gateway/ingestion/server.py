@@ -1,12 +1,16 @@
 import asyncio
+import logging
 import ssl
 import json
 import os
 import sys
 import time
 import hashlib
+
 from collections import defaultdict
 from typing import Dict, Set, Optional, Tuple
+
+logger = logging.getLogger("aegis.ingestion.server")
 
 # Add paths for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -24,6 +28,30 @@ except ImportError:
     from security.forensics.evidence_vault import SurveillanceEvidenceVault
 
 evidence_vault = SurveillanceEvidenceVault()
+
+try:
+    from incident_response.alert_router import (
+        AlertRouter,
+        FileAlertDestination,
+        CameraMetadata,
+        EvidenceBundle,
+        AEGISAlert,
+    )
+except ImportError:
+    try:
+        from security.incident_response.alert_router import (
+            AlertRouter,
+            FileAlertDestination,
+            CameraMetadata,
+            EvidenceBundle,
+            AEGISAlert,
+        )
+    except ImportError:
+        AlertRouter = None
+
+LOGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs'))
+wazuh_file_dest = FileAlertDestination(os.path.join(LOGS_DIR, "wazuh_alerts.jsonl")) if AlertRouter else None
+alert_router = AlertRouter(destinations=[wazuh_file_dest]) if wazuh_file_dest else None
 
 HOST = '127.0.0.1'
 PORT = 8443
@@ -270,8 +298,26 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         height=payload.get("height"),
                     )
                     incident_id = inc.incident_id
-                except Exception as inc_err:
-                    print(f"[-] Evidence vault error: {inc_err}")
+                except Exception as vault_err:
+                    logger.warning(f"Vault storage failed for SEQUENCE_ANOMALY on {camera_id}: {vault_err}")
+                if alert_router:
+                    try:
+                        alert_router.build_and_route_alert(
+                            verdict="INTEGRITY_UNKNOWN",
+                            combined_score=1.0,
+                            integrity_ok=False,
+                            camera_metadata={"camera_id": camera_id, "ip_address": client_ip if 'client_ip' in locals() else "127.0.0.1"},
+                            evidence_bundle={
+                                "forensic_hash": expected_hash,
+                                "frame_sequence_range": [seq, seq],
+                                "broken_at_sequence": seq,
+                                "technical_detail": f"Sequence anomaly detected: {'; '.join(anomaly_details)}",
+                                "vault_incident_id": incident_id,
+                            },
+                            threat_classification="STREAM_SEQUENCE_GAP",
+                        )
+                    except Exception as route_err:
+                        pass
 
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Network Attack) on {camera_id}:")
@@ -325,8 +371,26 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         height=payload.get("height"),
                     )
                     incident_id = inc.incident_id
-                except Exception as inc_err:
-                    print(f"[-] Evidence vault error: {inc_err}")
+                except Exception as vault_err:
+                    logger.warning(f"Vault storage failed for HASH_CHAIN_BREAK on {camera_id}: {vault_err}")
+                if alert_router:
+                    try:
+                        alert_router.build_and_route_alert(
+                            verdict="INTEGRITY_UNKNOWN",
+                            combined_score=1.0,
+                            integrity_ok=False,
+                            camera_metadata={"camera_id": camera_id, "ip_address": client_ip if 'client_ip' in locals() else "127.0.0.1"},
+                            evidence_bundle={
+                                "forensic_hash": expected_hash,
+                                "frame_sequence_range": [seq, seq],
+                                "broken_at_sequence": seq,
+                                "technical_detail": f"Cryptographic hash chain broken at sequence #{seq}. Expected {expected_hash[:16]}... != calculated {hash_validator.current_hash[:16]}...",
+                                "vault_incident_id": incident_id,
+                            },
+                            threat_classification="CRYPTOGRAPHIC_HASH_MISMATCH",
+                        )
+                    except Exception as route_err:
+                        pass
 
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Splicing Attack) on {camera_id}: Hash mismatch at seq {seq}")
@@ -390,8 +454,28 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         height=height,
                     )
                     incident_id = inc.incident_id
-                except Exception as inc_err:
-                    print(f"[-] Evidence vault error: {inc_err}")
+                except Exception as vault_err:
+                    logger.warning(f"Vault storage failed for PRNU_SENSOR_MISMATCH on {camera_id}: {vault_err}")
+                if alert_router:
+                    try:
+                        alert_router.build_and_route_alert(
+                            verdict="INTEGRITY_UNKNOWN",
+                            combined_score=1.0,
+                            integrity_ok=False,
+                            camera_metadata={"camera_id": camera_id, "ip_address": client_ip if 'client_ip' in locals() else "127.0.0.1"},
+                            evidence_bundle={
+                                "forensic_hash": expected_hash,
+                                "frame_sequence_range": [seq, seq],
+                                "pce_score": round(pce, 2),
+                                "pce_threshold": PRNU_PCE_THRESHOLD,
+                                "broken_at_sequence": seq,
+                                "technical_detail": f"Hardware PRNU sensor mismatch: {prnu_msg}",
+                                "vault_incident_id": incident_id,
+                            },
+                            threat_classification="PRNU_SENSOR_MISMATCH",
+                        )
+                    except Exception as route_err:
+                        pass
 
                 if AEGIS_SECURITY_PROFILE == "prod":
                     print(f"[!] INTEGRITY COMPROMISED (Hardware Sensor Mismatch / PRNU Splice) on {camera_id}:")
