@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import uuid
 import traceback
+from judge_bridge import run_judge
 from contextlib import asynccontextmanager
 
 from typing import Optional
@@ -21,7 +22,7 @@ from rules import decide_detectors_to_call
 from planner import plan_detectors, resolve_planner_mode, get_configured_planner_mode
 from dispatch import call_all_detectors
 from aggregate import aggregate_results
-from db import init_db, log_decision
+from db import init_db, log_decision, log_judge_report
 from models import OrchestrationResponse
 
 # Configure vibrant terminal logging
@@ -133,8 +134,18 @@ async def orchestrate(
             else:
                 logger.info(f"Detector [{res.detector}] SUCCESS: score={res.raw_score}, latency={res.latency_ms}ms")
 
-        aggregated_score, aggregated_verdict = aggregate_results(results)
-        logger.info(f"Final Decision: Verdict={aggregated_verdict}, Aggregated Score={aggregated_score:.4f}")
+        # ── Month 2: Judge-Agent Debate Layer ────────────────────────────────
+        # Replaces Month 1's simple weighted average (aggregate.py).
+        # Produces a 3-round debate transcript + CourtAdmissibleVerdict.
+        judge_report = run_judge(results=results, metadata=metadata, job_id=job_id)
+        aggregated_score = judge_report.verdict.calibrated_score
+        aggregated_verdict = judge_report.verdict.final_verdict.value
+        logger.info(
+            f"Final Decision: Verdict={aggregated_verdict}, "
+            f"Score={aggregated_score:.4f}, "
+            f"Mode={judge_report.verdict.arbitration_mode}, "
+            f"SIEM={judge_report.verdict.siem_alert_tier}"
+        )
 
         log_decision(
             job_id=job_id,
@@ -150,6 +161,7 @@ async def orchestrate(
             fallback=is_fallback,
             fallback_reason=fallback_reason,
         )
+        log_judge_report(job_id=job_id, report=judge_report)
 
         return OrchestrationResponse(
             input_file=file.filename or "unknown",
@@ -162,6 +174,17 @@ async def orchestrate(
             plan=plan_data,
             fallback=is_fallback,
             fallback_reason=fallback_reason,
+            # ── Judge-Agent fields ────────────────────────────────────────────
+            judge_verdict=judge_report.verdict.final_verdict.value,
+            judge_score=judge_report.verdict.calibrated_score,
+            judge_mode=judge_report.judge_mode,
+            siem_alert_tier=judge_report.verdict.siem_alert_tier,
+            debate_transcript=[r.model_dump() for r in judge_report.rounds],
+            forensic_justification=judge_report.verdict.forensic_justification,
+            debate_transcript_hash=judge_report.debate_transcript_hash,
+            guards_applied=judge_report.guards_applied,
+            cross_examination_findings=[f.model_dump() for f in judge_report.cross_examination_findings],
+            adjudication_latency_ms=judge_report.adjudication_latency_ms,
         )
     except Exception as exc:
         logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{file.filename}': {exc}")
@@ -169,4 +192,5 @@ async def orchestrate(
         raise HTTPException(status_code=500, detail=f"Orchestration Error: {str(exc)}. Check terminal logs.")
     finally:
         if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+            os.remove(tmp_path)
+

@@ -57,8 +57,54 @@ class DetectorTelemetry(Base):
     request = relationship("RequestLog", back_populates="telemetry")
 
 
+class JudgeAuditLog(Base):
+    __tablename__ = "judge_audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, unique=True, index=True)
+    judge_verdict = Column(String)           # SYNTHETIC | AUTHENTIC | INTEGRITY_UNKNOWN
+    judge_score = Column(Float)
+    judge_mode = Column(String)              # expert_deterministic_judge | llm_agentic_judge
+    siem_alert_tier = Column(String)         # P1_CRITICAL | P2_ELEVATED | P4_INFORMATIONAL
+    debate_transcript_hash = Column(String)  # tamper-evident SHA-256 over all 3 rounds
+    forensic_justification = Column(String)
+    guards_applied_count = Column(Integer, default=0)
+    cross_exam_findings_count = Column(Integer, default=0)
+    adjudication_latency_ms = Column(Float)
+    debate_transcript_json = Column(String)  # full JSON of all 3 DebateRound objects
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def log_judge_report(job_id: str, report) -> None:
+    """Persists a JudgeReport to the judge_audit_log table for tamper-evident audit trail."""
+    import json
+    db = SessionLocal()
+    try:
+        row = JudgeAuditLog(
+            job_id=job_id,
+            judge_verdict=report.verdict.final_verdict.value,
+            judge_score=report.verdict.calibrated_score,
+            judge_mode=report.judge_mode,
+            siem_alert_tier=report.verdict.siem_alert_tier,
+            debate_transcript_hash=report.debate_transcript_hash,
+            forensic_justification=report.verdict.forensic_justification,
+            guards_applied_count=len(report.guards_applied),
+            cross_exam_findings_count=len(report.cross_examination_findings),
+            adjudication_latency_ms=report.adjudication_latency_ms,
+            debate_transcript_json=json.dumps(
+                [r.model_dump() for r in report.rounds], default=str
+            ),
+        )
+        db.add(row)
+        db.commit()
+    except Exception as e:
+        print(f"Error persisting JudgeReport to DB: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 def log_decision(

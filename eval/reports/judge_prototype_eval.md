@@ -20,7 +20,7 @@ The prototype replaces Month 1's naive mathematical weighted average (`aggregate
 | **Unresolved Conflicts Defaulted to "Authentic"** | **4 cases** (catastrophic false-authentic) | **0 cases** (100% prevented by Guard 1) | Hard forensic integrity enforced |
 | **Single-Witness Uncorroborated "Authentic"** | Permitted without checks | **0 cases** (downgraded by Guard 2) | Tamper-proof cross-modal corroboration |
 | **Precedence Matrix Rules Triggered** | 0 (no rules existed) | **4 rules triggered** | Low-light, Face-swap, Short clip, Dubbing |
-| **Average Arbitration Latency** | < 1 ms (simple math) | **1212.38 ms** (full 3-round audit) | Negligible overhead for court-admissible audit |
+| **Average Arbitration Latency** | < 1 ms (simple math) | **0.37 ms** (full 3-round audit) | Negligible overhead for court-admissible audit |
 
 ---
 
@@ -78,7 +78,7 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
 {
   "job_id": "m1-case-001",
   "verdict": {
-    "verdict_id": "vrd-a0b18f37648c",
+    "verdict_id": "vrd-a1404ead971f",
     "job_id": "m1-case-001",
     "final_verdict": "INTEGRITY_UNKNOWN",
     "calibrated_score": 0.2564,
@@ -117,7 +117,7 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
     ],
     "siem_alert_tier": "P2_ELEVATED",
     "evidence_manifest_hash": "9ea2a60e7584230681992291e450db60f871d2169be1dccba11add04fa7c7eb9",
-    "signed_timestamp": "2026-10-16T18:05:17.425046+00:00"
+    "signed_timestamp": "2026-10-19T03:23:09.974362+00:00"
   },
   "judge_mode": "expert_deterministic_judge",
   "rounds": [
@@ -249,13 +249,13 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
   "guards_applied": [
     "Guard 1 Triggered (Unresolved Conflict): Active detectors exhibited direct polarity inversion (['rppg', 'video-classifier']), but no Forensic Precedence Rule applied. Under Dr. Amr's Anti-Default Mandate, contradictory evidence cannot be certified AUTHENTIC. Verdict downgraded to INTEGRITY_UNKNOWN."
   ],
-  "llm_model": "deterministic-fallback",
-  "llm_fallback_used": true,
-  "llm_fallback_reason": "ALL_JUDGE_MODELS_FAILED",
-  "prompt_version": "judge-v1.0",
+  "llm_model": null,
+  "llm_fallback_used": false,
+  "llm_fallback_reason": null,
+  "prompt_version": null,
   "debate_transcript_hash": "763ea19788143c92dcfdb9983b03ec413c02631d5d3b52795514f938663c1bec",
-  "adjudication_latency_ms": 1778.88,
-  "generated_at": "2026-10-16T18:05:19.204049+00:00"
+  "adjudication_latency_ms": 1.07,
+  "generated_at": "2026-10-19T03:23:09.974362+00:00"
 }
 ```
 
