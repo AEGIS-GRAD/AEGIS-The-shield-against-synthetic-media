@@ -76,7 +76,7 @@ services:
     volumes:
       - ./orchestrator:/app
       - ./capability_manifests:/capability_manifests:ro
-      - ./debate:/debate:ro        # judge_bridge.py imports debate package at runtime
+      - ./debate:/repo/debate:ro  # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
     networks:
       - aegis_net
     environment:
@@ -85,7 +85,7 @@ services:
       - DETECTOR_RPPG_URL=http://detector_rppg:8000
       - DETECTOR_AASIST_URL=http://detector_aasist:8000
       - DETECTOR_SYNCNET_URL=http://detector_syncnet:8000
-      - PYTHONPATH=/app/app:/debate  # makes `import debate` resolve inside container
+      - PYTHONPATH=/app/app:/repo  # /repo/debate/__init__.py → `import debate` resolves correctly
       - AEGIS_JUDGE_MODE=${AEGIS_JUDGE_MODE:-deterministic}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]

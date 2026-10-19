@@ -9,16 +9,26 @@ This is the ONLY file in orchestrator/ that imports from the debate package.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from models import DetectorResult, InputMetadata
 
-# Ensure repo root is on sys.path so `debate` package is importable
+# ---------------------------------------------------------------------------
+# Ensure debate package is importable.
+# Docker: PYTHONPATH=/app/app:/repo, debate mounted at /repo/debate — no sys.path needed.
+# Local dev: __file__ is .../orchestrator/app/judge_bridge.py → parent×3 = repo root.
+# ---------------------------------------------------------------------------
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+# Also honour entries already on PYTHONPATH (set by Docker / CI environment)
+for _p in os.environ.get("PYTHONPATH", "").split(os.pathsep):
+    if _p and _p not in sys.path:
+        sys.path.insert(0, _p)
+
 
 from debate.judge_agent import JudgeAgent
 from debate.schemas import JudgeReport, OperatingConditions
@@ -27,7 +37,6 @@ logger = logging.getLogger("aegis.orchestrator.judge_bridge")
 
 # Module-level singleton — JudgeAgent is stateless after __init__ (manifests are cached).
 # Mode is read from env var AEGIS_JUDGE_MODE (default: "deterministic").
-import os
 _JUDGE_MODE = os.environ.get("AEGIS_JUDGE_MODE", "deterministic")
 _judge: Optional[JudgeAgent] = None
 
