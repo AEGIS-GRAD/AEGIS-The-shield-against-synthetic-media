@@ -27,7 +27,7 @@ COPY . /app
 
 # Set working directory to the inner app folder where main.py and logic modules reside
 WORKDIR /app/app
-ENV PYTHONPATH=/app/app
+ENV PYTHONPATH=/app/app:/debate
 
 EXPOSE 8000
 
