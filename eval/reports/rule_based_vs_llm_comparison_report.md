@@ -31,8 +31,8 @@
 | Mean compute cost -- rule-based | 7794.9 ms (parallel-wall-clock) |
 | Mean compute cost -- LLM planner | 14223.7 ms |
 | Mean compute-cost delta (LLM minus rule) | +6428.8 ms |
-| Mean LLM planning overhead | 20.401 s |
-| P95 LLM planning overhead | 20.495 s |
+| Mean LLM planning overhead | 20.370 s |
+| P95 LLM planning overhead | 20.434 s |
 | Rule-based planning overhead | 0.000002 s (negligible) |
 
 > **Compute-cost model:** parallel execution wall-clock = latency of the slowest
@@ -185,10 +185,10 @@ LLM planner overhead includes manifest loading, eligibility filtering, prompt bu
 | Mode | Mean overhead | P95 overhead |
 |---|---|---|
 | Rule-based | 0.000002 s | less than 0.001 s |
-| LLM planner (mock) | 20.401 s | 20.495 s |
+| LLM planner (mock) | 20.370 s | 20.434 s |
 
 Target planning overhead from orchestrator_design.md s7 is <=3s at P95.
-This run recorded 20.495s at P95. Target NOT met -- see Finding 4 in planner_v1_evaluation_summary.md (free-tier model queuing).
+This run recorded 20.434s at P95. Target NOT met -- see Finding 4 in planner_v1_evaluation_summary.md (free-tier model queuing).
 
 ---
 
