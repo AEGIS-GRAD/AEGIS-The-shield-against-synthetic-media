@@ -25,7 +25,7 @@ try:
     )
 except (ImportError, ValueError):
     try:
-        from ..incident_response.alert_router import (
+        from incident_response.alert_router import (
             AEGISAlert,
             CameraMetadata,
             EvidenceBundle,
@@ -33,11 +33,23 @@ except (ImportError, ValueError):
             classify_threat_from_fusion,
             severity_from_verdict_and_score,
         )
-    except Exception:
-        AEGISAlert = None
-        AlertRouter = None
-        classify_threat_from_fusion = None
-        severity_from_verdict_and_score = None
+    except (ImportError, ValueError):
+        try:
+            from ..incident_response.alert_router import (
+                AEGISAlert,
+                CameraMetadata,
+                EvidenceBundle,
+                AlertRouter,
+                classify_threat_from_fusion,
+                severity_from_verdict_and_score,
+            )
+        except Exception:
+            AEGISAlert = None
+            CameraMetadata = None
+            EvidenceBundle = None
+            AlertRouter = None
+            classify_threat_from_fusion = None
+            severity_from_verdict_and_score = None
 
 
 @dataclass

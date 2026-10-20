@@ -41,4 +41,5 @@ security/transport/certs/
 .frame_cache_efficientnet/
 **/.frame_cache_efficientnet/
 security/vault/
+security/logs/
 
