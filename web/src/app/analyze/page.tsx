@@ -2,11 +2,51 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UploadCloud, X, AlertCircle, Check, Minus, Sparkles, Video, AudioLines, Image as ImageIcon, FileText, Play } from "lucide-react";
+import Link from "next/link";
+import { UploadCloud, X, AlertCircle, Check, Minus, Sparkles, Video, AudioLines, Image as ImageIcon, FileText, Play, ArrowRight, ShieldCheck } from "lucide-react";
 import { detectors } from "@/lib/mock";
-import { Btn, Chip, ModalityIcon, PageHeader, Panel, Toggle } from "@/components/aegis/ui";
+import { Btn, Chip, ModalityIcon, PageHeader, Panel, Toggle, SiemTierBadge } from "@/components/aegis/ui";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
+
+const DEMO_PRESETS = [
+  {
+    id: "clean_baseline",
+    title: "Clean Baseline",
+    category: "100% Authentic",
+    tier: "TIER_1_LOW",
+    file: "clean_interview_broadcast.mp4",
+    desc: "Unedited broadcast video & natural speech. All modalities corroborate authentic.",
+    badgeClass: "border-emerald-500/30 text-emerald-400 bg-emerald-500/10",
+  },
+  {
+    id: "voice_clone",
+    title: "Voice Clone Scam",
+    category: "Audio Deepfake",
+    tier: "TIER_3_CRITICAL",
+    file: "synthetic_voice_clone_scam.wav",
+    desc: "AASIST flags vocoder artifacts. Bypasses video models safely.",
+    badgeClass: "border-rose-500/30 text-rose-400 bg-rose-500/10",
+  },
+  {
+    id: "silent_video",
+    title: "Silent Surveillance",
+    category: "Visual Only",
+    tier: "TIER_1_LOW",
+    file: "surveillance_silent_clip.mp4",
+    desc: "Zero-audio stream. Manifest safely bypasses acoustic detectors.",
+    badgeClass: "border-cyan-500/30 text-cyan-400 bg-cyan-500/10",
+  },
+  {
+    id: "cross_modal_conflict",
+    title: "Cross-Modal Conflict",
+    category: "Dubbed Mismatch",
+    tier: "TIER_3_CRITICAL",
+    file: "dubbed_speech_conflict.mp4",
+    desc: "Authentic face + cloned voice. Guard 1 prevents false-authentic default.",
+    badgeClass: "border-amber-500/30 text-amber-400 bg-amber-500/10",
+  },
+];
 
 type Tab = "media" | "image" | "text";
 const MAX = 100 * 1024 * 1024;
@@ -72,6 +112,69 @@ export default function UploadPage() {
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
+          {/* Month 2 Milestone Evaluation Presets */}
+          <div className="rounded-2xl border border-accent/20 bg-accent-soft/20 p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-accent animate-pulse" />
+                <h3 className="text-sm font-bold text-foreground tracking-tight">
+                  Month 2 Milestone Demo Presets (1-Click Evaluation)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-soft text-accent border border-accent/30">
+                EVALUATION FIXTURES
+              </span>
+            </div>
+            <p className="caption mb-3.5">
+              Select any curated evaluation scenario to test the deterministic Judge Agent, multi-agent debate, and SIEM alert tiers with verified test fixtures:
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {DEMO_PRESETS.map((preset) => (
+                <div
+                  key={preset.id}
+                  className="group relative flex flex-col justify-between rounded-xl border border-border bg-card/90 hover:bg-card hover:border-accent/60 p-3.5 transition-all shadow-xs"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <span className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-accent transition-colors">
+                        {preset.title}
+                      </span>
+                      <span className={cn("text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border", preset.badgeClass)}>
+                        {preset.category}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">
+                      {preset.desc}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
+                    <SiemTierBadge tier={preset.tier} size="sm" />
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/analyze/processing?file=${encodeURIComponent(preset.file)}&preset=${preset.id}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                        title="Simulate analysis pipeline"
+                      >
+                        <Play className="size-2.5" />
+                        <span>Run</span>
+                      </Link>
+                      <Link
+                        href={`/reports/${preset.id}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-accent hover:underline"
+                        title="View instant Month 2 report"
+                      >
+                        <span>Report</span>
+                        <ArrowRight className="size-3" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <Panel>
             <div className="mb-5 flex gap-2">
               {([["media", "Video / Audio", Video, true], ["image", "Image", ImageIcon, false], ["text", "Text", FileText, false]] as const).map(([k, l, I, active]) => (
