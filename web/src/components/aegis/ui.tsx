@@ -1,25 +1,49 @@
 import type { ReactNode } from "react";
 import React from "react";
 import {
-  ShieldCheck, ShieldAlert, ShieldQuestion, Video, AudioLines, Image as ImageIcon, FileText, Inbox,
+  ShieldCheck, ShieldAlert, ShieldQuestion, AlertTriangle, Video, AudioLines, Image as ImageIcon, FileText, Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Health, Level, Modality, Verdict } from "@/lib/mock";
 
-const verdictMap = {
+const verdictMap: Record<string, { label: string; icon: any; cls: string; bar: string }> = {
   authentic: { label: "Authentic", icon: ShieldCheck, cls: "bg-authentic-soft text-authentic-ink border-authentic/30", bar: "bg-authentic" },
   synthetic: { label: "Synthetic", icon: ShieldAlert, cls: "bg-synthetic-soft text-synthetic-ink border-synthetic/30", bar: "bg-synthetic" },
   inconclusive: { label: "Inconclusive", icon: ShieldQuestion, cls: "bg-inconclusive-soft text-inconclusive-ink border-inconclusive/40", bar: "bg-inconclusive" },
+  debate_required: { label: "Debate Required", icon: AlertTriangle, cls: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-500/40", bar: "bg-amber-500" },
+  integrity_unknown: { label: "Integrity Unknown", icon: AlertTriangle, cls: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-500/40", bar: "bg-rose-500" },
+  suspect: { label: "Suspect", icon: ShieldAlert, cls: "bg-synthetic-soft text-synthetic-ink border-synthetic/30", bar: "bg-synthetic" },
+  verified: { label: "Verified Authentic", icon: ShieldCheck, cls: "bg-authentic-soft text-authentic-ink border-authentic/30", bar: "bg-authentic" },
 };
 
-export function VerdictBadge({ verdict, size = "md" }: { verdict: Verdict; size?: "sm" | "md" | "lg" }) {
-  const v = verdictMap[verdict];
+export function VerdictBadge({ verdict, size = "md", className }: { verdict: string; size?: "sm" | "md" | "lg"; className?: string }) {
+  const key = (verdict || "inconclusive").toLowerCase().replace(/[\s-]+/g, "_");
+  const v = verdictMap[key] || verdictMap.inconclusive;
   const Icon = v.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border font-semibold", v.cls,
-      size === "sm" && "px-2 py-0.5 text-[11px]", size === "md" && "px-2.5 py-1 text-xs", size === "lg" && "px-4 py-2 text-lg")}>
-      <Icon className={size === "lg" ? "size-6" : "size-3.5"} />
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border font-semibold tracking-tight", v.cls,
+      size === "sm" && "px-2 py-0.5 text-[11px]", size === "md" && "px-2.5 py-1 text-xs", size === "lg" && "px-4 py-2 text-base", className)}>
+      <Icon className={size === "lg" ? "size-5" : "size-3.5"} />
       {v.label}
+    </span>
+  );
+}
+
+const tierMap: Record<string, { label: string; icon: any; cls: string }> = {
+  tier_1_low: { label: "SIEM TIER 1 — LOW", icon: ShieldCheck, cls: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-500/40" },
+  tier_2_elevated: { label: "SIEM TIER 2 — ELEVATED", icon: AlertTriangle, cls: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-500/40" },
+  tier_3_critical: { label: "SIEM TIER 3 — CRITICAL", icon: ShieldAlert, cls: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-500/40" },
+};
+
+export function SiemTierBadge({ tier, size = "md", className }: { tier: string; size?: "sm" | "md" | "lg"; className?: string }) {
+  const key = (tier || "tier_1_low").toLowerCase().replace(/[\s-]+/g, "_");
+  const t = tierMap[key] || tierMap.tier_2_elevated;
+  const Icon = t.icon;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border font-mono font-bold tracking-wider uppercase", t.cls,
+      size === "sm" && "px-2 py-0.5 text-[10px]", size === "md" && "px-2.5 py-1 text-xs", size === "lg" && "px-3.5 py-1.5 text-sm", className)}>
+      <Icon className={size === "lg" ? "size-4" : "size-3"} />
+      {t.label}
     </span>
   );
 }

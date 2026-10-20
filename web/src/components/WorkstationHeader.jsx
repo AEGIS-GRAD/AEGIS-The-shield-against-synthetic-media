@@ -63,7 +63,7 @@ export default function WorkstationHeader({
             <FileText className={`w-3.5 h-3.5 ${verificationMode === "offline" ? "text-white" : "text-cyan-600"}`} />
             <span>Offline File</span>
             <span className={`hidden sm:inline-block text-[9px] px-1 py-0.2 rounded font-sans ${verificationMode === "offline" ? "bg-cyan-700 text-cyan-100" : "bg-slate-200 text-slate-700"}`}>
-              Month 1
+              Single-Pass
             </span>
           </button>
 
@@ -77,9 +77,9 @@ export default function WorkstationHeader({
             title="Switch to Live Surveillance Monitoring Mode (Continuous sliding-window check)"
           >
             <Radio className={`w-3.5 h-3.5 ${verificationMode === "live" ? "text-white animate-pulse" : "text-emerald-600"}`} />
-            <span>Live Stream</span>
+            <span>Live Surveillance</span>
             <span className={`hidden sm:inline-block text-[9px] px-1 py-0.2 rounded font-sans ${verificationMode === "live" ? "bg-emerald-700 text-emerald-100" : "bg-slate-200 text-slate-700"}`}>
-              Month 2
+              Sliding-Window
             </span>
           </button>
         </div>

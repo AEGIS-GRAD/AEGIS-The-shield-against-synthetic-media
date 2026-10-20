@@ -353,6 +353,16 @@ export async function submitMediaWithProgress(file, onProgress) {
 
   return {
     ...detectorMap,
+    judge_verdict: data.judge_verdict,
+    judge_score: data.judge_score,
+    judge_mode: data.judge_mode,
+    siem_alert_tier: data.siem_alert_tier,
+    guards_applied: data.guards_applied || [],
+    debate_transcript: data.debate_transcript,
+    debate_transcript_hash: data.debate_transcript_hash,
+    forensic_justification: data.forensic_justification,
+    cross_examination_findings: data.cross_examination_findings,
+    adjudication_latency_ms: data.adjudication_latency_ms,
     raw_response: data,
     endpoint_used: `${ORCHESTRATOR_BASE_URL}/orchestrate`,
     status_code: 200,
@@ -493,10 +503,104 @@ async function runPresetSimulation(presetId, file, jobId, onProgress) {
   state.overall_status = "completed";
   emit(100);
 
+  const presetJudgeData = {
+    clean_baseline: {
+      judge_verdict: "AUTHENTIC",
+      judge_score: 0.12,
+      judge_mode: "deterministic",
+      siem_alert_tier: "TIER_1_LOW",
+      guards_applied: ["Guard 2: Cross-Modal Corroboration Requirement Satisfied"],
+      forensic_justification: "All active modalities (Visual boundary, CHROM rPPG, SyncNet, AASIST) corroborate natural origin with high statistical confidence. No synthesis or reenactment anomalies detected.",
+      cross_examination_findings: "Unanimous agreement across all 4 layers. Cross-examination found zero temporal or spectral inconsistencies.",
+      adjudication_latency_ms: 0.35,
+      debate_transcript_hash: "0xa4f28e9b10c551dd6a7b391d84f001c27e8a93bc44ef0182736154388192a001",
+      debate_transcript: [
+        { round: 1, speaker: "video_classifier", claim: "Natural facial boundary textures, no warping artifacts (score: 0.12).", polarity: "AUTHENTIC", confidence: 0.88 },
+        { round: 1, speaker: "rppg", claim: "Continuous sub-dermal blood volume pulse extracted at 72.4 BPM (score: 0.15).", polarity: "AUTHENTIC", confidence: 0.85 },
+        { round: 2, speaker: "syncnet", claim: "Phoneme-viseme temporal correlation aligned within 12ms natural window (score: 0.18).", polarity: "AUTHENTIC", confidence: 0.82 },
+        { round: 2, speaker: "aasist", claim: "Vocal tract formants conform to natural biological acoustics (score: 0.08).", polarity: "AUTHENTIC", confidence: 0.92 },
+        { round: 3, speaker: "judge_agent", claim: "Synthesis: Unanimous 4-layer multi-modal corroboration. Authentic media certified under standard court-admissible protocol.", polarity: "AUTHENTIC", confidence: 0.94 }
+      ],
+    },
+    voice_clone: {
+      judge_verdict: "SYNTHETIC",
+      judge_score: 0.94,
+      judge_mode: "deterministic",
+      siem_alert_tier: "TIER_3_CRITICAL",
+      guards_applied: ["Acoustic Synthesis Precedence Rule Activated"],
+      forensic_justification: "Neural vocoder phase discontinuity and unnatural harmonic envelope detected in 2-4kHz band. Visual modalities correctly bypassed as Not Applicable.",
+      cross_examination_findings: "AASIST spectro-temporal graph attention identified vocoder artifact clusters at 12.4s and 31.2s.",
+      adjudication_latency_ms: 0.42,
+      debate_transcript_hash: "0x51c3d987e2a9b4001c5f829033ba019482fe913840219572839105827192a3bc",
+      debate_transcript: [
+        { round: 1, speaker: "aasist", claim: "Critical acoustic spoofing detected: neural vocoder synthesis artifacts in 2-4kHz band (score: 0.94).", polarity: "SYNTHETIC", confidence: 0.94 },
+        { round: 1, speaker: "video_classifier", claim: "Skipped: Audio file contains no visual frames.", polarity: "NOT_APPLICABLE", confidence: 0.0 },
+        { round: 2, speaker: "judge_agent", claim: "Pre-dispatch manifest verified audio-only modality. Acoustic synthesis precedence rule triggered.", polarity: "SYNTHETIC", confidence: 0.94 },
+        { round: 3, speaker: "judge_agent", claim: "Synthesis: Standalone voice clone confirmed. Immediate SIEM Tier 3 escalation.", polarity: "SYNTHETIC", confidence: 0.95 }
+      ],
+    },
+    silent_video: {
+      judge_verdict: "AUTHENTIC",
+      judge_score: 0.14,
+      judge_mode: "deterministic",
+      siem_alert_tier: "TIER_1_LOW",
+      guards_applied: ["Pre-dispatch Zero-Audio Manifest Filter Applied"],
+      forensic_justification: "Silent surveillance footage: audio and lip-sync detectors safely bypassed via capability manifest. Visual classifier and rPPG pulse confirm natural camera capture.",
+      cross_examination_findings: "Visual spatial textures and dermal blood volume pulse verified authentic without audio dependency.",
+      adjudication_latency_ms: 0.28,
+      debate_transcript_hash: "0x892a014c2b98e1f0037a891048b291c3057e9128394018274619283740192837",
+      debate_transcript: [
+        { round: 1, speaker: "video_classifier", claim: "Natural camera capture confirmed without warping or blend boundaries (score: 0.12).", polarity: "AUTHENTIC", confidence: 0.88 },
+        { round: 1, speaker: "rppg", claim: "CHROM algorithm extracted stable pulse wave at 70.8 BPM (score: 0.15).", polarity: "AUTHENTIC", confidence: 0.85 },
+        { round: 2, speaker: "aasist", claim: "Skipped: Video contains zero audio stream.", polarity: "NOT_APPLICABLE", confidence: 0.0 },
+        { round: 2, speaker: "syncnet", claim: "Skipped: Multi-modal sync requires audio stream.", polarity: "NOT_APPLICABLE", confidence: 0.0 },
+        { round: 3, speaker: "judge_agent", claim: "Synthesis: Capability manifest correctly isolated visual domain. Visual and biometric authenticity corroborated.", polarity: "AUTHENTIC", confidence: 0.91 }
+      ],
+    },
+    cross_modal_conflict: {
+      judge_verdict: "SYNTHETIC",
+      judge_score: 0.88,
+      judge_mode: "deterministic",
+      siem_alert_tier: "TIER_3_CRITICAL",
+      guards_applied: [
+        "Guard 1: Unresolved Polarity Inversion Anti-Default",
+        "Guard 2: Cross-Modal Corroboration Requirement"
+      ],
+      forensic_justification: "Cross-modal contradiction: Video classifier reported authentic visual face (score: 0.12), but AASIST detected neural speech cloning (score: 0.91) and SyncNet observed >140ms desynchronization. Guard 1 prevented false-authentic default and escalated to TIER_3_CRITICAL.",
+      cross_examination_findings: "Severe cross-modal divergence between authentic facial texture and acoustic deepfake voice dubbing.",
+      adjudication_latency_ms: 0.51,
+      debate_transcript_hash: "0x3f7b9218c0a891273948501c8293740192837461029384756102938475610293",
+      debate_transcript: [
+        { round: 1, speaker: "video_classifier", claim: "Facial textures and boundaries appear natural (score: 0.12).", polarity: "AUTHENTIC", confidence: 0.88 },
+        { round: 1, speaker: "aasist", claim: "Voice track cloned via neural vocoder with high anomaly score (score: 0.91).", polarity: "SYNTHETIC", confidence: 0.91 },
+        { round: 2, speaker: "syncnet", claim: "Lip-sync trails audio by 140ms, indicating dubbed face replacement (score: 0.85).", polarity: "SYNTHETIC", confidence: 0.85 },
+        { round: 2, speaker: "judge_agent", claim: "Cross-examination: Polarity conflict detected. Video claiming AUTHENTIC while Audio and AV Sync claim SYNTHETIC.", polarity: "INCONCLUSIVE", confidence: 0.50 },
+        { round: 3, speaker: "judge_agent", claim: "Synthesis: Guard 1 triggered to block false-authentic default. Dubbed speech manipulation confirmed.", polarity: "SYNTHETIC", confidence: 0.89 }
+      ],
+    },
+  };
+
+  const judgeDetails = presetJudgeData[presetId] || {
+    judge_verdict: isConflict ? "SYNTHETIC" : isAudio ? "SYNTHETIC" : "AUTHENTIC",
+    judge_score: isConflict ? 0.88 : isAudio ? 0.94 : 0.12,
+    judge_mode: "deterministic",
+    siem_alert_tier: isConflict || isAudio ? "TIER_3_CRITICAL" : "TIER_1_LOW",
+    guards_applied: isConflict ? ["Guard 1: Unresolved Polarity Inversion Anti-Default"] : [],
+    forensic_justification: "Standard multi-modal evaluation completed.",
+    cross_examination_findings: "Completed.",
+    adjudication_latency_ms: 0.40,
+    debate_transcript_hash: "0x9f8c12...4a02",
+    debate_transcript: [],
+  };
+
   const formatted = formatResultsFromStatus(state, jobId, isAudio);
   return {
     ...formatted,
-    raw_response: state,
+    ...judgeDetails,
+    raw_response: {
+      ...state,
+      ...judgeDetails,
+    },
     endpoint_used: `Standalone Preset Harness (${presetId})`,
     status_code: 200,
   };
@@ -603,9 +707,33 @@ async function runDynamicSimulation(file, jobId, isAudio, onProgress) {
   emit(100);
 
   const formatted = formatResultsFromStatus(state, jobId, isAudio);
+  const synth = isAudio;
+  const judgeDetails = {
+    judge_verdict: synth ? "SYNTHETIC" : "AUTHENTIC",
+    judge_score: synth ? 0.88 : 0.22,
+    judge_mode: "deterministic",
+    siem_alert_tier: synth ? "TIER_3_CRITICAL" : "TIER_1_LOW",
+    guards_applied: synth ? ["Acoustic Synthesis Precedence Rule Activated"] : ["Guard 2: Cross-Modal Corroboration Requirement Satisfied"],
+    forensic_justification: synth
+      ? "Acoustic spoofing anomalies identified in speech harmonics. Visual layers isolated via capability manifest."
+      : "Multi-modal consensus verified authentic. No manipulation signatures detected.",
+    cross_examination_findings: "Completed.",
+    adjudication_latency_ms: 0.38,
+    debate_transcript_hash: "0x7a2e49...10b8",
+    debate_transcript: [
+      { round: 1, speaker: isAudio ? "aasist" : "video_classifier", claim: synth ? "Acoustic spoofing detected." : "Authentic frame textures.", polarity: synth ? "SYNTHETIC" : "AUTHENTIC" },
+      { round: 2, speaker: "judge_agent", claim: "Evaluated against capability manifest and precedence matrix.", polarity: synth ? "SYNTHETIC" : "AUTHENTIC" },
+      { round: 3, speaker: "judge_agent", claim: synth ? "Final Verdict: SYNTHETIC (SIEM Tier 3)" : "Final Verdict: AUTHENTIC (SIEM Tier 1)", polarity: synth ? "SYNTHETIC" : "AUTHENTIC" }
+    ],
+  };
+
   return {
     ...formatted,
-    raw_response: state,
+    ...judgeDetails,
+    raw_response: {
+      ...state,
+      ...judgeDetails,
+    },
     endpoint_used: "Standalone Dynamic Simulation",
     status_code: 200,
   };

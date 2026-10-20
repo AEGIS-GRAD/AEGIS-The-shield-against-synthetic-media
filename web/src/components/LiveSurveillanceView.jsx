@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import TelemetryView from "./TelemetryView";
+import LiveAlertDetailModal from "./LiveAlertDetailModal";
 import { logger } from "../api/systemLogger";
 import { playAlertChime } from "../utils/audioAlert";
 import {
@@ -127,6 +128,39 @@ export default function LiveSurveillanceView() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isAlertAcknowledged, setIsAlertAcknowledged] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
+  const [activeAlertModal, setActiveAlertModal] = useState(null);
+  const [isInjecting, setIsInjecting] = useState(false);
+  const [injectFeedback, setInjectFeedback] = useState(null);
+
+  const handleInjectAttack = async () => {
+    const next = !isInjecting;
+    setIsInjecting(next);
+    if (next) {
+      setIsAlertAcknowledged(false);
+      try {
+        setInjectFeedback("Adversarial payload dispatched (:8444)...");
+        const res = await fetch("http://localhost:8444/telemetry/inject", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attack_type: "prnu_splice",
+            camera_id: selectedCam.id,
+            frames: 45,
+          }),
+        });
+        if (res.ok) {
+          setInjectFeedback("mTLS Attack Injected via Gateway (:8444)");
+        } else {
+          setInjectFeedback(`Gateway HTTP ${res.status} (Simulating payload)`);
+        }
+      } catch (err) {
+        setInjectFeedback("Adversarial attack simulated (Gateway offline)");
+      }
+      setTimeout(() => setInjectFeedback(null), 4000);
+    } else {
+      setInjectFeedback(null);
+    }
+  };
 
   // Reset alert acknowledgment state when changing cameras or when score drops below threshold
   useEffect(() => {
@@ -270,7 +304,9 @@ export default function LiveSurveillanceView() {
       let newScore = currentScore;
       let baseNoise = (Math.random() - 0.48) * 0.06;
 
-      if (selectedCam.type === "webcam") {
+      if (isInjecting) {
+        newScore = Math.min(0.96, Math.max(0.85, 0.90 + baseNoise));
+      } else if (selectedCam.type === "webcam") {
         // Compute frame metric from webcam canvas
         newScore = Math.max(0.04, Math.min(0.28, 0.12 + baseNoise));
       } else if (selectedCam.simulatedType === "deepfake") {
@@ -332,7 +368,7 @@ export default function LiveSurveillanceView() {
     }, 600);
 
     return () => clearInterval(interval);
-  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs, alertThreshold, isAudioMuted, processedFrames, isAlertAcknowledged]);
+  }, [isPlaying, selectedCam, currentScore, emaScore, emaAlpha, tick, eventLogs, alertThreshold, isAudioMuted, processedFrames, isAlertAcknowledged, isInjecting]);
 
   // SVG Chart Paths
   const chartHeight = 110;
@@ -440,6 +476,20 @@ export default function LiveSurveillanceView() {
             )}
           </button>
 
+          {/* Adversarial Attack Injection Button */}
+          <button
+            onClick={handleInjectAttack}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer shadow-xs border ${
+              isInjecting
+                ? "bg-rose-600 text-white border-rose-700 animate-pulse hover:bg-rose-700"
+                : "bg-slate-900 text-rose-300 border-rose-500/50 hover:bg-rose-950/60"
+            }`}
+            title="Inject PRNU Sensor Mismatch / Adversarial Frame Splice via Gateway :8444"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isInjecting ? "text-yellow-300 fill-yellow-300 animate-spin" : "text-rose-400"}`} />
+            <span>{isInjecting ? "ATTACK ACTIVE [STOP]" : "INJECT ATTACK"}</span>
+          </button>
+
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer shadow-xs ${
@@ -528,12 +578,48 @@ export default function LiveSurveillanceView() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setIsAlertAcknowledged(true)}
-                      className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-lg shadow cursor-pointer shrink-0 transition-colors"
-                    >
-                      Acknowledge Alert
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setActiveAlertModal({
+                            id: `INC-${processedFrames}`,
+                            camId: selectedCam.id,
+                            score: emaScore,
+                            frameNum: processedFrames,
+                            time: new Date().toLocaleTimeString(),
+                            verdict: emaScore >= alertThreshold ? (livePce !== null && livePce < 50.0 ? "INTEGRITY_UNKNOWN" : "SYNTHETIC") : "AUTHENTIC",
+                            integritySignals: {
+                              hash_chain_ok: !isInjecting && selectedCam.simulatedType !== "deepfake",
+                              last_hash: liveHash || selectedCam.hashChainId,
+                              prnu_ok: !isInjecting && selectedCam.simulatedType !== "deepfake",
+                              prnu_pce: isInjecting ? 14.2 : livePce || (selectedCam.simulatedType === "deepfake" ? 18.4 : 74.2),
+                              prnu_threshold: 50.0,
+                              anomalies: isInjecting
+                                ? ["PRNU hardware fingerprint mismatch", "Timestamp drift +340ms"]
+                                : selectedCam.simulatedType === "deepfake"
+                                ? ["Facial bounding box blending", "PRNU sensor variance"]
+                                : [],
+                            },
+                            aiSignals: {
+                              mobilenet_score: emaScore,
+                              rppg_score: selectedCam.simulatedType === "deepfake" ? 0.78 : 0.12,
+                              hr_bpm: selectedCam.simulatedType === "deepfake" ? 54 : 72,
+                              syncnet_score: 0.15,
+                              face_detected: true,
+                            },
+                          });
+                        }}
+                        className="px-2.5 py-1 bg-rose-900/80 hover:bg-rose-900 text-rose-100 font-bold text-xs rounded-lg border border-rose-300 shadow cursor-pointer shrink-0 transition-colors"
+                      >
+                        Inspect Evidence
+                      </button>
+                      <button
+                        onClick={() => setIsAlertAcknowledged(true)}
+                        className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-900 font-bold text-xs rounded-lg shadow cursor-pointer shrink-0 transition-colors"
+                      >
+                        Acknowledge Alert
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="absolute top-0 left-0 right-0 z-30 bg-slate-900/90 backdrop-blur-md text-emerald-300 px-4 py-2 border-b border-emerald-500/40 flex items-center justify-between shadow-md animate-in slide-in-from-top duration-300">
@@ -541,12 +627,48 @@ export default function LiveSurveillanceView() {
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>ALERT ACKNOWLEDGED BY OPERATOR — MONITORING LIVE FEED</span>
                     </div>
-                    <button
-                      onClick={() => setIsAlertAcknowledged(false)}
-                      className="px-2.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] rounded border border-slate-600 transition-colors cursor-pointer"
-                    >
-                      Re-arm Alarm
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setActiveAlertModal({
+                            id: `INC-${processedFrames}`,
+                            camId: selectedCam.id,
+                            score: emaScore,
+                            frameNum: processedFrames,
+                            time: new Date().toLocaleTimeString(),
+                            verdict: emaScore >= alertThreshold ? (livePce !== null && livePce < 50.0 ? "INTEGRITY_UNKNOWN" : "SYNTHETIC") : "AUTHENTIC",
+                            integritySignals: {
+                              hash_chain_ok: !isInjecting && selectedCam.simulatedType !== "deepfake",
+                              last_hash: liveHash || selectedCam.hashChainId,
+                              prnu_ok: !isInjecting && selectedCam.simulatedType !== "deepfake",
+                              prnu_pce: isInjecting ? 14.2 : livePce || (selectedCam.simulatedType === "deepfake" ? 18.4 : 74.2),
+                              prnu_threshold: 50.0,
+                              anomalies: isInjecting
+                                ? ["PRNU hardware fingerprint mismatch", "Timestamp drift +340ms"]
+                                : selectedCam.simulatedType === "deepfake"
+                                ? ["Facial bounding box blending", "PRNU sensor variance"]
+                                : [],
+                            },
+                            aiSignals: {
+                              mobilenet_score: emaScore,
+                              rppg_score: selectedCam.simulatedType === "deepfake" ? 0.78 : 0.12,
+                              hr_bpm: selectedCam.simulatedType === "deepfake" ? 54 : 72,
+                              syncnet_score: 0.15,
+                              face_detected: true,
+                            },
+                          });
+                        }}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-[10px] rounded border border-slate-600 transition-colors cursor-pointer"
+                      >
+                        View Evidence
+                      </button>
+                      <button
+                        onClick={() => setIsAlertAcknowledged(false)}
+                        className="px-2.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] rounded border border-slate-600 transition-colors cursor-pointer"
+                      >
+                        Re-arm Alarm
+                      </button>
+                    </div>
                   </div>
                 )
               )}
@@ -944,6 +1066,18 @@ export default function LiveSurveillanceView() {
       <div className="pt-4 border-t border-slate-200">
         <TelemetryView statusData={mockTelemetryStatus} />
       </div>
+
+      {/* Fused Dual-Pillar Alert Detail Modal */}
+      {activeAlertModal && (
+        <LiveAlertDetailModal
+          alert={activeAlertModal}
+          onClose={() => setActiveAlertModal(null)}
+          onAcknowledge={() => {
+            setIsAlertAcknowledged(true);
+            setActiveAlertModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }
