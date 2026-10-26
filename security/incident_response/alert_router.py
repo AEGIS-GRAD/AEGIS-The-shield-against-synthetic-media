@@ -297,7 +297,8 @@ class FileAlertDestination(BaseAlertDestination):
 class WebhookAlertDestination(BaseAlertDestination):
     """
     Dispatches alerts via HTTP/HTTPS POST to external SIEM/SOC or PagerDuty endpoints.
-    Includes HMAC-SHA256 signature for payload verification and tamper prevention.
+    Includes HMAC-SHA256 signature for payload verification and tamper prevention,
+    with full support for mutual TLS (client certs and custom CA trust anchors).
     """
 
     def __init__(
@@ -306,11 +307,17 @@ class WebhookAlertDestination(BaseAlertDestination):
         signing_secret: str = "aegis_soc_webhook_secret_key",
         timeout_seconds: float = 3.0,
         mock_sender: Optional[Callable[[str, Dict[str, str], bytes], bool]] = None,
+        client_cert: Optional[str] = None,
+        client_key: Optional[str] = None,
+        ca_cert: Optional[str] = None,
     ):
         self.endpoint_url = endpoint_url
         self.signing_secret = signing_secret.encode("utf-8")
         self.timeout_seconds = timeout_seconds
         self.mock_sender = mock_sender  # For testing without live network
+        self.client_cert = client_cert
+        self.client_key = client_key
+        self.ca_cert = ca_cert
         self.sent_count = 0
 
     def compute_signature(self, payload_bytes: bytes) -> str:
@@ -335,7 +342,12 @@ class WebhookAlertDestination(BaseAlertDestination):
         # In production environments with httpx/requests available:
         try:
             import httpx
-            with httpx.Client(timeout=self.timeout_seconds) as client:
+            cert_param = None
+            if self.client_cert and self.client_key:
+                cert_param = (self.client_cert, self.client_key)
+            verify_param = self.ca_cert if self.ca_cert else True
+
+            with httpx.Client(timeout=self.timeout_seconds, cert=cert_param, verify=verify_param) as client:
                 res = client.post(self.endpoint_url, content=payload_bytes, headers=headers)
                 if res.is_success:
                     self.sent_count += 1
@@ -344,6 +356,52 @@ class WebhookAlertDestination(BaseAlertDestination):
                 return False
         except Exception as e:
             logger.error(f"Webhook dispatch failed to {self.endpoint_url}: {e}")
+            return False
+
+
+class MTLSAlertDestination(BaseAlertDestination):
+    """
+    Dispatches alerts directly over an encrypted, mutually authenticated mTLS 1.3/1.2 TCP socket
+    to internal SOC receivers, Wazuh agent intake, or secondary aggregation nodes.
+    """
+
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 8446,
+        calling_service_name: str = "alert_router",
+        expected_server_cn: str = "aegis-siem",
+        certs_dir: Optional[str] = None,
+        timeout_seconds: float = 3.0,
+    ):
+        self.host = host
+        self.port = port
+        self.calling_service_name = calling_service_name
+        self.expected_server_cn = expected_server_cn
+        self.certs_dir = certs_dir
+        self.timeout_seconds = timeout_seconds
+        self.sent_count = 0
+
+    def deliver(self, alert: AEGISAlert) -> bool:
+        try:
+            from security.transport.mtls_service_mesh import MTLSServiceClient
+            client = MTLSServiceClient(
+                calling_service_name=self.calling_service_name,
+                certs_dir=self.certs_dir,
+                timeout=self.timeout_seconds,
+            )
+            resp = client.send_request(
+                host=self.host,
+                port=self.port,
+                payload=alert.model_dump(),
+                expected_server_cn=self.expected_server_cn,
+            )
+            if resp.get("status") in ("OK", "ACK"):
+                self.sent_count += 1
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"mTLS Alert delivery failed to {self.host}:{self.port}: {e}")
             return False
 
 

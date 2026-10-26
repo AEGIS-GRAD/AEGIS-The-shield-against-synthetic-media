@@ -385,10 +385,10 @@ export default function UploadPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
-                      <span>Month 1 Demo Presets (1-Click Rehearsal)</span>
+                      <span>Month 2 Milestone Demo Presets (1-Click Evaluation)</span>
                     </div>
                     <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
-                      Curated project fixtures
+                      RQ1 &amp; RQ2 Evaluation Fixtures
                     </span>
                   </div>
 
