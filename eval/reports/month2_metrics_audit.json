@@ -1,0 +1,81 @@
+{
+  "source_csv": "eval\\reports\\month2_vs_month1_full_benchmark_raw.csv",
+  "planner": {
+    "total_samples": 19,
+    "agreements": 6,
+    "agreement_rate": 0.3158,
+    "divergence_count": 13,
+    "divergence_rate": 0.6842,
+    "empty_plans": 1,
+    "cost_deltas_ms": [
+      -2979.7,
+      0.0,
+      0.0,
+      -420.9,
+      0.0,
+      -2979.7,
+      -2979.7,
+      0.0,
+      -2979.7,
+      0.0,
+      0.0,
+      0.0,
+      -420.9,
+      -420.9,
+      0.0,
+      -2979.7,
+      -2979.7,
+      -234.8,
+      -2979.7
+    ],
+    "mean_cost_delta_ms": -1176.6
+  },
+  "judge": {
+    "total_cases": 20,
+    "strict_correct": 6,
+    "strict_accuracy": 0.3,
+    "decisive_verdicts": 7,
+    "decisive_correct": 6,
+    "decisive_precision": 0.8571,
+    "coverage_rate": 0.35,
+    "abstention_count": 13,
+    "abstention_rate": 0.65,
+    "false_authentics": 0,
+    "false_synthetics": 1,
+    "month1_baseline_correct": 11,
+    "month1_baseline_accuracy": 0.55,
+    "month1_false_authentics": 9,
+    "siem_tiers": {
+      "P2_ELEVATED": 13,
+      "P1_CRITICAL": 4,
+      "P4_INFORMATIONAL": 3
+    }
+  },
+  "surveillance": {
+    "total_scenarios": 9,
+    "active_scenarios": 8,
+    "skipped_scenarios": 1,
+    "passes": 8,
+    "accuracy_pct": 100.0,
+    "min_realtime_ratio": 0.156,
+    "max_realtime_ratio": 0.177,
+    "min_p95_ms": 50.21,
+    "max_p95_ms": 77.48
+  },
+  "provenance": {
+    "planner_provenance": {
+      "mode": "mock_llm",
+      "mock_llm_flag": true,
+      "caveat": "Divergence metrics derived using deterministic mock; live LLM exhibits 21.8s\u2013365s latency."
+    },
+    "judge_provenance": {
+      "fixture_origin": "Month 1 eval/reports/week_benchmark_raw.csv",
+      "checkpoint_caveat": "15/20 cases constructed while video-classifier evaluated uninitialized random weights."
+    },
+    "surveillance_provenance": {
+      "integrity_flags_injected": true,
+      "fixture_dataset_present": false,
+      "caveat": "100% pass rate achieved by assigning hash/PRNU booleans directly from scenario names."
+    }
+  }
+}
