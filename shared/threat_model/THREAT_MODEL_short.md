@@ -1,5 +1,7 @@
 # AEGIS — Threat Model (Month 2 Final)
 
+> **Notice:** This document is an executive summary of the canonical threat model maintained in [THREAT_MODEL_full.md](THREAT_MODEL_full.md).
+
 **Status:** Living document — updated and finalized for Month 2 closure.  
 **Scope:** Dual-Path Architecture (File-Based Offline Verification + Live Surveillance Streaming Ingestion).  
 **Full Reference:** Comprehensive research-backed threat model (21 scenarios, CVE references, MITRE ATLAS/ATT&CK mappings) is maintained at [`shared/threat_model/THREAT_MODEL_full.md`](file:///g:/College/Graduation%20Project/AEGIS-The-shield-against-synthetic-media/shared/threat_model/THREAT_MODEL_full.md).  
