@@ -28,9 +28,12 @@ const plan: Record<string, { start: number; end: number; skip?: string; fail?: b
 function ProcessingContent() {
   const searchParams = useSearchParams();
   const file = searchParams.get("file") || "uploaded_media.mp4";
+  const preset = searchParams.get("preset");
   const [t, setT] = useState(0);
-  const [targetJobId, setTargetJobId] = useState("AEG-1042");
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [targetJobId, setTargetJobId] = useState(preset || "AEG-1042");
+  const [statusMessage, setStatusMessage] = useState<string | null>(
+    preset ? `Month 2 Milestone Demo Preset: ${preset.replace(/_/g, " ").toUpperCase()}` : null
+  );
 
   useEffect(() => {
     const uploadedFile = typeof window !== "undefined" ? (window as any).__currentAnalyzeFile : null;

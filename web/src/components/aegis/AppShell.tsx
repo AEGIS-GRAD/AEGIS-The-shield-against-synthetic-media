@@ -76,10 +76,33 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input placeholder="Search job ID or filename…" className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition-soft focus:border-accent focus:ring-2 focus:ring-accent/20" />
           </div>
-          <div className="flex rounded-lg border bg-secondary p-0.5 text-sm font-medium">
-            <Link href="/analyze" className={cn("rounded-md px-3 py-1.5 transition-soft", !liveMode ? "bg-card text-primary shadow-soft" : "text-muted-foreground")}>Offline Analysis</Link>
-            <Link href="/live" className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-soft", liveMode ? "bg-card text-primary shadow-soft" : "text-muted-foreground")}>
-              <span className="size-1.5 rounded-full bg-synthetic animate-live" />Live Surveillance
+          <div className="flex rounded-lg border bg-secondary p-0.5 text-xs font-mono font-bold">
+            <Link
+              href="/analyze"
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-soft",
+                !liveMode ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-primary"
+              )}
+              title="Offline File Verification Mode (Single-Pass Adjudication)"
+            >
+              <span>Offline File</span>
+              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block", !liveMode ? "bg-accent-soft text-accent" : "opacity-60")}>
+                Single-Pass
+              </span>
+            </Link>
+            <Link
+              href="/live"
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-soft",
+                liveMode ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-primary"
+              )}
+              title="Live Surveillance Monitoring Mode (Sliding-Window Stream)"
+            >
+              <span className={cn("size-1.5 rounded-full", liveMode ? "bg-emerald-500 animate-live" : "bg-muted-foreground")} />
+              <span>Live Surveillance</span>
+              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block", liveMode ? "bg-emerald-500/20 text-emerald-400" : "opacity-60")}>
+                Stream
+              </span>
             </Link>
           </div>
           <div className="ml-auto flex items-center gap-3">

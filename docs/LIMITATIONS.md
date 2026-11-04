@@ -1,8 +1,8 @@
-﻿# AEGIS — Detector Limitations Discovered During Benchmarking
+# AEGIS — Detector Limitations Discovered During Benchmarking
 
 **Author:** Role 3 — Benchmarking & Limitations
-**Status:** Week 4 baseline — updated after each benchmark pass
-**Feeds:** Month 2 debate-layer design & `orchestrator/app/rules.py` eligibility logic
+**Status:** Week 4 baseline + Month 2 addendum — updated after each benchmark pass
+**Feeds:** Month 2/3 debate-layer design, `orchestrator/app/rules.py` eligibility logic, and live surveillance pipeline
 **Cross-references:** `docs/failure_notes.md`, `capability_manifests/*.json`, `eval/scripts/test_edge_cases.py`
 
 ---
@@ -270,23 +270,228 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | High compression | Video-classifier | Down-weight; elevate rPPG and SyncNet relatively |
 | Demographic bias | Video-classifier | Flag until bias benchmarks complete |
 | `insufficient_signal` status | All | Never escalate to confident verdict |
-| Score inversion (0 quality → 1.0 synthetic) | rPPG (resolved), others (at risk) | Mandate `status` field in all detector responses |
+| Score inversion (0 quality → 1.0 synthetic) | rPPG (resolved in file path; open in streaming) | Mandate `status` field in all detector responses |
 | Frame score variance | Video-classifier | Surface distribution (mean, max, std, % > 0.5) to debate layer |
 | Non-speech audio | AASIST | Require VAD pre-filter or flag `low_confidence` |
+| Streaming flat-signal inversion (M2-L1) | Streaming rPPG | Re-route flat signals to `UNCERTAIN` / `INSUFFICIENT_SIGNAL` |
+| Warmup & gap blind spots (M2-L2) | Streaming rPPG | Invalidate rolling alerts during buffer re-accumulation |
+| Uncalibrated SNR logistic (M2-L4) | Streaming rPPG | Calibrate midpoint and slope against in-distribution benchmarks |
+| Equal-weights fusion collapse (M2-L6) | Live Pipeline Fusion | Decouple AI anomaly thresholds from static 0.5 weight dilution |
+| Placeholder alert defaults (M2-L7) | Ingestion / Fusion | Enforce strict non-null evidence validation prior to SIEM escalation |
+| Audio exclusion in debate (M2-L9) | Judge Agent / Bridge | Build dedicated AASIST claim adapter in `debate/claim_wrapper.py` |
+| Static operating conditions (M2-L10) | Orchestrator Bridge | Dynamically bind real-time luminance & MTCNN bounding-box metadata |
 
 ---
 
-## 7. Open Gaps and Month 2 Tasks
+## 7. Open Gaps and Month 2/3 Tasks
 
 - [ ] **Quantified FPR/FNR tables per condition** — limitations above are qualitative; Task 1 benchmark report must fill in per-detector accuracy numbers for each failure condition.
 - [ ] **Demographic bias benchmark** — disaggregated accuracy by skin tone, age, gender for the video-classifier.
 - [ ] **Dubbed-content test set** — at least 20 authentic dubbed clips from public film/TV sources to quantify SyncNet's false-positive rate on legitimate dubbing.
-- [ ] **AASIST and video-classifier input guardrails** — runtime `insufficient_signal` path matching rPPG's implementation.
+- [ ] **AASIST input guardrails** — runtime `insufficient_signal` path matching rPPG's implementation. *(Note: ~~video-classifier guardrails~~ resolved in Month 2 via startup checkpoint validation and MTCNN alignment).*
 - [ ] **Night-vision / IR footage handling** — current luminance guardrail is not calibrated for IR (which has high luminance values but is monochromatic).
 - [ ] **Compression-level metadata enrichment** — `ffprobe` bitrate and codec history added to orchestrator `metadata.py` as an eligibility signal.
 - [ ] **Per-frame score distribution surfaced to debate layer** — not just aggregated mean from the video-classifier.
 - [ ] **VAD pre-filter for AASIST** — to isolate speech segments before scoring.
+- [ ] **Fix Score-Inversion Trap in Streaming rPPG (M2-L1)** — Prevent flat signal from emitting `score=1.000` (SYNTHETIC) in `detectors/rppg/streaming/streaming.py`.
+- [ ] **Eliminate Temporal Blind Spots during Gap Resets (M2-L2)** — Implement graceful interpolation or state carry-over for face-tracking interruptions.
+- [ ] **Streaming rPPG Face ROI & Luminance Guardrails (M2-L3)** — Port MTCNN bounding-box and minimum luminance checks into `detectors/rppg/streaming/`.
+- [ ] **Calibrate Streaming rPPG Logistic Mapping (M2-L4)** — Fit `snr_midpoint_db` and `snr_slope` against empirical benchmark distributions.
+- [ ] **Wire Streaming rPPG into Live Surveillance Pipeline (M2-L5)** — Integrate multi-modal physiological verification alongside MobileNetV3 in `live_pipeline/`.
+- [ ] **Calibrate Feed-Integrity Fusion Weights (M2-L6)** — Eliminate dead-zone where `ai_score in (0.35, 0.65)` trivially yields `UNCERTAIN`.
+- [ ] **Remove Placeholder Evidence Fallbacks in SIEM Alerts (M2-L7)** — Replace empty-string SHA-256 and dummy camera IP with authentic forensic hardware bindings.
+- [ ] **Fix Sliding Window Anomaly Attribution (M2-L8)** — Attribute stream anomalies across all overlapping temporal windows in `live_pipeline.py`.
+- [ ] **Develop AASIST Debate Adapter (M2-L9)** — Enable Judge Agent to adjudicate audio deepfake claims alongside video detectors.
+- [ ] **Dynamic Operating Conditions Binding in Orchestrator (M2-L10)** — Replace hardcoded `mean_luminance=None, face_detected=True` in `judge_bridge.py`.
+- [ ] **Mitigate Judge Agent Over-Abstention & False-Alerts (M2-L11)** — Refine consensus thresholds to reduce 65% `INTEGRITY_UNKNOWN` rate and fix false-synthetic classifications.
+- [ ] **Regenerate Clean Benchmark Fixtures (M2-L12, M2-L13)** — Replace random-weight Month 1 fixtures and commit authentic tampered stream datasets.
+- [ ] **Resolve LLM Planner Latency SLA (M2-L14)** — Transition from high-latency shared free endpoints (21.8s–365s) to dedicated low-latency inference.
+- [ ] **End-to-End Multi-Feed AI Inference Load Testing (M2-L15)** — Benchmark concurrent live streaming with active neural model execution, not just transport sockets.
 
 ---
 
-*Last updated: Week 4 baseline (2026-09-26). Append new findings here after each benchmark pass — do not delete earlier entries, mark resolved items with a strikethrough.*
+## 8. Month 2 Findings & Limitations Profile (M2-L1 to M2-L15)
+
+### 8.1 Streaming rPPG (`detectors/rppg/streaming/`)
+
+#### M2-L1: Score Inversion Trap on Flat Signal
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Flat or static facial ROIs produce a confident 100% synthetic verdict (`score = 1.000`). |
+| **Root cause** | In `detectors/rppg/streaming/streaming.py` (`_evaluate`), when no spectral peak is detected in the cardiac frequency band or Welch power sum <= 0, the function returns `RPPGResult(True, 1.0, None, None, ..., "flat signal")`. |
+| **Observed behaviour** | Static or motionless authentic faces that produce zero chrominance variation are classified as synthetic deepfakes with maximal confidence. |
+| **Current mitigation** | None in streaming implementation (reintroduces the Month 1 flaw that was resolved for file-based rPPG). |
+| **Residual risk** | Severe false-positive risk in live surveillance when a human subject sits completely still or lighting is static. |
+| **Debate-layer / System implication** | Live pipeline must intercept `reason == "flat signal"` and map the result to `status: insufficient_signal` rather than treating `score=1.0` as genuine synthetic evidence. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L131-L132](file:///d:/Grad%20Projectt%20eccuuuuu/detectors/rppg/streaming/streaming.py#L131-L132); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l1_flat_signal_returns_confident_synthetic`. |
+
+#### M2-L2: Contiguous Buffer Warmup & Gap Purge Blind Spots
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Complete absence of physiological forensic evidence during initial warmup (first 6.0 seconds) and after minor face-tracking drops (> 1.0 second). |
+| **Root cause** | `min_sec = 6.0` suppresses evaluation until 60 contiguous frames (at 10 FPS) accumulate. Any temporal discontinuity where `t - last_t > max_gap_sec (1.0s)` invokes `self.reset()`, completely emptying the FIFO buffer. |
+| **Observed behaviour** | Emits `ready = False, score = None` during the first 6 seconds of a stream and immediately following transient head-turns or subject occlusion. |
+| **Current mitigation** | Explicit `ready` boolean flag prevents emitting premature guesses. |
+| **Residual risk** | Subjects moving in and out of surveillance frames cause persistent buffer thrashing, rendering rPPG perpetually unready and blind. |
+| **Debate-layer / System implication** | Surveillance fusion must account for detector non-readiness without stalling real-time alert routing. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L74-L83](file:///d:/Grad%20Projectt%20eccuuuuu/detectors/rppg/streaming/streaming.py#L74-L83); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l2_no_evidence_during_warmup`. |
+
+#### M2-L3: Unvalidated ROI & Full-Frame Background Sampling
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Background environmental illumination variations are analyzed as physiological pulse signals. |
+| **Root cause** | In `roi_mean_rgb(frame_bgr, box=None)`, when no bounding box is provided, the function averages across the entire frame without verifying facial presence, skin-tone ratio, or illumination adequacy. |
+| **Observed behaviour** | Flashing monitors, room lighting shifts, or moving objects induce spurious periodic signals in the chrominance projection. |
+| **Current mitigation** | Central 60% cropping applied only when a bounding box is explicitly supplied. |
+| **Residual risk** | High risk of false-negative or false-positive pulse detection when face localizer fails to track. |
+| **Debate-layer / System implication** | Require upstream face-tracker confidence metrics before forwarding frame ROIs to streaming rPPG. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L145-L157](file:///d:/Grad%20Projectt%20eccuuuuu/detectors/rppg/streaming/streaming.py#L145-L157); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l3_whole_frame_roi_when_no_box`. |
+
+#### M2-L4: Uncalibrated Logistic SNR-to-Score Mapping
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Synthetic probability scores are derived from heuristic, unvalidated logistic curves. |
+| **Root cause** | Synthetic score is mapped via `score = 1.0 / (1.0 + exp(snr_slope * (snr_db - snr_mid)))` using arbitrary defaults (`snr_midpoint_db = 1.0`, `snr_slope = 0.6`) explicitly commented as *"heuristics to be calibrated on the /eval set"*. |
+| **Observed behaviour** | Modest pulse signals (SNR ~2.5 dB) produce synthetic probabilities near 0.28 rather than confident authentic verdicts. |
+| **Current mitigation** | None — parameters are static. |
+| **Residual risk** | Systematic miscalibration of synthetic likelihood across diverse camera sensors. |
+| **Debate-layer / System implication** | Treat raw streaming rPPG scores as uncalibrated ordinal rankings rather than calibrated Bayesian posteriors. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L45-L50, L138-L140](file:///d:/Grad%20Projectt%20eccuuuuu/detectors/rppg/streaming/streaming.py#L45-L50); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l4_fixed_logistic_snr_score_mapping`. |
+
+---
+
+### 8.2 Feed-Integrity Fusion & Live Surveillance Pipeline (`security/fusion/`, `live_pipeline/`)
+
+#### M2-L5: Modality Disconnect — Streaming rPPG Omitted from Live Pipeline
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Live surveillance pipeline operates strictly on single-frame 2D spatial features, lacking physiological cross-verification. |
+| **Root cause** | `live_pipeline/live_pipeline.py` wires `SlidingWindowDetector` (MobileNetV3) into `FeedFusionEngine`, but does not integrate or instantiate `StreamingRPPG`. |
+| **Observed behaviour** | Deepfakes preserving structural boundaries but destroying temporal cardiac continuity evade physiological detection in the live stream. |
+| **Current mitigation** | Spatial MobileNetV3 edge model INT8 inference is active. |
+| **Residual risk** | The live surveillance path is monomodal regarding AI detection, contradicting AEGIS's multi-modal architecture. |
+| **Debate-layer / System implication** | Milestone presentations must clearly document that Month 2 surveillance AI evaluation reflects spatial CNN features only. |
+| **Evidence** | [live_pipeline/live_pipeline.py:L24-L27, L123-L136](file:///d:/Grad%20Projectt%20eccuuuuu/live_pipeline/live_pipeline.py#L24-L27). |
+
+#### M2-L6: Mathematical Degeneracy of Equal-Weighted Fusion Verdicts
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Combined score thresholds are mathematically unreachable or degenerate when integrity is clean. |
+| **Root cause** | With `w_integrity = 0.5` and `w_ai = 0.5`, under clean feed integrity (`integrity_score = 0.0`), `combined_score = 0.5 * ai_score`. Because `combined_score` cannot exceed 0.5, the condition `combined_score >= synthetic_threshold (0.65)` never triggers; the verdict is decided exclusively by `ai_score >= 0.65`. |
+| **Observed behaviour** | For any `ai_score` in the interval (0.35, 0.65), the engine defaults to `UNCERTAIN` regardless of pristine feed integrity. |
+| **Current mitigation** | Hardcoded secondary check `ai_score >= synthetic_threshold` catches synthetic alerts. |
+| **Residual risk** | Weighted averaging dilutes the AI forensic score and obscures nuanced threat levels. |
+| **Debate-layer / System implication** | Move from linear scalar combination to hierarchical multi-condition rule engines in Month 3. |
+| **Evidence** | [security/fusion/feed_fusion.py:L154-L167](file:///d:/Grad%20Projectt%20eccuuuuu/security/fusion/feed_fusion.py#L154-L167); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l6_equal_weights_verdict_reduces_to_ai_threshold`. |
+
+#### M2-L7: Synthetic & Placeholder Evidentiary Fallbacks in Incident Alerts
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | SIEM / SOC alert payloads contain hardcoded placeholder values when caller context is omitted. |
+| **Root cause** | In `build_incident_alert()`, unsupplied camera metadata defaults to `192.168.10.50`, and missing forensic hashes default to `e3b0c442...` (the SHA-256 digest of an empty string). |
+| **Observed behaviour** | Security logs record identical cryptographic signatures and network addresses for distinct surveillance camera nodes. |
+| **Current mitigation** | Fallback prevents `AttributeError` during incident dispatch. |
+| **Residual risk** | Corrupts court-admissibility under ISO/IEC 27037 by logging false evidentiary provenance. |
+| **Debate-layer / System implication** | Enforce strict schema validation: reject alert creation if hardware fingerprint or frame hash is missing. |
+| **Evidence** | [security/fusion/feed_fusion.py:L211-L216, L257](file:///d:/Grad%20Projectt%20eccuuuuu/security/fusion/feed_fusion.py#L211-L216); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l7_alert_uses_placeholder_evidence_when_omitted`. |
+
+#### M2-L8: Temporal Anomaly Boundary Misattribution Across Sliding Windows
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Stream integrity anomalies occurring in overlapping frames are attributed to only one sliding window. |
+| **Root cause** | In `live_pipeline/live_pipeline.py`, `self.window_anomalies = []` clears all accumulated sequence/timestamp errors every stride (8 frames), but the window size is 16 frames. |
+| **Observed behaviour** | An anomaly at frame index 12 is evaluated in Window $N$, but discarded before Window $N+1$ processes the same frame. Additionally, `prnu_pce` is passed into metadata but never thresholded against `50.0` in the fusion calculation. |
+| **Current mitigation** | All anomalies are tracked globally in `self.all_anomalies`. |
+| **Residual risk** | Window-level SIEM alerts have inconsistent tamper context across consecutive evaluations. |
+| **Debate-layer / System implication** | Use sliding deque for anomaly tracking matching the frame buffer window size. |
+| **Evidence** | [live_pipeline/live_pipeline.py:L264](file:///d:/Grad%20Projectt%20eccuuuuu/live_pipeline/live_pipeline.py#L264); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l8_prnu_pce_not_thresholded_in_fusion`. |
+
+---
+
+### 8.3 Judge Agent Integration & Production Bridge (`orchestrator/app/judge_bridge.py`)
+
+#### M2-L9: Complete Audio Modality Suppression (AASIST Dropped from Adjudication)
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Audio spoofing and synthetic voice claims are completely excluded from Judge Agent arbitration. |
+| **Root cause** | `orchestrator/app/judge_bridge.py` defines `DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet"}`. Any detector not in this set (including `aasist`) is filtered out before calling `judge.judge_file()`. |
+| **Observed behaviour** | When AASIST detects a synthetic voice attack with 100% confidence, the Judge Agent never sees the evidence and rules solely on video consensus. |
+| **Current mitigation** | AASIST raw results are preserved in `OrchestrationResponse.raw_results`. |
+| **Residual risk** | Complete blind spot to audio-driven deepfake attacks in final adjudicated forensic reports. |
+| **Debate-layer / System implication** | High priority for Month 3: implement AASIST claim adapter in `debate/claim_wrapper.py`. |
+| **Evidence** | [orchestrator/app/judge_bridge.py:L64-L73](file:///d:/Grad%20Projectt%20eccuuuuu/orchestrator/app/judge_bridge.py#L64-L73). |
+
+#### M2-L10: Static Environmental Operating Conditions Bypass Precedence Matrix
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Specialized precedence rules (low-light attenuation, facial occlusion discounting) cannot fire in production. |
+| **Root cause** | In `build_operating_conditions()`, the bridge hardcodes `mean_luminance = None` and `face_detected = True`. |
+| **Observed behaviour** | Video clips shot in pitch-dark conditions or with heavily masked faces never trigger Rule 1 (low light) or Rule 2 (face occlusion) in the Forensic Precedence Matrix. |
+| **Current mitigation** | Baseline consensus and cross-examination still execute. |
+| **Residual risk** | Degraded inputs receive full analytical weight rather than being discounted. |
+| **Debate-layer / System implication** | Enrich `InputMetadata` with runtime luminance and face-detection ratios extracted by detector preprocessors. |
+| **Evidence** | [orchestrator/app/judge_bridge.py:L108-L110](file:///d:/Grad%20Projectt%20eccuuuuu/orchestrator/app/judge_bridge.py#L108-L110). |
+
+#### M2-L11: High Abstention Rate (65% INTEGRITY_UNKNOWN) and Single-Sample False-Synthetic P1 Failure
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | The Judge Agent abstains from rendering decisive verdicts on nearly two-thirds of contested cases, and misclassifies one authentic case as high-severity synthetic. |
+| **Root cause** | Guard 1 (Polarity Inversion Anti-Default) aggressively forces `INTEGRITY_UNKNOWN` whenever conflicting detectors disagree across the 0.5 boundary. On sample `067.mp4` (`m1-case-010`), authentic video was misjudged as `SYNTHETIC (0.78)` with a `P1_CRITICAL` alert. |
+| **Observed behaviour** | Across 20 Month 1 audit cases: 13 cases (65.0%) result in `INTEGRITY_UNKNOWN`; 7 cases produce decisive verdicts, of which 6 are correct (85.7% decisive precision) and 1 is a false-synthetic. Overall strict accuracy is 30.0% (6/20). |
+| **Current mitigation** | Completely eliminates catastrophic false-authentics (0 fakes certified as authentic). |
+| **Residual risk** | Operational alert fatigue from excessive `INTEGRITY_UNKNOWN` escalations requiring human review. |
+| **Debate-layer / System implication** | Refine consensus thresholds and corroboration weights in Month 3 to narrow the abstention band. |
+| **Evidence** | [eval/reports/month2_vs_month1_full_benchmark_raw.csv:L21-L40](file:///d:/Grad%20Projectt%20eccuuuuu/eval/reports/month2_vs_month1_full_benchmark_raw.csv#L21-L40); audited by `eval/scripts/month2_metrics_audit.py`. |
+
+---
+
+### 8.4 Evaluation, Latency & Benchmarking Methodology (`eval/`)
+
+#### M2-L12: Historical Fixture Provenance Poisoning (Random-Weight Checkpoints)
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | Judge Agent evaluation cases were constructed from detector outputs that were generated while the video-classifier was broken. |
+| **Root cause** | 15 of the 20 cases in `eval/fixtures/judge/month1_judge_cases.json` were extracted from Month 1 benchmark runs (`eval/reports/week_benchmark_raw.csv`), during which the video-classifier was silently evaluating uninitialized random network weights (see `eval/reports/video_classifier_refinement.md`). |
+| **Observed behaviour** | The judge was evaluated on resolving arbitrary mathematical noise rather than genuine forensic classifier discordance. |
+| **Current mitigation** | Benchmarking verified the arbitration logic's mathematical stability under conflict. |
+| **Residual risk** | Reported accuracy metrics do not reflect the judge's performance on real, calibrated EfficientNet-B0 detector outputs. |
+| **Debate-layer / System implication** | Re-run full judge benchmark against fixtures generated with the fine-tuned, weight-loaded detector. |
+| **Evidence** | [eval/scripts/build_judge_cases.py:L18-L20](file:///d:/Grad%20Projectt%20eccuuuuu/eval/scripts/build_judge_cases.py#L18-L20); [eval/reports/video_classifier_refinement.md:L14-L20](file:///d:/Grad%20Projectt%20eccuuuuu/eval/reports/video_classifier_refinement.md#L14-L20). |
+
+#### M2-L13: Benchmark Circularity & Missing Ground-Truth Stream Fixtures
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | 100% tamper detection in the surveillance benchmark is guaranteed by synthetic flag injection, not measured from live raw video. |
+| **Root cause** | In `eval/scripts/benchmark_month2_vs_month1.py`, `hash_ok` and `prnu_ok` booleans are assigned directly based on whether `"clean"` or `"splice"` appears in the scenario name string. Furthermore, the dataset folder `security/fixtures/tampered_streams/` is omitted from the git repository. |
+| **Observed behaviour** | Live pipeline benchmark passes 8/8 active scenarios, but verifies only downstream fusion branching, not upstream PRNU wavelet extraction or hash-chain reconstruction. |
+| **Current mitigation** | Separate unit and harness tests exist in `security/fusion/tests/`. |
+| **Residual risk** | False sense of empirical security regarding live camera attack resilience. |
+| **Debate-layer / System implication** | Commit reproducible video fixtures and wire true live validation into the benchmark suite. |
+| **Evidence** | [eval/scripts/benchmark_month2_vs_month1.py:L239-L240](file:///d:/Grad%20Projectt%20eccuuuuu/eval/scripts/benchmark_month2_vs_month1.py#L239-L240). |
+
+#### M2-L14: Unresolved LLM Planning Latency SLA Breakdown
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | LLM planner response times exceed the 3.0-second architectural latency SLA by 10× to 120×. |
+| **Root cause** | Live cloud LLM queries via OpenRouter's free tier (`nvidia/nemotron-3.5-lightning:free`) encounter severe queuing delays and timeouts. Benchmark evaluation in Task 3 substituted `mock_llm=True` to avoid pipeline stalls. |
+| **Observed behaviour** | Real-world planning latency ranges from 21.8 s to 365.5 s (P95 > 200 s). In Task 3, 5 of 19 sample runs fell back to the static rule-based baseline. |
+| **Current mitigation** | Deterministic local fallback prevents catastrophic service failure. |
+| **Residual risk** | Real-time adaptive planning is completely unusable in live or interactive media verification under free cloud routing. |
+| **Debate-layer / System implication** | Month 3 priority: transition planner to local quantized model execution on dedicated edge GPU. |
+| **Evidence** | [eval/reports/planner_v1_evaluation_summary.md:L40-L56](file:///d:/Grad%20Projectt%20eccuuuuu/eval/reports/planner_v1_evaluation_summary.md#L40-L56); [eval/scripts/benchmark_month2_vs_month1.py:L109](file:///d:/Grad%20Projectt%20eccuuuuu/eval/scripts/benchmark_month2_vs_month1.py#L109). |
+
+#### M2-L15: Disconnected Load Testing (Transport Throughput vs. Model Inference)
+| Attribute | Detail |
+|---|---|
+| **Failure mode** | "32 feeds PASS" load test validates network socket I/O but excludes neural network computational saturation. |
+| **Root cause** | `eval/scripts/load_test_streaming_pipeline.py` measures client `sendall()` latency and gateway socket concurrency. The AI sliding window detector (MobileNetV3) was not instantiated in the load test loop. |
+| **Observed behaviour** | Sub-millisecond latency (0.18 ms P95) is reported for 32 feeds, while actual edge model inference takes 48–55 ms per window. |
+| **Current mitigation** | Validates gateway asyncio connection management and DoS resilience. |
+| **Residual risk** | Live deployment assuming 32 concurrent feeds will suffer catastrophic GPU/CPU starvation once neural inference is enabled. |
+| **Debate-layer / System implication** | Re-run multi-feed load tests with edge neural inference actively processing every sliding window. |
+| **Evidence** | [eval/reports/streaming_load_test_report.md:L51-L54](file:///d:/Grad%20Projectt%20eccuuuuu/eval/reports/streaming_load_test_report.md#L51-L54). |
+
+---
+
+*Last updated: Month 2 wrap-up (2026-10-27). Append new findings here after each benchmark pass — do not delete earlier entries, mark resolved items with a strikethrough.*
+

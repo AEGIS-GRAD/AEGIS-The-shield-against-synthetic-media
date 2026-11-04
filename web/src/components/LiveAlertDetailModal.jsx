@@ -127,17 +127,30 @@ export default function LiveAlertDetailModal({ alert, onClose, onAcknowledge }) 
               ? "bg-red-950/40 border-red-500/50 text-red-200"
               : "bg-slate-900 border-slate-700 text-slate-300"
           }`}>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-mono uppercase tracking-wider text-slate-400">Fused Surveillance Verdict:</span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-black font-mono tracking-wider uppercase border ${
                   verdict === "INTEGRITY_UNKNOWN"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                    ? "bg-rose-500/20 text-rose-300 border-rose-500/50"
                     : verdict === "SYNTHETIC"
                     ? "bg-red-500/20 text-red-300 border-red-500/50"
                     : "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
                 }`}>
                   {verdict}
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                  score >= 0.65 || verdict === "INTEGRITY_UNKNOWN" || verdict === "SYNTHETIC"
+                    ? "bg-rose-950/80 text-rose-300 border-rose-500/50"
+                    : score >= 0.35
+                    ? "bg-amber-950/80 text-amber-300 border-amber-500/50"
+                    : "bg-emerald-950/80 text-emerald-300 border-emerald-500/50"
+                }`}>
+                  {score >= 0.65 || verdict === "INTEGRITY_UNKNOWN" || verdict === "SYNTHETIC"
+                    ? "SIEM TIER 3 — CRITICAL"
+                    : score >= 0.35
+                    ? "SIEM TIER 2 — ELEVATED"
+                    : "SIEM TIER 1 — LOW"}
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-sans">

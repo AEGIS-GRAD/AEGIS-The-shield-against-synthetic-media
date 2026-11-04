@@ -38,11 +38,27 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB limit
 
+# Security Profile: "dev" (permissive for friction-free local dev) vs "prod" (strict zero-trust)
+AEGIS_SECURITY_PROFILE = os.environ.get("AEGIS_SECURITY_PROFILE", "dev").lower()
+
 async def get_api_key(api_key_header: str = Security(api_key_header)):
-    # Flexible dev mode check to avoid blocking local frontend testing
-    valid_keys = {API_KEY, "dev_default_key", "aegis-secret-key-change-in-prod"}
-    if api_key_header and api_key_header not in valid_keys and API_KEY != "dev_default_key":
-        logger.warning(f"Unauthorized API key attempt: '{api_key_header}'")
+    # Dual-profile authentication:
+    # In 'dev' mode (default), allow requests through without credentials to facilitate local development and frontend testing.
+    profile = os.environ.get("AEGIS_SECURITY_PROFILE", "dev").lower()
+    if profile != "prod":
+        valid_keys = {API_KEY, "dev_default_key", "aegis-secret-key-change-in-prod"}
+        if api_key_header and api_key_header not in valid_keys and API_KEY != "dev_default_key":
+            logger.warning(f"Unauthorized API key attempt in dev mode: '{api_key_header}'")
+            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials")
+        return api_key_header or "dev_permissive_key"
+
+    # Prod profile: strict authentication required
+    expected_key = os.environ.get("INTERNAL_API_KEY", API_KEY)
+    if not api_key_header:
+        logger.error("Missing X-API-Key header in production security mode.")
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Authentication required: X-API-Key header missing")
+    if api_key_header != expected_key:
+        logger.warning(f"Invalid API key attempt in prod mode: '{api_key_header}'")
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials")
     return api_key_header
 
@@ -93,14 +109,24 @@ async def orchestrate(
         raise HTTPException(status_code=HTTP_413_TOO_LARGE, detail="File too large (exceeds 100MB)")
     file.file.seek(0)
 
-    suffix = os.path.splitext(file.filename)[1] if file.filename else ""
+    # Path traversal protection: sanitize filename
+    safe_filename = os.path.basename(file.filename) if file.filename else "unknown_media"
+
+    # In prod profile, prevent arbitrary executable uploads
+    profile = os.environ.get("AEGIS_SECURITY_PROFILE", "dev").lower()
+    suffix = os.path.splitext(safe_filename)[1].lower() if safe_filename else ""
+    DISALLOWED_DANGEROUS_EXTS = {".exe", ".bat", ".cmd", ".sh", ".bash", ".bin", ".elf", ".ps1", ".vbs", ".dll", ".so"}
+    if profile == "prod" and suffix in DISALLOWED_DANGEROUS_EXTS:
+        logger.error(f"Rejected executable file upload in prod mode: '{safe_filename}'")
+        raise HTTPException(status_code=415, detail=f"Unsupported media type: executable files are prohibited ({suffix})")
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
     try:
         logger.info(f"Extracting metadata from temporary file '{tmp_path}'...")
-        metadata = get_input_metadata(tmp_path, original_filename=file.filename or "unknown")
+        metadata = get_input_metadata(tmp_path, original_filename=safe_filename)
         logger.info(f"Extracted metadata: Modality={metadata.modality}, Duration={metadata.duration_seconds}s, HasAudio={metadata.has_audio}")
 
         # Determine effective planning mode (query param > header > environment config)
@@ -149,7 +175,7 @@ async def orchestrate(
 
         log_decision(
             job_id=job_id,
-            input_file=file.filename or "unknown",
+            input_file=safe_filename,
             metadata=metadata.model_dump(),
             detectors_called=detectors_to_call,
             raw_results=[r.model_dump() for r in results],
@@ -164,7 +190,7 @@ async def orchestrate(
         log_judge_report(job_id=job_id, report=judge_report)
 
         return OrchestrationResponse(
-            input_file=file.filename or "unknown",
+            input_file=safe_filename,
             metadata=metadata,
             detectors_called=detectors_to_call,
             raw_results=results,

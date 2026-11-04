@@ -13,7 +13,11 @@ from typing import Dict, Set, Optional, Tuple
 logger = logging.getLogger("aegis.ingestion.server")
 
 # Add paths for imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+_security_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+_repo_root = os.path.abspath(os.path.join(_security_dir, '..'))
+for _p in (_repo_root, _security_dir):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 from stream_integrity.stream_validator import StreamValidator
 from fusion.feed_fusion import FeedFusionEngine
 from forensics.prnu import (

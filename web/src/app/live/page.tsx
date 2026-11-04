@@ -240,7 +240,7 @@ export default function LivePage() {
               )}
               title="Inject Deepfake Adversarial Attack Stream (PRNU Splice test on Gateway :8444)"
             >
-              <Zap className={cn("size-3.5", injecting ? "text-synthetic animate-bounce" : "text-amber-500")} />
+              <Zap className={cn("size-3.5", injecting ? "text-synthetic animate-pulse" : "text-amber-500")} />
               {injecting ? "Stop Inject" : "Inject Attack"}
             </button>
 

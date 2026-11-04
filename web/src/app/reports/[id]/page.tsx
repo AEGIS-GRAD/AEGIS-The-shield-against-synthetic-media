@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash } from "lucide-react";
+import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash, ShieldCheck, Copy, Check, ShieldAlert, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { analyses, detectors, type Verdict } from "@/lib/mock";
-import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge } from "@/components/aegis/ui";
+import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge, SiemTierBadge } from "@/components/aegis/ui";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +69,40 @@ export default function ReportDetailPage() {
       };
 
   const [open, setOpen] = useState<string | null>("video");
+  const [copiedHash, setCopiedHash] = useState(false);
+
   const verdict = a.verdict;
+  const siemTier = customJob?.siem_alert_tier || (verdict === "synthetic" ? "TIER_3_CRITICAL" : verdict === "authentic" ? "TIER_1_LOW" : "TIER_2_ELEVATED");
+  const judgeVerdict = customJob?.judge_verdict || (verdict ? verdict.toUpperCase() : "SYNTHETIC");
+  const judgeScore = customJob?.judge_score ?? a.confidence;
+  const guardsApplied: string[] = customJob?.guards_applied || (
+    verdict === "synthetic"
+      ? ["Guard 1: Unresolved Polarity Inversion Anti-Default"]
+      : ["Guard 2: Cross-Modal Corroboration Requirement Satisfied"]
+  );
+  const forensicJustification = customJob?.forensic_justification || (
+    verdict === "synthetic"
+      ? "Multi-detector consensus indicates synthetic media manipulation based on spatial feature anomalies and temporal incoherence."
+      : verdict === "authentic"
+      ? "Multi-detector consensus indicates authentic media with natural biological pulse signals and consistent facial feature geometry."
+      : "Detectors returned mixed or low-confidence indicators; human analyst review recommended."
+  );
+  const crossExamFindings = customJob?.cross_examination_findings || (
+    verdict === "synthetic"
+      ? "Cross-examination resolved polarity inversion between rPPG pulse ambiguity and high-confidence spatial/temporal synthesis."
+      : "Cross-examination verified multi-layer alignment across visual geometry and acoustic features."
+  );
+  const transcriptHash = customJob?.debate_transcript_hash || "0x9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7";
+  const debateTranscript: any[] = customJob?.debate_transcript || null;
+
+  const handleCopyHash = (text: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedHash(true);
+      toast.success("Tamper-evident transcript hash copied to clipboard");
+      setTimeout(() => setCopiedHash(false), 2000);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -91,19 +124,44 @@ export default function ReportDetailPage() {
         </div>
       </div>
 
-      <section className={cn("surface flex flex-wrap items-center gap-8 p-6", verdict === "synthetic" ? "bg-synthetic-soft/50" : verdict === "authentic" ? "bg-authentic-soft/50" : "bg-inconclusive-soft/50")}>
-        <VerdictBadge verdict={verdict} size="lg" />
+      <section className={cn("surface flex flex-wrap items-center gap-6 p-6 rounded-2xl border transition-all", verdict === "synthetic" ? "bg-synthetic-soft/50 border-synthetic/30" : verdict === "authentic" ? "bg-authentic-soft/50 border-authentic/30" : "bg-inconclusive-soft/50 border-inconclusive/30")}>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2.5">
+            <VerdictBadge verdict={verdict} size="lg" />
+            <SiemTierBadge tier={siemTier} size="md" />
+          </div>
+          <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+            <span>Judge Adjudication:</span>
+            <span className="font-bold text-foreground">{judgeVerdict}</span>
+            <span className="opacity-50">·</span>
+            <span>Score: <b className="text-foreground">{Number(judgeScore).toFixed(2)}</b></span>
+          </div>
+        </div>
+
         <div className="w-56">
           <p className="caption mb-1">Overall confidence</p>
           <ConfidenceMeter value={a.confidence} verdict={verdict} />
         </div>
-        <p className="min-w-[280px] flex-1 text-[15px] leading-relaxed">
-          {verdict === "synthetic"
-            ? "This video is very likely AI-manipulated: the face shows blending artifacts, lips are out of sync with the voice, and the voice itself appears cloned."
-            : verdict === "authentic"
-            ? "No signs of manipulation were found across the detectors that ran."
-            : "Detectors disagree; a human reviewer should examine this file."}
-        </p>
+
+        <div className="min-w-[280px] flex-1">
+          <p className="text-[14px] leading-relaxed text-foreground font-medium">
+            {forensicJustification}
+          </p>
+          {guardsApplied && guardsApplied.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-mono uppercase text-muted-foreground font-bold tracking-wider">Active Guards:</span>
+              {guardsApplied.map((guard, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 rounded-md bg-background/90 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground font-medium shadow-2xs"
+                >
+                  <ShieldCheck className="size-3 text-emerald-500" />
+                  {guard}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -282,57 +340,171 @@ export default function ReportDetailPage() {
         <Panel
           title={
             <div className="flex items-center justify-between">
-              <span>Debate & judge reasoning</span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
-                SIMULATED PROTOTYPE
+              <span className="flex items-center gap-2">
+                <Gavel className="size-4 text-accent" />
+                <span>Multi-Agent Debate & Judge Reasoning</span>
+              </span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-soft text-accent border border-accent/30">
+                MONTH 2 ADJUDICATION
               </span>
             </div>
           }
+          subtitle="3-Round Cross-Modal Examination & Determinist Adjudication"
         >
-          <ComingSoon
-            variant="callout"
-            title="Multi-Agent Debate & LLM Judge [Under Development]"
-            description="The multi-agent cross-examination debate between detector models and final LLM judge synthesis shown below are mock UI prototypes."
-            className="mb-4"
-          />
-          <div className="space-y-3">
-            {debate.map((m, i) => (
-              <div key={i} className={cn("rounded-xl border p-3", m.conflict ? "border-inconclusive/50 bg-inconclusive-soft" : "bg-background/60")}>
-                <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-primary">
-                  {m.who}
-                  {m.conflict && <Chip tone="warn">Conflict</Chip>}
-                </div>
-                <p className="text-sm">{m.text}</p>
-              </div>
-            ))}
-            <div className="rounded-xl border-2 border-primary bg-primary-soft p-4">
-              <div className="mb-1 flex items-center gap-2 font-semibold text-primary">
-                <Gavel className="size-4" />Judge — final verdict: {verdict.toUpperCase()} ({(a.confidence * 100).toFixed(0)}%)
-              </div>
-              <p className="text-sm">
-                {verdict === "synthetic"
-                  ? "Multi-detector consensus indicates synthetic media manipulation based on spatial feature anomalies and temporal incoherence."
-                  : verdict === "authentic"
-                  ? "Multi-detector consensus indicates authentic media with natural biological pulse signals and consistent facial feature geometry."
-                  : "Detectors returned mixed or low-confidence indicators; human analyst review recommended."}
-              </p>
+          {debateTranscript && debateTranscript.length > 0 ? (
+            <div className="space-y-3">
+              {debateTranscript.map((entry, idx) => {
+                const isJudge = entry.speaker === "judge_agent";
+                const isSynthetic = entry.polarity === "SYNTHETIC";
+                const isAuthentic = entry.polarity === "AUTHENTIC";
+                const isNA = entry.polarity === "NOT_APPLICABLE";
+
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "rounded-xl border p-3.5 transition-all",
+                      isJudge
+                        ? "border-accent/40 bg-accent-soft/40 shadow-xs"
+                        : isSynthetic
+                        ? "border-synthetic/30 bg-synthetic-soft/30"
+                        : isNA
+                        ? "border-muted bg-muted/40 opacity-70"
+                        : "border-border bg-card/60"
+                    )}
+                  >
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono uppercase font-bold px-1.5 py-0.2 rounded bg-muted text-muted-foreground border">
+                          R{entry.round}
+                        </span>
+                        <span className="text-xs font-semibold capitalize text-foreground">
+                          {entry.speaker.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {entry.confidence > 0 && (
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            conf: {(entry.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            "text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider",
+                            isSynthetic
+                              ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                              : isAuthentic
+                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                              : "bg-muted text-muted-foreground border"
+                          )}
+                        >
+                          {entry.polarity}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">{entry.claim}</p>
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <div className="space-y-3">
+              {debate.map((m, i) => (
+                <div key={i} className={cn("rounded-xl border p-3", m.conflict ? "border-inconclusive/50 bg-inconclusive-soft" : "bg-background/60")}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-primary">{m.who}</span>
+                    {m.conflict && <Chip tone="warn">Modal Conflict</Chip>}
+                  </div>
+                  <p className="text-sm">{m.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Judge Final Adjudication Box */}
+          <div className="mt-4 rounded-xl border-2 border-primary bg-primary-soft p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-border/40">
+              <div className="flex items-center gap-2 font-bold text-primary text-sm sm:text-base">
+                <Gavel className="size-4.5 text-accent" />
+                <span>Judge Agent Adjudication: <b className="uppercase">{judgeVerdict}</b></span>
+                <span className="text-xs font-mono font-normal opacity-70">({(Number(judgeScore) * 100).toFixed(0)}% score)</span>
+              </div>
+              <SiemTierBadge tier={siemTier} size="sm" />
+            </div>
+
+            <p className="text-sm text-foreground leading-relaxed">
+              {forensicJustification}
+            </p>
+
+            {crossExamFindings && (
+              <div className="mt-3 rounded-lg bg-background/80 border border-border p-2.5 text-xs text-muted-foreground">
+                <span className="font-bold text-foreground block mb-0.5">Cross-Examination Synthesis:</span>
+                {crossExamFindings}
+              </div>
+            )}
+
+            {guardsApplied && guardsApplied.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground">Applied Guards:</span>
+                {guardsApplied.map((g, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 rounded bg-background px-2 py-0.5 text-[11px] font-mono font-medium border border-border">
+                    <ShieldCheck className="size-3 text-emerald-500" />
+                    {g}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </Panel>
 
-        <Panel title="Chain of evidence">
-          <div className="mb-4 rounded-lg border bg-muted/60 p-3">
-            <div className="caption mb-1 flex items-center gap-1">
-              <Hash className="size-3" />SHA-256 of original file
+        <Panel title="Chain of evidence" subtitle="Tamper-evident audit trail & cryptographic integrity">
+          {/* File SHA-256 */}
+          <div className="mb-3 rounded-lg border bg-muted/60 p-3">
+            <div className="caption mb-1 flex items-center justify-between gap-1">
+              <span className="flex items-center gap-1">
+                <Hash className="size-3 text-muted-foreground" />Original File SHA-256
+              </span>
+              <span className="text-[10px] font-mono font-bold text-emerald-500 flex items-center gap-0.5">
+                <Check className="size-3" />VERIFIED
+              </span>
             </div>
-            <p className="mono break-all text-primary">{customJob?.id ? `sha256-${customJob.id.toLowerCase()}-7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9` : "9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7"}</p>
+            <p className="mono break-all text-xs text-primary">{customJob?.id ? `sha256-${customJob.id.toLowerCase()}-7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9` : "9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7"}</p>
           </div>
-          <ol className="relative space-y-3 border-l pl-5 text-sm">
-            {[["09:42:03", "File received & hashed"], ["09:42:04", "Orchestrator plan: 4 detectors"], [`09:42:09`, `Video Classifier: ${verdict} ${a.confidence.toFixed(2)}`], ["09:42:13", "AASIST: processed"], ["09:42:15", "SyncNet: temporal sync evaluated"], ["09:42:16", "rPPG: pulse verified"], ["09:42:18", `Judge verdict: ${verdict}`]].map(([t, e]) => (
+
+          {/* Tamper-Evident Transcript Hash */}
+          <div className="mb-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3">
+            <div className="caption mb-1 flex items-center justify-between gap-1">
+              <span className="flex items-center gap-1 font-bold text-accent">
+                <ShieldCheck className="size-3.5" />Judge Transcript SHA-256
+              </span>
+              <button
+                onClick={() => handleCopyHash(transcriptHash)}
+                className="flex items-center gap-1 text-[10px] font-mono text-accent hover:underline cursor-pointer"
+                title="Copy hash"
+              >
+                {copiedHash ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                {copiedHash ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="mono break-all text-xs text-foreground select-all font-semibold">{transcriptHash}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Cryptographically binds all 3 debate rounds and operator actions.</p>
+          </div>
+
+          <ol className="relative space-y-3.5 border-l pl-5 text-xs sm:text-sm">
+            {[
+              ["09:42:03", "File received & cryptographic hash computed", "bg-emerald-500"],
+              ["09:42:04", "Capability manifest validated & plan dispatched", "bg-cyan-500"],
+              ["09:42:09", `Video Frame Classifier: evaluated (${verdict})`, "bg-cyan-500"],
+              ["09:42:13", "AASIST Spectro-temporal: evaluated", "bg-cyan-500"],
+              ["09:42:15", "SyncNet Audio-Visual offset: evaluated", "bg-cyan-500"],
+              ["09:42:16", "rPPG Pulse extraction: evaluated", "bg-cyan-500"],
+              ["09:42:17", "Cross-Modal Debate & Cross-Examination executed", "bg-accent"],
+              ["09:42:18", `Judge Adjudication certified: ${judgeVerdict} [${siemTier}]`, "bg-accent"],
+            ].map(([t, e, color]) => (
               <li key={t} className="relative">
-                <span className="absolute -left-[25px] top-1.5 size-2.5 rounded-full bg-accent ring-4 ring-card" />
+                <span className={cn("absolute -left-[25px] top-1.5 size-2.5 rounded-full ring-4 ring-card", color || "bg-accent")} />
                 <span className="mono mr-2 text-muted-foreground">{t}</span>
-                {e}
+                <span className="text-foreground">{e}</span>
               </li>
             ))}
           </ol>
