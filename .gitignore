@@ -43,3 +43,12 @@ security/transport/certs/
 security/vault/
 security/logs/
 
+
+# Runtime outputs & state
+live_scores_display.csv
+.jobs/
+**/.jobs/
+web/.jobs/
+
+# Intermediate checkpoints (final weights remain tracked)
+*_ckpt_ep*.pth
