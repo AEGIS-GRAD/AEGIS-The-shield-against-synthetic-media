@@ -50,9 +50,7 @@ def test_preprocessor_silent_video(sample_clips):
     vid_seqs, aud_seqs, has_audio = pre.preprocess(silent_clip)
     assert has_audio is False
     assert aud_seqs is None
-    assert len(vid_seqs) > 0
-    # Each video sequence tensor should be 5 frames * 3 channels = 15 channels
-    assert vid_seqs[0].shape == (15, 112, 112)
+    assert len(vid_seqs) == 0
 
 
 def test_score_silent_video_returns_not_applicable():

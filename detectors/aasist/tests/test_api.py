@@ -107,7 +107,7 @@ def test_detect_file_path():
 def test_detect_invalid_modality():
     payload = {
         "job_id": "test-invalid-modality",
-        "modality": "video",
+        "modality": "text",
         "payload": "dummy_data"
     }
     response = client.post("/detect", json=payload)

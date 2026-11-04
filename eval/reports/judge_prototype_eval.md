@@ -263,6 +263,6 @@ Below is the verified JSON export of Case 1 (`m1-case-001`), demonstrating compl
 
 ## 5. Deliverable Summary for Dr. Amr & Supervisor Review
 
-1. **Python Module**: [`debate/judge_agent.py`](file:///d:/Grad%20Projectt%20eccuuuuu/debate/judge_agent.py) with full `judge_file` and `judge_claims` APIs.
-2. **Evaluation Suite**: [`debate/tests/test_judge_month1_cases.py`](file:///d:/Grad%20Projectt%20eccuuuuu/debate/tests/test_judge_month1_cases.py) exercising 20 real Month 1 samples (11 known disagreements, 0 crashes, 100% pass rate).
-3. **Raw Evaluation Log**: [`eval/reports/judge_prototype_eval_raw.csv`](file:///d:/Grad%20Projectt%20eccuuuuu/eval/reports/judge_prototype_eval_raw.csv).
+1. **Python Module**: [`debate/judge_agent.py`](file:///d:/DeepFake_Grad/debate/judge_agent.py) with full `judge_file` and `judge_claims` APIs.
+2. **Evaluation Suite**: [`debate/tests/test_judge_month1_cases.py`](file:///d:/DeepFake_Grad/debate/tests/test_judge_month1_cases.py) exercising 20 real Month 1 samples (11 known disagreements, 0 crashes, 100% pass rate).
+3. **Raw Evaluation Log**: [`eval/reports/judge_prototype_eval_raw.csv`](file:///d:/DeepFake_Grad/eval/reports/judge_prototype_eval_raw.csv).
