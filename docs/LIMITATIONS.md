@@ -323,7 +323,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | None in streaming implementation (reintroduces the Month 1 flaw that was resolved for file-based rPPG). |
 | **Residual risk** | Severe false-positive risk in live surveillance when a human subject sits completely still or lighting is static. |
 | **Debate-layer / System implication** | Live pipeline must intercept `reason == "flat signal"` and map the result to `status: insufficient_signal` rather than treating `score=1.0` as genuine synthetic evidence. |
-| **Evidence** | [detectors/rppg/streaming/streaming.py:L131-L132](file:///d:/DeepFake_Grad/detectors/rppg/streaming/streaming.py#L131-L132); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l1_flat_signal_returns_confident_synthetic`. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L131-L132](../detectors/rppg/streaming/streaming.py#L131-L132); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l1_flat_signal_returns_confident_synthetic`. |
 
 #### M2-L2: Contiguous Buffer Warmup & Gap Purge Blind Spots
 | Attribute | Detail |
@@ -334,7 +334,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Explicit `ready` boolean flag prevents emitting premature guesses. |
 | **Residual risk** | Subjects moving in and out of surveillance frames cause persistent buffer thrashing, rendering rPPG perpetually unready and blind. |
 | **Debate-layer / System implication** | Surveillance fusion must account for detector non-readiness without stalling real-time alert routing. |
-| **Evidence** | [detectors/rppg/streaming/streaming.py:L74-L83](file:///d:/DeepFake_Grad/detectors/rppg/streaming/streaming.py#L74-L83); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l2_no_evidence_during_warmup`. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L74-L83](../detectors/rppg/streaming/streaming.py#L74-L83); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l2_no_evidence_during_warmup`. |
 
 #### M2-L3: Unvalidated ROI & Full-Frame Background Sampling
 | Attribute | Detail |
@@ -345,7 +345,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Central 60% cropping applied only when a bounding box is explicitly supplied. |
 | **Residual risk** | High risk of false-negative or false-positive pulse detection when face localizer fails to track. |
 | **Debate-layer / System implication** | Require upstream face-tracker confidence metrics before forwarding frame ROIs to streaming rPPG. |
-| **Evidence** | [detectors/rppg/streaming/streaming.py:L145-L157](file:///d:/DeepFake_Grad/detectors/rppg/streaming/streaming.py#L145-L157); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l3_whole_frame_roi_when_no_box`. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L145-L157](../detectors/rppg/streaming/streaming.py#L145-L157); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l3_whole_frame_roi_when_no_box`. |
 
 #### M2-L4: Uncalibrated Logistic SNR-to-Score Mapping
 | Attribute | Detail |
@@ -356,7 +356,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | None — parameters are static. |
 | **Residual risk** | Systematic miscalibration of synthetic likelihood across diverse camera sensors. |
 | **Debate-layer / System implication** | Treat raw streaming rPPG scores as uncalibrated ordinal rankings rather than calibrated Bayesian posteriors. |
-| **Evidence** | [detectors/rppg/streaming/streaming.py:L45-L50, L138-L140](file:///d:/DeepFake_Grad/detectors/rppg/streaming/streaming.py#L45-L50); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l4_fixed_logistic_snr_score_mapping`. |
+| **Evidence** | [detectors/rppg/streaming/streaming.py:L45-L50, L138-L140](../detectors/rppg/streaming/streaming.py#L45-L50); verified by unit test `detectors/rppg/tests/test_streaming_limitations.py::test_m2_l4_fixed_logistic_snr_score_mapping`. |
 
 ---
 
@@ -371,7 +371,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Spatial MobileNetV3 edge model INT8 inference is active. |
 | **Residual risk** | The live surveillance path is monomodal regarding AI detection, contradicting AEGIS's multi-modal architecture. |
 | **Debate-layer / System implication** | Milestone presentations must clearly document that Month 2 surveillance AI evaluation reflects spatial CNN features only. |
-| **Evidence** | [live_pipeline/live_pipeline.py:L24-L27, L123-L136](file:///d:/DeepFake_Grad/live_pipeline/live_pipeline.py#L24-L27). |
+| **Evidence** | [live_pipeline/live_pipeline.py:L24-L27, L123-L136](../live_pipeline/live_pipeline.py#L24-L27). |
 
 #### M2-L6: Mathematical Degeneracy of Equal-Weighted Fusion Verdicts
 | Attribute | Detail |
@@ -382,7 +382,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Hardcoded secondary check `ai_score >= synthetic_threshold` catches synthetic alerts. |
 | **Residual risk** | Weighted averaging dilutes the AI forensic score and obscures nuanced threat levels. |
 | **Debate-layer / System implication** | Move from linear scalar combination to hierarchical multi-condition rule engines in Month 3. |
-| **Evidence** | [security/fusion/feed_fusion.py:L154-L167](file:///d:/DeepFake_Grad/security/fusion/feed_fusion.py#L154-L167); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l6_equal_weights_verdict_reduces_to_ai_threshold`. |
+| **Evidence** | [security/fusion/feed_fusion.py:L154-L167](../security/fusion/feed_fusion.py#L154-L167); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l6_equal_weights_verdict_reduces_to_ai_threshold`. |
 
 #### M2-L7: Synthetic & Placeholder Evidentiary Fallbacks in Incident Alerts
 | Attribute | Detail |
@@ -393,7 +393,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Fallback prevents `AttributeError` during incident dispatch. |
 | **Residual risk** | Corrupts court-admissibility under ISO/IEC 27037 by logging false evidentiary provenance. |
 | **Debate-layer / System implication** | Enforce strict schema validation: reject alert creation if hardware fingerprint or frame hash is missing. |
-| **Evidence** | [security/fusion/feed_fusion.py:L211-L216, L257](file:///d:/DeepFake_Grad/security/fusion/feed_fusion.py#L211-L216); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l7_alert_uses_placeholder_evidence_when_omitted`. |
+| **Evidence** | [security/fusion/feed_fusion.py:L211-L216, L257](../security/fusion/feed_fusion.py#L211-L216); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l7_alert_uses_placeholder_evidence_when_omitted`. |
 
 #### M2-L8: Temporal Anomaly Boundary Misattribution Across Sliding Windows
 | Attribute | Detail |
@@ -404,7 +404,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | All anomalies are tracked globally in `self.all_anomalies`. |
 | **Residual risk** | Window-level SIEM alerts have inconsistent tamper context across consecutive evaluations. |
 | **Debate-layer / System implication** | Use sliding deque for anomaly tracking matching the frame buffer window size. |
-| **Evidence** | [live_pipeline/live_pipeline.py:L264](file:///d:/DeepFake_Grad/live_pipeline/live_pipeline.py#L264); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l8_prnu_pce_not_thresholded_in_fusion`. |
+| **Evidence** | [live_pipeline/live_pipeline.py:L264](../live_pipeline/live_pipeline.py#L264); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l8_prnu_pce_not_thresholded_in_fusion`. |
 
 ---
 
@@ -419,7 +419,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | AASIST raw results are preserved in `OrchestrationResponse.raw_results`. |
 | **Residual risk** | Complete blind spot to audio-driven deepfake attacks in final adjudicated forensic reports. |
 | **Debate-layer / System implication** | High priority for Month 3: implement AASIST claim adapter in `debate/claim_wrapper.py`. |
-| **Evidence** | [orchestrator/app/judge_bridge.py:L64-L73](file:///d:/DeepFake_Grad/orchestrator/app/judge_bridge.py#L64-L73). |
+| **Evidence** | [orchestrator/app/judge_bridge.py:L64-L73](../orchestrator/app/judge_bridge.py#L64-L73). |
 
 #### M2-L10: Static Environmental Operating Conditions Bypass Precedence Matrix
 | Attribute | Detail |
@@ -430,7 +430,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Baseline consensus and cross-examination still execute. |
 | **Residual risk** | Degraded inputs receive full analytical weight rather than being discounted. |
 | **Debate-layer / System implication** | Enrich `InputMetadata` with runtime luminance and face-detection ratios extracted by detector preprocessors. |
-| **Evidence** | [orchestrator/app/judge_bridge.py:L108-L110](file:///d:/DeepFake_Grad/orchestrator/app/judge_bridge.py#L108-L110). |
+| **Evidence** | [orchestrator/app/judge_bridge.py:L108-L110](../orchestrator/app/judge_bridge.py#L108-L110). |
 
 #### M2-L11: High Abstention Rate (65% INTEGRITY_UNKNOWN) and Single-Sample False-Synthetic P1 Failure
 | Attribute | Detail |
@@ -441,7 +441,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Completely eliminates catastrophic false-authentics (0 fakes certified as authentic). |
 | **Residual risk** | Operational alert fatigue from excessive `INTEGRITY_UNKNOWN` escalations requiring human review. |
 | **Debate-layer / System implication** | Refine consensus thresholds and corroboration weights in Month 3 to narrow the abstention band. |
-| **Evidence** | [eval/reports/month2_vs_month1_full_benchmark_raw.csv:L21-L40](file:///d:/DeepFake_Grad/eval/reports/month2_vs_month1_full_benchmark_raw.csv#L21-L40); audited by `eval/scripts/month2_metrics_audit.py`. |
+| **Evidence** | [eval/reports/month2_vs_month1_full_benchmark_raw.csv:L21-L40](../eval/reports/month2_vs_month1_full_benchmark_raw.csv#L21-L40); audited by `eval/scripts/month2_metrics_audit.py`. |
 
 ---
 
@@ -456,7 +456,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Benchmarking verified the arbitration logic's mathematical stability under conflict. |
 | **Residual risk** | Reported accuracy metrics do not reflect the judge's performance on real, calibrated EfficientNet-B0 detector outputs. |
 | **Debate-layer / System implication** | Re-run full judge benchmark against fixtures generated with the fine-tuned, weight-loaded detector. |
-| **Evidence** | [eval/scripts/build_judge_cases.py:L18-L20](file:///d:/DeepFake_Grad/eval/scripts/build_judge_cases.py#L18-L20); [eval/reports/video_classifier_refinement.md:L14-L20](file:///d:/DeepFake_Grad/eval/reports/video_classifier_refinement.md#L14-L20). |
+| **Evidence** | [eval/scripts/build_judge_cases.py:L18-L20](../eval/scripts/build_judge_cases.py#L18-L20); [eval/reports/video_classifier_refinement.md:L14-L20](../eval/reports/video_classifier_refinement.md#L14-L20). |
 
 #### M2-L13: Benchmark Circularity & Missing Ground-Truth Stream Fixtures
 | Attribute | Detail |
@@ -467,7 +467,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Separate unit and harness tests exist in `security/fusion/tests/`. |
 | **Residual risk** | False sense of empirical security regarding live camera attack resilience. |
 | **Debate-layer / System implication** | Commit reproducible video fixtures and wire true live validation into the benchmark suite. |
-| **Evidence** | [eval/scripts/benchmark_month2_vs_month1.py:L239-L240](file:///d:/DeepFake_Grad/eval/scripts/benchmark_month2_vs_month1.py#L239-L240). |
+| **Evidence** | [eval/scripts/benchmark_month2_vs_month1.py:L239-L240](../eval/scripts/benchmark_month2_vs_month1.py#L239-L240). |
 
 #### M2-L14: Unresolved LLM Planning Latency SLA Breakdown
 | Attribute | Detail |
@@ -478,7 +478,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Deterministic local fallback prevents catastrophic service failure. |
 | **Residual risk** | Real-time adaptive planning is completely unusable in live or interactive media verification under free cloud routing. |
 | **Debate-layer / System implication** | Month 3 priority: transition planner to local quantized model execution on dedicated edge GPU. |
-| **Evidence** | [eval/reports/planner_v1_evaluation_summary.md:L40-L56](file:///d:/DeepFake_Grad/eval/reports/planner_v1_evaluation_summary.md#L40-L56); [eval/scripts/benchmark_month2_vs_month1.py:L109](file:///d:/DeepFake_Grad/eval/scripts/benchmark_month2_vs_month1.py#L109). |
+| **Evidence** | [eval/reports/planner_v1_evaluation_summary.md:L40-L56](../eval/reports/planner_v1_evaluation_summary.md#L40-L56); [eval/scripts/benchmark_month2_vs_month1.py:L109](../eval/scripts/benchmark_month2_vs_month1.py#L109). |
 
 #### M2-L15: Disconnected Load Testing (Transport Throughput vs. Model Inference)
 | Attribute | Detail |
@@ -489,7 +489,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Validates gateway asyncio connection management and DoS resilience. |
 | **Residual risk** | Live deployment assuming 32 concurrent feeds will suffer catastrophic GPU/CPU starvation once neural inference is enabled. |
 | **Debate-layer / System implication** | Re-run multi-feed load tests with edge neural inference actively processing every sliding window. |
-| **Evidence** | [eval/reports/streaming_load_test_report.md:L51-L54](file:///d:/DeepFake_Grad/eval/reports/streaming_load_test_report.md#L51-L54). |
+| **Evidence** | [eval/reports/streaming_load_test_report.md:L51-L54](../eval/reports/streaming_load_test_report.md#L51-L54). |
 
 ---
 

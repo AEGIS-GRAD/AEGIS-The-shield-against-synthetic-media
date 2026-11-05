@@ -5,10 +5,10 @@
 **Status:** Complete Deliverable (Month 2 — Task 6 Deliverable)  
 **Purpose:** What the AI track *learned* this month, not just what it shipped — for the Month 2 milestone review.  
 **Source Data:**
-- Full Unified Benchmark: [eval/reports/month2_vs_month1_full_benchmark_raw.csv](file:///d:/DeepFake_Grad/eval/reports/month2_vs_month1_full_benchmark_raw.csv), [eval/reports/month2_vs_month1_full_benchmark_report.md](file:///d:/DeepFake_Grad/eval/reports/month2_vs_month1_full_benchmark_report.md)
-- Recomputed Audit Record: [eval/reports/month2_metrics_audit.json](file:///d:/DeepFake_Grad/eval/reports/month2_metrics_audit.json) via [eval/scripts/month2_metrics_audit.py](file:///d:/DeepFake_Grad/eval/scripts/month2_metrics_audit.py)
-- Subsystem Evaluations: [eval/reports/judge_prototype_eval.md](file:///d:/DeepFake_Grad/eval/reports/judge_prototype_eval.md), [eval/reports/surveillance_benchmark_report.md](file:///d:/DeepFake_Grad/eval/reports/surveillance_benchmark_report.md), [eval/reports/streaming_load_test_report.md](file:///d:/DeepFake_Grad/eval/reports/streaming_load_test_report.md), [eval/reports/planner_v1_evaluation_summary.md](file:///d:/DeepFake_Grad/eval/reports/planner_v1_evaluation_summary.md)
-- Grounded Limitations & Planning: [docs/LIMITATIONS.md](file:///d:/DeepFake_Grad/docs/LIMITATIONS.md) (Section 8: M2-L1 to M2-L15), [docs/month3_planning.md](file:///d:/DeepFake_Grad/docs/month3_planning.md)
+- Full Unified Benchmark: [eval/reports/month2_vs_month1_full_benchmark_raw.csv](../eval/reports/month2_vs_month1_full_benchmark_raw.csv), [eval/reports/month2_vs_month1_full_benchmark_report.md](../eval/reports/month2_vs_month1_full_benchmark_report.md)
+- Recomputed Audit Record: [eval/reports/month2_metrics_audit.json](../eval/reports/month2_metrics_audit.json) via [eval/scripts/month2_metrics_audit.py](../eval/scripts/month2_metrics_audit.py)
+- Subsystem Evaluations: [eval/reports/judge_prototype_eval.md](../eval/reports/judge_prototype_eval.md), [eval/reports/surveillance_benchmark_report.md](../eval/reports/surveillance_benchmark_report.md), [eval/reports/streaming_load_test_report.md](../eval/reports/streaming_load_test_report.md), [eval/reports/planner_v1_evaluation_summary.md](../eval/reports/planner_v1_evaluation_summary.md)
+- Grounded Limitations & Planning: [docs/LIMITATIONS.md](LIMITATIONS.md) (Section 8: M2-L1 to M2-L15), [docs/month3_planning.md](month3_planning.md)
 
 ---
 
@@ -34,7 +34,7 @@ In Month 2, the AI track moved AEGIS from isolated, static heuristics into a clo
 
 ## 2. Benchmark Results: Both Paths (Audited Evaluation)
 
-The table below reflects the mathematically verified metrics recomputed directly from [eval/reports/month2_vs_month1_full_benchmark_raw.csv](file:///d:/DeepFake_Grad/eval/reports/month2_vs_month1_full_benchmark_raw.csv) using [eval/scripts/month2_metrics_audit.py](file:///d:/DeepFake_Grad/eval/scripts/month2_metrics_audit.py).
+The table below reflects the mathematically verified metrics recomputed directly from [eval/reports/month2_vs_month1_full_benchmark_raw.csv](../eval/reports/month2_vs_month1_full_benchmark_raw.csv) using [eval/scripts/month2_metrics_audit.py](../eval/scripts/month2_metrics_audit.py).
 
 <!-- AUDIT:BEGIN -->
 | Path / Subsystem | Metric Dimension | Month 1 Baseline | Month 2 Reported | Month 2 Audited Value | Forensic / Operational Reality |
@@ -60,7 +60,7 @@ To ensure complete transparency across engineering tracks, the AI track presents
 | **Month 1 Baseline** | **50.00%** | **55.0%** (11/20) | On the 20 specific contested audit cases, Month 1's heuristic convention (treating `UNCERTAIN` as authentic) scored 11 correct, with 9 catastrophic false-authentics. |
 | **False-Authentic Certifications** | **0 cases** | **0 cases** ✅ | **Confirmed.** Guard 1 (Polarity Inversion Anti-Default) and Guard 2 (Corroboration Requirement) successfully prevented all 9 Month 1 false-authentics. |
 | **False-Synthetic Certifications** | **0 cases** | **1 case** | On sample `067.mp4` (`m1-case-010`), authentic video was misclassified as `SYNTHETIC (0.78)` and routed as a `P1_CRITICAL` alert. |
-| **Surveillance Tamper Detection** | **100.0%** (8/8) | **100.0%** (by construction) | In `benchmark_month2_vs_month1.py` ([L239–240](file:///d:/DeepFake_Grad/eval/scripts/benchmark_month2_vs_month1.py#L239-L240)), `hash_ok` and `prnu_ok` were set based on whether `"clean"` appeared in the scenario name string. This proves downstream fusion branching works, but does not benchmark live PRNU wavelet extraction. |
+| **Surveillance Tamper Detection** | **100.0%** (8/8) | **100.0%** (by construction) | In `benchmark_month2_vs_month1.py` ([L239–240](../eval/scripts/benchmark_month2_vs_month1.py#L239-L240)), `hash_ok` and `prnu_ok` were set based on whether `"clean"` appeared in the scenario name string. This proves downstream fusion branching works, but does not benchmark live PRNU wavelet extraction. |
 | **Surveillance Real-Time Ratio** | **0.22 – 0.25** | **0.156 – 0.177** | The template hardcoded 0.22–0.25. The actual measured INT8 edge model execution was even faster (15.6%–17.7% of budget). |
 | **Planner Divergence** | **68.4%** (13/19) | **68.4%** (Mock LLM) | The divergence from static rules is mathematically confirmed, but was executed with `mock_llm=True`. Live cloud LLM queries failed the ≤3.0s latency budget. |
 
@@ -93,7 +93,7 @@ Unit tests and evaluation fixtures masked two production integration gaps:
 
 ## 4. Biggest Open Reliability & Latency Concerns
 
-The following 15 limitation profiles (documented in full in [docs/LIMITATIONS.md Section 8](file:///d:/DeepFake_Grad/docs/LIMITATIONS.md#8-month-2-findings--limitations-profile-m2-l1-to-m2-l15)) represent our primary operational risks:
+The following 15 limitation profiles (documented in full in [docs/LIMITATIONS.md Section 8](LIMITATIONS.md#8-month-2-findings--limitations-profile-m2-l1-to-m2-l15)) represent our primary operational risks:
 
 1. **[M2-L1] Score-Inversion Trap in Streaming rPPG:** Flat or motionless facial ROIs emit `score = 1.000` (100% synthetic), reintroducing Month 1's false-alarm flaw.
 2. **[M2-L2] Buffer Warmup & Gap Purge Blind Spots:** Streaming rPPG produces no evidence for the first 6 seconds, and any face-tracking drop > 1s purges the buffer, causing repeated blind spots.
@@ -115,7 +115,7 @@ The following 15 limitation profiles (documented in full in [docs/LIMITATIONS.md
 
 ## 5. Open Questions for Month 3 (Orchestration, Debate & Security)
 
-These strategic questions link directly to our proposed Month 3 priorities in [docs/month3_planning.md](file:///d:/DeepFake_Grad/docs/month3_planning.md):
+These strategic questions link directly to our proposed Month 3 priorities in [docs/month3_planning.md](month3_planning.md):
 
 ### Q1 (Debate Track & Cyber Track): What is the acceptable operational threshold for Judge Agent abstention?
 *Context:* Guard 1 eliminates false-authentics by forcing `INTEGRITY_UNKNOWN` on 65% of contested cases. Does the SOC team prefer high abstention with zero false-authentics, or should Month 3 tune consensus thresholds to achieve >= 60% coverage, even if borderline ambiguity increases?  
