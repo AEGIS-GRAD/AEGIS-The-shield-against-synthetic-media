@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 
 from . import config, path_safety
 from .magic_bytes import sniff_audio_payload, sniff_extension
+from .mesh_tls import client_tls_kwargs
 from .prnu_extractor import PRNUExtractor
 
 logging.basicConfig(level=logging.INFO)
@@ -180,12 +181,12 @@ async def validate_audio(req: AudioDetectorRequest) -> JSONResponse:
 
 
 async def _forward_multipart(url: str, filename: str, content: bytes) -> httpx.Response:
-    async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS, **client_tls_kwargs()) as client:
         return await client.post(url, files={"file": (filename, content)})
 
 
 async def _forward_json(url: str, body: dict) -> httpx.Response:
-    async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS, **client_tls_kwargs()) as client:
         return await client.post(url, json=body)
 
 

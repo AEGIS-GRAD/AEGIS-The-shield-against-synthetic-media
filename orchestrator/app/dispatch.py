@@ -6,6 +6,7 @@ import httpx
 from models import DetectorResult, DetectorEvidence
 
 from circuit_breaker import CircuitBreaker, CircuitBreakerOpenException
+from mesh_tls import client_tls_kwargs, url_allowed
 
 _DEFAULT_BASE = "http://{service}:8000"
 INTERNAL_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
@@ -26,6 +27,12 @@ def _service_url(detector_name: str) -> str:
 
 async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modality: str, file_path: str) -> DetectorResult:
     url = f"{_service_url(detector)}/detect"
+    if not url_allowed(detector, url):
+        # Strict mesh mode: refuse to downgrade an mTLS detector to plaintext HTTP.
+        return DetectorResult(
+            detector=detector, status="failed", job_id=job_id,
+            error=f"mTLS required for '{detector}' but URL is not https: {url}",
+        )
     body = {"job_id": job_id, "modality": modality, "payload": file_path}
     headers = {"X-Internal-Token": INTERNAL_TOKEN}
     breaker = _get_breaker(detector)
@@ -63,6 +70,7 @@ async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modal
 
 
 async def call_all_detectors(detectors: List[str], job_id: str, modality: str, file_path: str) -> List[DetectorResult]:
-    async with httpx.AsyncClient() as client:
+    # {} in relaxed/dev mode (unchanged behaviour); mutual-TLS context in strict mode.
+    async with httpx.AsyncClient(**client_tls_kwargs()) as client:
         tasks = [_call_one(client, d, job_id, modality, file_path) for d in detectors]
         return await asyncio.gather(*tasks)

@@ -1,0 +1,97 @@
+# ==============================================================================
+# AEGIS strict internal mTLS overlay  (Month 3, Week 9 Task 6)
+#
+#   Relaxed / dev (default):   docker compose up
+#   Strict  / prod / CI:       docker compose -f docker-compose.yml -f docker-compose.mtls.yml up
+#
+# In strict mode, for video-classifier and aasist ONLY (the rest of the mesh follows
+# in Week 10 Task 1):
+#   * detectors listen on HTTPS and REQUIRE a client certificate issued by the
+#     dedicated mesh CA (a camera / main-CA certificate is rejected at the handshake);
+#   * orchestrator and gateway_validator present mesh client certificates and refuse
+#     plaintext http:// for these two detectors;
+#   * host ports 8001 / 8002 are no longer published (reachable only on aegis_net);
+#   * Docker healthchecks and Prometheus scrape over https with client certs.
+#
+# Generate the certificates first:   python security/transport/generate_certs.py
+# ==============================================================================
+x-mesh-certs: &mesh_certs ./security/transport/certs:/mesh:ro
+
+services:
+  detector_video_classifier:
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --ssl-keyfile=/mesh/mesh_detector_video_classifier.key
+      - --ssl-certfile=/mesh/mesh_detector_video_classifier.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    ports: !reset []
+    volumes:
+      - *mesh_certs
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_detector_video_classifier.crt",
+              "--key", "/mesh/mesh_detector_video_classifier.key",
+              "https://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  detector_aasist:
+    command:
+      - uvicorn
+      - app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --ssl-keyfile=/mesh/mesh_detector_aasist.key
+      - --ssl-certfile=/mesh/mesh_detector_aasist.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    ports: !reset []
+    volumes:
+      - *mesh_certs
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_detector_aasist.crt",
+              "--key", "/mesh/mesh_detector_aasist.key",
+              "https://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  orchestrator:
+    volumes:
+      - *mesh_certs
+    environment:
+      - AEGIS_MESH_CA=/mesh/mesh_ca.crt
+      - AEGIS_MESH_CERT=/mesh/mesh_orchestrator.crt
+      - AEGIS_MESH_KEY=/mesh/mesh_orchestrator.key
+      - AEGIS_MESH_DETECTORS=video-classifier,aasist
+      - DETECTOR_VIDEO_CLASSIFIER_URL=https://detector_video_classifier:8000
+      - DETECTOR_AASIST_URL=https://detector_aasist:8000
+
+  gateway_validator:
+    volumes:
+      - *mesh_certs
+    environment:
+      - AEGIS_MESH_CA=/mesh/mesh_ca.crt
+      - AEGIS_MESH_CERT=/mesh/mesh_gateway_validator.crt
+      - AEGIS_MESH_KEY=/mesh/mesh_gateway_validator.key
+      - AEGIS_MESH_DETECTORS=video-classifier,aasist
+      - VIDEO_DETECTOR_URL=https://aegis_detector_video_classifier:8000/detect
+      - AUDIO_DETECTOR_URL=https://aegis_detector_aasist:8000/detect
+
+  prometheus:
+    volumes:
+      - ./security/telemetry/prometheus.mtls.yml:/etc/prometheus/prometheus.yml
+      - *mesh_certs
+
