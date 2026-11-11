@@ -13,8 +13,26 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from debate.llm_tls import JudgeTLSConfigError, llm_tls_kwargs
+    from debate.prompt_security import (
+        MAX_RAW_LLM_RESPONSE_BYTES,
+        build_isolated_chat_messages,
+        generate_canary_token,
+        validate_judge_output,
+    )
 except ImportError:
     from llm_tls import JudgeTLSConfigError, llm_tls_kwargs
+    from prompt_security import (
+        MAX_RAW_LLM_RESPONSE_BYTES,
+        build_isolated_chat_messages,
+        generate_canary_token,
+        validate_judge_output,
+    )
+
+_JUDGE_SYSTEM_PROMPT = (
+    "You are the impartial AEGIS Forensic Judge Agent under ISO/IEC 27037. "
+    "Return strictly valid JSON with only `forensic_justification` and `adjudication_summary`. "
+    "NEVER contradict the locked verdict or calibrated score."
+)
 
 logger = logging.getLogger("aegis.debate.llm_client")
 
@@ -118,6 +136,8 @@ def call_judge_llm(
         )
         return simulated, "deterministic-fallback", 0.0, f"TLS_POLICY_VIOLATION: {exc}"
 
+    canary = generate_canary_token()
+    messages = build_isolated_chat_messages(_JUDGE_SYSTEM_PROMPT, prompt, canary=canary)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -125,11 +145,12 @@ def call_judge_llm(
         "X-Title": "AEGIS Debate Judge Agent",
     }
 
+    last_policy_reason: Optional[str] = None
     t0 = time.time()
     for model_name in DEFAULT_JUDGE_MODELS:
         payload = {
             "model": model_name,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": 0.1,
             "response_format": {"type": "json_object"},
         }
@@ -144,6 +165,10 @@ def call_judge_llm(
 
             data = resp.json()
             raw_text = data["choices"][0]["message"]["content"].strip()
+            if len(raw_text.encode("utf-8")) > MAX_RAW_LLM_RESPONSE_BYTES:
+                last_policy_reason = "LLM_OUTPUT_POLICY_VIOLATION: RESPONSE_TOO_LARGE"
+                logger.warning("Judge response from %s exceeded byte cap", model_name)
+                continue
 
             # Clean markdown JSON fences if present
             if raw_text.startswith("```"):
@@ -154,21 +179,16 @@ def call_judge_llm(
 
             parsed = json.loads(raw_text)
 
-            # Strict validation
-            if not isinstance(parsed, dict) or "forensic_justification" not in parsed:
-                logger.warning(f"Judge response from {model_name} missing 'forensic_justification'.")
+            ok, policy_err = validate_judge_output(
+                parsed,
+                locked_verdict_str=locked_verdict_str,
+                active_detector_ids=active_detector_ids,
+                canary=canary,
+            )
+            if not ok:
+                last_policy_reason = f"LLM_OUTPUT_POLICY_VIOLATION: {policy_err}"
+                logger.warning(f"Judge LLM response from {model_name} failed security/consistency gate: {policy_err}")
                 continue
-
-            justification = parsed["forensic_justification"]
-            if not isinstance(justification, str) or len(justification.strip()) < 30:
-                logger.warning(f"Judge response from {model_name} had empty or too short justification.")
-                continue
-
-            # Ensure all active detectors are mentioned
-            missing_detectors = [det for det in active_detector_ids if det.lower() not in justification.lower()]
-            if missing_detectors:
-                logger.warning(f"Judge response from {model_name} failed to address detector(s): {missing_detectors}")
-                # We can accept or append, or reject. Let's keep it if reasonably detailed.
 
             return parsed, model_name, latency, None
 
@@ -180,4 +200,4 @@ def call_judge_llm(
     simulated = _generate_deterministic_justification(
         locked_verdict_str, calibrated_score, active_detector_ids, applied_rules, guards_applied
     )
-    return simulated, "deterministic-fallback", total_latency, "ALL_JUDGE_MODELS_FAILED"
+    return simulated, "deterministic-fallback", total_latency, (last_policy_reason or "ALL_JUDGE_MODELS_FAILED")

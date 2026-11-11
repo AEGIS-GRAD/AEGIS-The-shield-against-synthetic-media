@@ -34,6 +34,12 @@ from debate.disagreement import (
 )
 from debate.judge_prompt import JUDGE_PROMPT_VERSION, build_judge_prompt
 from debate.llm_client import call_judge_llm
+from debate.prompt_security import (
+    MAX_FORENSIC_CLAIM_LEN,
+    sanitize_claim_text,
+    sanitize_flags,
+    validate_judge_output,
+)
 from debate.schemas import (
     ClaimPolarity,
     CourtAdmissibleVerdict,
@@ -123,17 +129,21 @@ class JudgeAgent:
     ) -> JudgeReport:
         rounds: List[DebateRound] = []
 
-        # Round 1: Claim Submissions
+        # Round 1: Claim Submissions (defense-in-depth sanitization for direct judge_claims calls)
         round_1_entries = []
         for c in claims:
+            safe_claim = sanitize_claim_text(
+                c.claim, max_len=MAX_FORENSIC_CLAIM_LEN, source=f"judge_round1:{c.detector_id}"
+            ).sanitized
+            safe_flags, _ = sanitize_flags(c.flags)
             round_1_entries.append({
                 "detector_id": c.detector_id,
                 "domain": c.domain.value,
                 "polarity": c.polarity.value,
                 "confidence": c.confidence,
                 "effective_confidence": c.effective_confidence,
-                "claim": c.claim,
-                "flags": c.flags,
+                "claim": safe_claim,
+                "flags": safe_flags,
                 "coverage_gap": c.coverage_gap,
             })
         rounds.append(
@@ -202,10 +212,21 @@ class JudgeAgent:
             )
 
             if llm_res and not err:
-                llm_model = model_name
-                effective_mode_str = "llm_agentic_judge"
-                guarded_verdict.arbitration_mode = "llm_agentic_judge"
-                guarded_verdict.forensic_justification = llm_res["forensic_justification"]
+                policy_ok, policy_err = validate_judge_output(
+                    llm_res,
+                    locked_verdict_str=guarded_verdict.final_verdict.value,
+                    active_detector_ids=active_detector_ids,
+                )
+                if policy_ok:
+                    llm_model = model_name
+                    effective_mode_str = "llm_agentic_judge"
+                    guarded_verdict.arbitration_mode = "llm_agentic_judge"
+                    guarded_verdict.forensic_justification = llm_res["forensic_justification"]
+                else:
+                    logger.warning(f"JudgeAgent rejected LLM narrative at post-check: {policy_err}")
+                    llm_fallback_used = True
+                    llm_fallback_reason = f"LLM_OUTPUT_POLICY_VIOLATION: {policy_err}"
+                    llm_model = model_name
             else:
                 llm_fallback_used = True
                 llm_fallback_reason = err or "LLM generation returned empty payload"

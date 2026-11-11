@@ -71,6 +71,13 @@ from debate.disagreement import (
     AUTHENTIC_POLARITY_THRESHOLD,
     SYNTHETIC_POLARITY_THRESHOLD,
 )
+from debate.prompt_security import (
+    MAX_FORENSIC_CLAIM_LEN,
+    MAX_RAW_DETECTOR_CLAIM_LEN,
+    sanitize_claim_text,
+    sanitize_flags,
+    sanitize_untrusted_text,
+)
 from debate.schemas import (
     AttenuationFactors,
     AudioVisualMetrics,
@@ -191,7 +198,10 @@ def _bpm_text(bpm: Optional[float], reliable: bool = True) -> str:
 
 
 def _adapt_rppg(r: Dict[str, Any], flags: List[str]) -> _Adapted:
-    detector_claim = (r.get("evidence") or {}).get("claim", "")
+    raw_detector_claim = (r.get("evidence") or {}).get("claim", "")
+    detector_claim = sanitize_claim_text(
+        raw_detector_claim, max_len=MAX_RAW_DETECTOR_CLAIM_LEN, source="rppg_claim"
+    ).sanitized
     verdict = r.get("verdict")
 
     # See contract note 2: P(synthetic) lives in `score`, not `confidence`.
@@ -285,7 +295,10 @@ def _adapt_rppg(r: Dict[str, Any], flags: List[str]) -> _Adapted:
 
 # ── SyncNet ──────────────────────────────────────────────────────────────────
 def _adapt_syncnet(r: Dict[str, Any], flags: List[str]) -> _Adapted:
-    detector_claim = (r.get("evidence") or {}).get("claim", "")
+    raw_detector_claim = (r.get("evidence") or {}).get("claim", "")
+    detector_claim = sanitize_claim_text(
+        raw_detector_claim, max_len=MAX_RAW_DETECTOR_CLAIM_LEN, source="syncnet_claim"
+    ).sanitized
 
     # SyncNet signals "could not judge" through the not_applicable flag (see infer.py).
     if NOT_APPLICABLE_FLAG in flags:
@@ -362,20 +375,26 @@ def wrap_detector_response(
         )
 
     evidence = response.get("evidence") or {}
-    flags = list(evidence.get("flags") or [])
+    flags, _ = sanitize_flags(list(evidence.get("flags") or []))
     adapted = adapter(response, flags)
-    job_id = response.get("job_id") or "unknown"
+    safe_claim = sanitize_claim_text(
+        adapted.claim, max_len=MAX_FORENSIC_CLAIM_LEN, source=f"wrapped_claim:{detector_id}"
+    ).sanitized
+    raw_job = response.get("job_id") or "unknown"
+    safe_job = sanitize_untrusted_text(str(raw_job), max_len=64, strict_chars=True, source="job_id").sanitized or "unknown"
+    raw_ver = response.get("model_version") or "unknown"
+    safe_ver = sanitize_untrusted_text(str(raw_ver), max_len=64, strict_chars=True, source="model_version").sanitized or "unknown"
 
     return ForensicClaim(
-        claim_id=f"clm-{detector_id}-{job_id}",
-        job_id=job_id,
+        claim_id=f"clm-{detector_id}-{safe_job}",
+        job_id=safe_job,
         detector_id=detector_id,
-        model_version=response.get("model_version") or "unknown",
+        model_version=safe_ver,
         domain=DOMAIN_BY_DETECTOR[detector_id],
         polarity=adapted.polarity,
         confidence=round(adapted.p_synthetic, 4),
         raw_score=response.get("raw_score"),
-        claim=adapted.claim,
+        claim=safe_claim,
         flags=flags,
         observational_metrics=adapted.metrics,
         attenuation_factors=adapted.attenuation,
