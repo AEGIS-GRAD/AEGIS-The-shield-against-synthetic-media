@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from . import config, path_safety
 from .magic_bytes import sniff_audio_payload, sniff_extension
-from .mesh_tls import client_tls_kwargs
+from .mesh_tls import MeshTLSConfigError, client_tls_kwargs, url_allowed
 from .prnu_extractor import PRNUExtractor
 
 logging.basicConfig(level=logging.INFO)
@@ -123,8 +123,8 @@ async def validate_video(file: UploadFile = File(...)) -> JSONResponse:
     # ---------------------------------------
 
     try:
-        response = await _forward_multipart(config.VIDEO_DETECTOR_URL, file.filename, content)
-    except httpx.RequestError as exc:
+        response = await _forward_multipart(config.VIDEO_DETECTOR_URL, file.filename, content, detector="video-classifier")
+    except (httpx.RequestError, MeshTLSConfigError) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream detector unreachable: {exc}") from exc
 
     return JSONResponse(status_code=response.status_code, content=_safe_json(response))
@@ -173,19 +173,23 @@ async def validate_audio(req: AudioDetectorRequest) -> JSONResponse:
             raise HTTPException(status_code=415, detail=result.reason)
 
     try:
-        response = await _forward_json(config.AUDIO_DETECTOR_URL, req.model_dump())
-    except httpx.RequestError as exc:
+        response = await _forward_json(config.AUDIO_DETECTOR_URL, req.model_dump(), detector="aasist")
+    except (httpx.RequestError, MeshTLSConfigError) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream detector unreachable: {exc}") from exc
 
     return JSONResponse(status_code=response.status_code, content=_safe_json(response))
 
 
-async def _forward_multipart(url: str, filename: str, content: bytes) -> httpx.Response:
+async def _forward_multipart(url: str, filename: str, content: bytes, detector: str = "video-classifier") -> httpx.Response:
+    if not url_allowed(detector, url):
+        raise MeshTLSConfigError(f"mTLS required for '{detector}' but URL is not https: {url}")
     async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS, **client_tls_kwargs()) as client:
         return await client.post(url, files={"file": (filename, content)})
 
 
-async def _forward_json(url: str, body: dict) -> httpx.Response:
+async def _forward_json(url: str, body: dict, detector: str = "aasist") -> httpx.Response:
+    if not url_allowed(detector, url):
+        raise MeshTLSConfigError(f"mTLS required for '{detector}' but URL is not https: {url}")
     async with httpx.AsyncClient(timeout=config.UPSTREAM_TIMEOUT_SECONDS, **client_tls_kwargs()) as client:
         return await client.post(url, json=body)
 

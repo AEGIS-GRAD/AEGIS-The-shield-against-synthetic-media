@@ -121,9 +121,11 @@ async def detect(
     x_internal_token: Optional[str] = Header(default=None),
 ) -> Dict[str, Any]:
     """Detect deepfake content via rPPG heartbeat-consistency analysis."""
-    expected_token = os.getenv("INTERNAL_API_KEY")
-    if expected_token and x_internal_token and x_internal_token != expected_token:
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid internal token")
+    # Legacy shared-token check retained only for relaxed dev mode; strict mTLS authenticates via client cert.
+    if os.getenv("AEGIS_MESH_STRICT", "").lower() not in ("1", "true", "yes", "on"):
+        expected_token = os.getenv("INTERNAL_API_KEY")
+        if expected_token and x_internal_token and x_internal_token != expected_token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid internal token")
 
     start_time = time.perf_counter()
     job_id = str(uuid.uuid4())

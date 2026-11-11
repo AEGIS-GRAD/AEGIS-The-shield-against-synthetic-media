@@ -11,6 +11,11 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    from debate.llm_tls import JudgeTLSConfigError, llm_tls_kwargs
+except ImportError:
+    from llm_tls import JudgeTLSConfigError, llm_tls_kwargs
+
 logger = logging.getLogger("aegis.debate.llm_client")
 
 DEFAULT_JUDGE_TIMEOUT_S = float(os.environ.get("AEGIS_JUDGE_TIMEOUT_S", "8.0"))
@@ -89,7 +94,7 @@ def call_judge_llm(
         source = "deterministic-reference-judge (mock)" if is_mock else "deterministic-fallback (no-api-key)"
         return simulated, source, latency, None if is_mock else "NO_OPENROUTER_API_KEY_SET"
 
-    # Live OpenRouter API Invocation
+    # Live OpenRouter / internal LLM-bridge invocation over verified TLS/mTLS
     try:
         import httpx
     except ImportError:
@@ -98,6 +103,20 @@ def call_judge_llm(
             locked_verdict_str, calibrated_score, active_detector_ids, applied_rules, guards_applied
         )
         return simulated, "deterministic-fallback", 0.0, "HTTPX_NOT_INSTALLED"
+
+    target_url = (
+        os.environ.get("AEGIS_LLM_BRIDGE_URL")
+        or os.environ.get("OPENROUTER_URL")
+        or OPENROUTER_URL
+    )
+    try:
+        tls_kwargs = llm_tls_kwargs(target_url)
+    except JudgeTLSConfigError as exc:
+        logger.error(f"Refusing Judge LLM request due to TLS policy violation: {exc}")
+        simulated = _generate_deterministic_justification(
+            locked_verdict_str, calibrated_score, active_detector_ids, applied_rules, guards_applied
+        )
+        return simulated, "deterministic-fallback", 0.0, f"TLS_POLICY_VIOLATION: {exc}"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -115,8 +134,8 @@ def call_judge_llm(
             "response_format": {"type": "json_object"},
         }
         try:
-            with httpx.Client(timeout=DEFAULT_JUDGE_TIMEOUT_S) as client:
-                resp = client.post(OPENROUTER_URL, headers=headers, json=payload)
+            with httpx.Client(timeout=DEFAULT_JUDGE_TIMEOUT_S, **tls_kwargs) as client:
+                resp = client.post(target_url, headers=headers, json=payload)
             latency = round(time.time() - t0, 3)
 
             if resp.status_code != 200:

@@ -6,12 +6,15 @@ import httpx
 from models import DetectorResult, DetectorEvidence
 
 from circuit_breaker import CircuitBreaker, CircuitBreakerOpenException
-from mesh_tls import client_tls_kwargs, url_allowed
+try:
+    from mesh_tls import client_tls_kwargs, mesh_enabled, mesh_strict, url_allowed
+except ImportError:
+    from orchestrator.app.mesh_tls import client_tls_kwargs, mesh_enabled, mesh_strict, url_allowed
 
-_DEFAULT_BASE = "http://{service}:8000"
 INTERNAL_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
 
 _breakers = {}
+
 
 def _get_breaker(detector: str) -> CircuitBreaker:
     if detector not in _breakers:
@@ -22,7 +25,8 @@ def _get_breaker(detector: str) -> CircuitBreaker:
 def _service_url(detector_name: str) -> str:
     env_key = f"DETECTOR_{detector_name.upper().replace('-', '_')}_URL"
     default_service = f"detector_{detector_name.replace('-', '_')}"
-    return os.environ.get(env_key, f"http://{default_service}:8000")
+    scheme = "https" if (mesh_enabled() or mesh_strict()) else "http"
+    return os.environ.get(env_key, f"{scheme}://{default_service}:8000")
 
 
 async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modality: str, file_path: str) -> DetectorResult:
@@ -34,7 +38,8 @@ async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modal
             error=f"mTLS required for '{detector}' but URL is not https: {url}",
         )
     body = {"job_id": job_id, "modality": modality, "payload": file_path}
-    headers = {"X-Internal-Token": INTERNAL_TOKEN}
+    # In mTLS mesh mode, authentication is cryptographic client cert; shared X-Internal-Token is removed.
+    headers = {} if (mesh_enabled() or mesh_strict()) else ({"X-Internal-Token": INTERNAL_TOKEN} if INTERNAL_TOKEN else {})
     breaker = _get_breaker(detector)
 
     try:
