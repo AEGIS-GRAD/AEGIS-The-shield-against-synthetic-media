@@ -405,6 +405,245 @@ class MTLSAlertDestination(BaseAlertDestination):
             return False
 
 
+class ReliableAlertDestination(BaseAlertDestination):
+    """
+    Loss-proof delivery wrapper (Month 3 / Week 9 Task 5).
+
+    Wraps any unreliable destination (SIEM webhook, mTLS socket, ...) so that an
+    outage never loses an alert:
+
+      1. deliver() tries the inner destination once, immediately.
+      2. On failure the alert is written to an on-disk spool (atomic, one file
+         per alert_id, survives process crashes/restarts).
+      3. flush() / the optional background worker retries spooled alerts with
+         exponential backoff (base * 2^(attempt-1), capped).
+      4. After max_attempts the alert moves to a dead-letter queue (DLQ) on disk
+         for manual replay (replay_dead_letters()). It is never silently dropped.
+
+    Idempotency: the spool is keyed by alert_id, so re-submitting the same alert
+    never creates a second entry, and an alert_id that was already delivered
+    successfully is not sent again. Retries bypass AlertRouter's dedup window,
+    so deduplication of *new* alerts is unaffected.
+
+    deliver() returns True only when the inner destination really accepted the
+    alert; a spooled alert returns False (and is counted in stats["spooled"]).
+    """
+
+    def __init__(
+        self,
+        inner: BaseAlertDestination,
+        spool_dir: Union[str, Path],
+        max_attempts: int = 6,
+        base_delay_seconds: float = 1.0,
+        max_delay_seconds: float = 60.0,
+        clock: Callable[[], float] = time.time,
+        sleep: Callable[[float], None] = time.sleep,
+    ):
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be >= 1")
+        self.inner = inner
+        self.max_attempts = max_attempts
+        self.base_delay_seconds = base_delay_seconds
+        self.max_delay_seconds = max_delay_seconds
+        self._clock = clock
+        self._sleep = sleep
+
+        name = inner.destination_name
+        self.spool_dir = Path(spool_dir) / name / "pending"
+        self.dlq_dir = Path(spool_dir) / name / "dead_letter"
+        self.spool_dir.mkdir(parents=True, exist_ok=True)
+        self.dlq_dir.mkdir(parents=True, exist_ok=True)
+
+        self._lock = threading.RLock()
+        self._delivered_ids: set = set()
+        self._worker: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
+        self.stats: Dict[str, int] = {
+            "delivered": 0, "spooled": 0, "retried": 0,
+            "recovered": 0, "dead_lettered": 0, "duplicates_suppressed": 0,
+        }
+
+    # ── naming / paths ───────────────────────────────────────────────────────
+    @property
+    def destination_name(self) -> str:
+        return self.inner.destination_name
+
+    @staticmethod
+    def _safe_id(alert_id: str) -> str:
+        # alert_id is a UUID by default, but never trust it as a file name.
+        return "".join(c for c in alert_id if c.isalnum() or c in "-_")[:128] or "unknown"
+
+    def _path(self, directory: Path, alert_id: str) -> Path:
+        return directory / f"{self._safe_id(alert_id)}.json"
+
+    def _write_atomic(self, path: Path, record: Dict[str, Any]) -> None:
+        tmp = path.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(record, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)  # atomic on POSIX and Windows
+
+    # ── backoff ──────────────────────────────────────────────────────────────
+    def backoff_delay(self, attempts: int) -> float:
+        """Delay before the next try after `attempts` failed attempts."""
+        return min(self.max_delay_seconds, self.base_delay_seconds * (2 ** max(0, attempts - 1)))
+
+    # ── delivery ─────────────────────────────────────────────────────────────
+    def deliver(self, alert: AEGISAlert) -> bool:
+        with self._lock:
+            if alert.alert_id in self._delivered_ids:
+                self.stats["duplicates_suppressed"] += 1
+                return True
+            if self._path(self.spool_dir, alert.alert_id).exists():
+                # Already queued for retry; do not enqueue or send twice.
+                self.stats["duplicates_suppressed"] += 1
+                return False
+
+        try:
+            ok = bool(self.inner.deliver(alert))
+        except Exception as exc:  # inner destination crashed: treat as outage
+            logger.error(f"[{self.destination_name}] inner delivery raised: {exc}")
+            ok = False
+
+        with self._lock:
+            if ok:
+                self._delivered_ids.add(alert.alert_id)
+                self.stats["delivered"] += 1
+                return True
+            self._spool(alert, attempts=1, last_error="initial delivery failed")
+            return False
+
+    def _spool(self, alert: AEGISAlert, attempts: int, last_error: str) -> None:
+        now = self._clock()
+        record = {
+            "alert": json.loads(alert.model_dump_json()),
+            "attempts": attempts,
+            "first_failed_at": now,
+            "next_attempt_at": now + self.backoff_delay(attempts),
+            "last_error": last_error,
+        }
+        path = self._path(self.spool_dir, alert.alert_id)
+        if path.exists():
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    record["first_failed_at"] = json.load(f).get("first_failed_at", now)
+            except Exception:
+                pass
+        self._write_atomic(path, record)
+        self.stats["spooled"] += 1
+        logger.warning(
+            f"[{self.destination_name}] alert {alert.alert_id} spooled "
+            f"(attempt {attempts}/{self.max_attempts}, retry in {self.backoff_delay(attempts):.1f}s)"
+        )
+
+    # ── spool processing ─────────────────────────────────────────────────────
+    @property
+    def pending_count(self) -> int:
+        return len(list(self.spool_dir.glob("*.json")))
+
+    @property
+    def dead_letter_count(self) -> int:
+        return len(list(self.dlq_dir.glob("*.json")))
+
+    def flush(self, force: bool = False) -> int:
+        """
+        Retry every spooled alert whose backoff has elapsed (all of them if
+        force=True). Returns the number of alerts delivered in this pass.
+        """
+        delivered = 0
+        with self._lock:
+            now = self._clock()
+            for path in sorted(self.spool_dir.glob("*.json")):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        record = json.load(f)
+                    alert = AEGISAlert(**record["alert"])
+                except Exception as exc:
+                    # Corrupt entry: quarantine it instead of retrying forever or deleting.
+                    logger.error(f"[{self.destination_name}] corrupt spool file {path.name}: {exc}")
+                    os.replace(path, self.dlq_dir / path.name)
+                    self.stats["dead_lettered"] += 1
+                    continue
+
+                if not force and record.get("next_attempt_at", 0) > now:
+                    continue
+
+                self.stats["retried"] += 1
+                try:
+                    ok = bool(self.inner.deliver(alert))
+                    err = "retry failed"
+                except Exception as exc:
+                    ok, err = False, f"retry raised: {exc}"
+
+                if ok:
+                    path.unlink(missing_ok=True)
+                    self._delivered_ids.add(alert.alert_id)
+                    self.stats["delivered"] += 1
+                    self.stats["recovered"] += 1
+                    delivered += 1
+                    continue
+
+                attempts = int(record.get("attempts", 1)) + 1
+                if attempts > self.max_attempts:
+                    record.update(attempts=attempts - 1, last_error=err, dead_lettered_at=now)
+                    self._write_atomic(self._path(self.dlq_dir, alert.alert_id), record)
+                    path.unlink(missing_ok=True)
+                    self.stats["dead_lettered"] += 1
+                    logger.error(
+                        f"[{self.destination_name}] alert {alert.alert_id} moved to DLQ "
+                        f"after {self.max_attempts} attempts"
+                    )
+                else:
+                    record.update(
+                        attempts=attempts, last_error=err,
+                        next_attempt_at=now + self.backoff_delay(attempts),
+                    )
+                    self._write_atomic(path, record)
+        return delivered
+
+    def replay_dead_letters(self) -> int:
+        """Move DLQ entries back to the spool with a fresh attempt counter (operator action)."""
+        moved = 0
+        with self._lock:
+            for path in sorted(self.dlq_dir.glob("*.json")):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        record = json.load(f)
+                    record.update(attempts=1, next_attempt_at=self._clock())
+                    record.pop("dead_lettered_at", None)
+                    self._write_atomic(self.spool_dir / path.name, record)
+                    path.unlink(missing_ok=True)
+                    moved += 1
+                except Exception as exc:
+                    logger.error(f"[{self.destination_name}] cannot replay {path.name}: {exc}")
+        return moved
+
+    # ── optional background worker ───────────────────────────────────────────
+    def start_background(self, interval_seconds: float = 1.0) -> None:
+        """Start a daemon thread that calls flush() periodically."""
+        if self._worker and self._worker.is_alive():
+            return
+        self._stop_event.clear()
+
+        def _loop():
+            while not self._stop_event.is_set():
+                try:
+                    self.flush()
+                except Exception as exc:  # never let the worker die
+                    logger.error(f"[{self.destination_name}] spool worker error: {exc}")
+                self._stop_event.wait(interval_seconds)
+
+        self._worker = threading.Thread(target=_loop, name=f"alert-spool-{self.destination_name}", daemon=True)
+        self._worker.start()
+
+    def stop_background(self, timeout: float = 5.0) -> None:
+        self._stop_event.set()
+        if self._worker:
+            self._worker.join(timeout=timeout)
+            self._worker = None
+
+
 class EvidenceVaultDestination(BaseAlertDestination):
     """
     Connects alerts to the ISO/IEC 27037 SurveillanceEvidenceVault.

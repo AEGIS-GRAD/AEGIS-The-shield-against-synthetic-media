@@ -13,6 +13,7 @@ from .alert_router import (
     FileAlertDestination,
     WebhookAlertDestination,
     EvidenceVaultDestination,
+    ReliableAlertDestination,
     classify_threat_from_fusion,
     severity_from_verdict_and_score,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "FileAlertDestination",
     "WebhookAlertDestination",
     "EvidenceVaultDestination",
+    "ReliableAlertDestination",
     "classify_threat_from_fusion",
     "severity_from_verdict_and_score",
 ]
