@@ -16,6 +16,8 @@ def generate_cert(
     issuer_key: Optional[rsa.RSAPrivateKey] = None,
     san_dns_names: Optional[List[str]] = None,
     san_ips: Optional[List[str]] = None,
+    valid_days: int = 365,
+    backdate_days: int = 0,
 ):
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
@@ -30,7 +32,7 @@ def generate_cert(
     issuer = issuer_name if issuer_name else subject
     signing_key = issuer_key if issuer_key else private_key
 
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=backdate_days)
     builder = x509.CertificateBuilder().subject_name(
         subject
     ).issuer_name(
@@ -42,7 +44,7 @@ def generate_cert(
     ).not_valid_before(
         now
     ).not_valid_after(
-        now + datetime.timedelta(days=365)
+        now + datetime.timedelta(days=valid_days)
     )
 
     if is_ca:
@@ -207,6 +209,52 @@ def generate_all_service_certs(cert_dir: Optional[str] = None):
     print(f"All 6 service certificates generated successfully in {cert_dir}")
 
 
+# Services that take part in the orchestrator -> detector mesh (Month 3, Week 9 Task 6).
+# name -> (cert file prefix, Docker/DNS names the service answers to)
+MESH_SERVICES = {
+    "aegis-orchestrator": ("mesh_orchestrator", ["orchestrator", "aegis_orchestrator", "localhost"]),
+    "aegis-gateway-validator": ("mesh_gateway_validator", ["gateway_validator", "aegis_gateway_validator", "localhost"]),
+    "aegis-prometheus": ("mesh_prometheus", ["prometheus", "aegis_prometheus", "localhost"]),
+    "aegis-detector-video-classifier": (
+        "mesh_detector_video_classifier",
+        ["detector_video_classifier", "aegis_detector_video_classifier", "localhost"],
+    ),
+    "aegis-detector-aasist": (
+        "mesh_detector_aasist",
+        ["detector_aasist", "aegis_detector_aasist", "localhost"],
+    ),
+}
+
+
+def generate_mesh_certs(cert_dir: Optional[str] = None) -> None:
+    """
+    Generates the dedicated *service mesh* PKI used for orchestrator -> detector traffic.
+
+    A separate CA (`mesh_ca`) is used on purpose: detectors trust ONLY this CA, so a
+    valid camera certificate (issued by the main AEGIS Root CA) is rejected at the TLS
+    handshake. That is role separation without any application code, which matters
+    because uvicorn does not expose the peer certificate to the ASGI app.
+    """
+    if cert_dir is None:
+        cert_dir = os.path.join(os.path.dirname(__file__), "certs")
+    os.makedirs(cert_dir, exist_ok=True)
+
+    ca_key, ca_cert, ca_subject = generate_cert("AEGIS Service Mesh CA", is_ca=True)
+    save_cert(cert_dir, "mesh_ca", ca_key, ca_cert)
+
+    for cn, (prefix, dns_names) in MESH_SERVICES.items():
+        key, cert, _ = generate_cert(
+            cn,
+            issuer_name=ca_subject,
+            issuer_key=ca_key,
+            san_dns_names=dns_names,
+            san_ips=["127.0.0.1"],
+        )
+        save_cert(cert_dir, prefix, key, cert)
+    print(f"Service-mesh PKI ({len(MESH_SERVICES)} certs + mesh_ca) generated in {cert_dir}")
+
+
 if __name__ == "__main__":
     generate_all_service_certs()
+    generate_mesh_certs()
 
