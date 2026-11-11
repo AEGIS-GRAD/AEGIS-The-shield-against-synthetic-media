@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
@@ -18,14 +19,15 @@ from models import InputMetadata
 def _extract_image_exif(file_path: str) -> Dict[str, Any]:
     """Best-effort EXIF tag extraction for image files when Pillow is available."""
     try:
-        from PIL import ExifTags, Image
+        pil_image = importlib.import_module("PIL.Image")
+        pil_exif_tags = importlib.import_module("PIL.ExifTags")
 
-        with Image.open(file_path) as img:
+        with pil_image.open(file_path) as img:
             raw_exif = img.getexif() if hasattr(img, "getexif") else None
             out: Dict[str, Any] = {}
             if raw_exif:
                 for tag_id, val in raw_exif.items():
-                    name = str(ExifTags.TAGS.get(tag_id, tag_id)).lower()
+                    name = str(pil_exif_tags.TAGS.get(tag_id, tag_id)).lower()
                     out[name] = val
             for k, v in getattr(img, "info", {}).items():
                 if isinstance(v, (str, int, float)):
