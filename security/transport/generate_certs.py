@@ -209,12 +209,25 @@ def generate_all_service_certs(cert_dir: Optional[str] = None):
     print(f"All 6 service certificates generated successfully in {cert_dir}")
 
 
-# Services that take part in the orchestrator -> detector mesh (Month 3, Week 9 Task 6).
+# Full AEGIS internal service-mesh PKI (Week 9 Task 6 -> Week 10 Task 1).
 # name -> (cert file prefix, Docker/DNS names the service answers to)
 MESH_SERVICES = {
-    "aegis-orchestrator": ("mesh_orchestrator", ["orchestrator", "aegis_orchestrator", "localhost"]),
-    "aegis-gateway-validator": ("mesh_gateway_validator", ["gateway_validator", "aegis_gateway_validator", "localhost"]),
-    "aegis-prometheus": ("mesh_prometheus", ["prometheus", "aegis_prometheus", "localhost"]),
+    "aegis-orchestrator": (
+        "mesh_orchestrator",
+        ["orchestrator", "aegis_orchestrator", "localhost"],
+    ),
+    "aegis-gateway-validator": (
+        "mesh_gateway_validator",
+        ["gateway_validator", "aegis_gateway_validator", "localhost"],
+    ),
+    "aegis-api-gateway": (
+        "mesh_api_gateway",
+        ["api_gateway", "aegis_api_gateway", "localhost"],
+    ),
+    "aegis-prometheus": (
+        "mesh_prometheus",
+        ["prometheus", "aegis_prometheus", "localhost"],
+    ),
     "aegis-detector-video-classifier": (
         "mesh_detector_video_classifier",
         ["detector_video_classifier", "aegis_detector_video_classifier", "localhost"],
@@ -222,6 +235,34 @@ MESH_SERVICES = {
     "aegis-detector-aasist": (
         "mesh_detector_aasist",
         ["detector_aasist", "aegis_detector_aasist", "localhost"],
+    ),
+    "aegis-detector-rppg": (
+        "mesh_detector_rppg",
+        ["detector_rppg", "aegis_detector_rppg", "localhost"],
+    ),
+    "aegis-detector-syncnet": (
+        "mesh_detector_syncnet",
+        ["detector_syncnet", "aegis_detector_syncnet", "localhost"],
+    ),
+    "aegis-detector-image": (
+        "mesh_detector_image",
+        ["detector_image", "aegis_detector_image", "localhost"],
+    ),
+    "aegis-detector-text": (
+        "mesh_detector_text",
+        ["detector_text", "aegis_detector_text", "localhost"],
+    ),
+    "aegis-judge": (
+        "mesh_judge",
+        ["judge", "aegis_judge", "debate", "aegis_debate", "localhost"],
+    ),
+    "aegis-llm-bridge": (
+        "mesh_llm_bridge",
+        ["llm_bridge", "aegis_llm_bridge", "localhost"],
+    ),
+    "aegis-web": (
+        "mesh_web",
+        ["web", "aegis_web", "localhost"],
     ),
 }
 

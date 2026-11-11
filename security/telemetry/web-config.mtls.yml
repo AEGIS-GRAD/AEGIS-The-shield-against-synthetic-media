@@ -1,0 +1,9 @@
+# Prometheus web TLS/mTLS server configuration (Week 10 Task 1).
+# Requires orchestrator and internal telemetry readers to present a mesh CA client certificate.
+tls_server_config:
+  cert_file: /mesh/mesh_prometheus.crt
+  key_file: /mesh/mesh_prometheus.key
+  client_auth_type: RequireAndVerifyClientCert
+  client_ca_file: /mesh/mesh_ca.crt
+  min_version: TLS12
+

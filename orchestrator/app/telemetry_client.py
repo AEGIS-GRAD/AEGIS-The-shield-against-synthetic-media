@@ -28,6 +28,11 @@ from typing import Dict, List, Optional
 
 import httpx
 
+try:
+    from mesh_tls import client_tls_kwargs, url_allowed
+except ImportError:
+    from orchestrator.app.mesh_tls import client_tls_kwargs, url_allowed
+
 logger = logging.getLogger(__name__)
 
 # Default Prometheus connection & query parameters
@@ -143,10 +148,14 @@ class PrometheusTelemetryClient:
         ram_by_job: Dict[str, float] = {}
 
         try:
+            if self._custom_client is None and not url_allowed("prometheus", self.prometheus_url):
+                raise RuntimeError(
+                    f"mTLS required for telemetry but PROMETHEUS_URL is not https: {self.prometheus_url}"
+                )
             client_ctx = (
                 self._custom_client
                 if self._custom_client is not None
-                else httpx.Client(timeout=self.timeout_s)
+                else httpx.Client(timeout=self.timeout_s, **client_tls_kwargs())
             )
             # If managed locally, wrap in context; if injected, use directly
             is_injected = self._custom_client is not None

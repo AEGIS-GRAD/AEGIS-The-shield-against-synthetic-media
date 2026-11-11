@@ -128,9 +128,11 @@ async def detect(
     Validates payload, preprocesses waveform, runs model inference,
     and returns standardized confidence score and debate evidence.
     """
-    expected_token = os.getenv("INTERNAL_API_KEY")
-    if expected_token and x_internal_token and x_internal_token != expected_token:
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid internal token")
+    # Legacy shared-token check retained only for relaxed dev mode; strict mTLS authenticates via client cert.
+    if os.getenv("AEGIS_MESH_STRICT", "").lower() not in ("1", "true", "yes", "on"):
+        expected_token = os.getenv("INTERNAL_API_KEY")
+        if expected_token and x_internal_token and x_internal_token != expected_token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid internal token")
 
     if not state["model_loaded"] or state["model"] is None:
         raise HTTPException(status_code=503, detail="Model is not loaded or service is initializing")

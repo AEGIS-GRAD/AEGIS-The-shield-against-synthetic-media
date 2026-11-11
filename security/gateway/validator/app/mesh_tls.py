@@ -1,17 +1,15 @@
 """
-Service-mesh client TLS for gateway-validator -> detector traffic (mirror of orchestrator/app/mesh_tls.py) (Month 3, Week 9 Task 6).
+Service-mesh TLS / mTLS helper for gateway-validator (mirrors orchestrator/app/mesh_tls.py).
 
-Relaxed (default, dev): none of the AEGIS_MESH_* variables are set, client_tls_kwargs()
-returns {} and every call behaves exactly as before (plain HTTP, no certificates).
+Relaxed (default, dev): neither AEGIS_MESH_STRICT nor AEGIS_MESH_CA/CERT/KEY are set;
+client_tls_kwargs() returns {} and every internal call behaves as plain HTTP for friction-free dev.
 
-Strict (prod / CI): the compose override sets AEGIS_MESH_CA / AEGIS_MESH_CERT /
-AEGIS_MESH_KEY and AEGIS_MESH_DETECTORS. Then:
-  * every outgoing connection presents the orchestrator's client certificate and
-    verifies the detector against the dedicated mesh CA;
-  * detectors listed in AEGIS_MESH_DETECTORS MUST be reached over https:// - a plain
-    http:// URL is refused (downgrade protection) rather than silently used;
-  * missing/unreadable certificate files raise instead of falling back to plaintext
-    (fail closed).
+Strict (prod / CI overlay): docker-compose.mtls.yml sets AEGIS_MESH_STRICT=1 alongside
+AEGIS_MESH_CA, AEGIS_MESH_CERT, AEGIS_MESH_KEY, and AEGIS_MESH_DETECTORS. Then:
+  * outgoing calls to detector microservices present the gateway validator client cert
+    and verify servers against `mesh_ca`;
+  * plaintext http:// detector URLs are refused (downgrade protection);
+  * missing certificate files fail closed.
 """
 
 from __future__ import annotations
@@ -25,10 +23,21 @@ class MeshTLSConfigError(RuntimeError):
     """Strict mTLS was requested but is not correctly configured."""
 
 
+def _is_truthy(value: Optional[str]) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def mesh_detectors(env: Optional[Mapping[str, str]] = None) -> Set[str]:
     env = os.environ if env is None else env
     raw = env.get("AEGIS_MESH_DETECTORS", "")
     return {d.strip() for d in raw.split(",") if d.strip()}
+
+
+def mesh_strict(env: Optional[Mapping[str, str]] = None) -> bool:
+    """True when full-mesh strict mTLS enforcement is requested across all services."""
+    env = os.environ if env is None else env
+    detectors = mesh_detectors(env)
+    return _is_truthy(env.get("AEGIS_MESH_STRICT")) or "*" in detectors or "all" in detectors
 
 
 def mesh_enabled(env: Optional[Mapping[str, str]] = None) -> bool:
@@ -37,9 +46,13 @@ def mesh_enabled(env: Optional[Mapping[str, str]] = None) -> bool:
 
 
 def client_tls_kwargs(env: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
-    """httpx.AsyncClient kwargs enabling mutual TLS, or {} when relaxed mode is active."""
+    """httpx Client/AsyncClient kwargs enabling mutual TLS, or {} when relaxed mode is active."""
     env = os.environ if env is None else env
     if not mesh_enabled(env):
+        if mesh_strict(env):
+            raise MeshTLSConfigError(
+                "AEGIS_MESH_STRICT is enabled but AEGIS_MESH_CA/CERT/KEY are not configured"
+            )
         return {}
 
     ca, cert, key = env["AEGIS_MESH_CA"], env["AEGIS_MESH_CERT"], env["AEGIS_MESH_KEY"]
@@ -54,7 +67,8 @@ def client_tls_kwargs(env: Optional[Mapping[str, str]] = None) -> Dict[str, Any]
 
 
 def url_allowed(detector: str, url: str, env: Optional[Mapping[str, str]] = None) -> bool:
-    """False when `detector` must use mTLS but `url` is not https (downgrade attempt)."""
-    if detector in mesh_detectors(env):
+    """False when `detector` requires mTLS (or full strict mesh is enabled) and URL is not https."""
+    env = os.environ if env is None else env
+    if mesh_strict(env) or detector in mesh_detectors(env):
         return url.lower().startswith("https://")
     return True

@@ -1,0 +1,63 @@
+# Strictly encrypted internal mTLS Nginx reverse-proxy template (Week 10 Task 1).
+# Proxies verified uploads from edge gateway over mutual TLS to aegis_gateway_validator:8080.
+log_format aegis_audit '[$time_iso8601] [$remote_addr] "$request" $status';
+access_log /dev/stdout aegis_audit;
+error_log /dev/stderr info;
+
+limit_req_zone $http_x_internal_token zone=aegis_limit:10m rate=10r/s;
+client_max_body_size 50m;
+
+map_hash_bucket_size 128;
+map $http_x_internal_token $is_valid_token {
+    default 0;
+    "${INTERNAL_API_KEY}" 1;
+}
+
+server {
+    listen 80;
+
+    limit_req zone=aegis_limit burst=20 nodelay;
+    limit_req_status 429;
+
+    error_page 413 = @payload_too_large;
+    error_page 429 = @rate_limited;
+
+    if ($is_valid_token = 0) {
+        return 401 '{"error": "Unauthorized. Missing or invalid X-Internal-Token."}';
+    }
+
+    location /api/video {
+        proxy_pass https://aegis_gateway_validator:8080/validate/video;
+        proxy_set_header Host $host;
+        proxy_ssl_certificate /mesh/mesh_api_gateway.crt;
+        proxy_ssl_certificate_key /mesh/mesh_api_gateway.key;
+        proxy_ssl_trusted_certificate /mesh/mesh_ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_name aegis_gateway_validator;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+    }
+
+    location /api/audio {
+        proxy_pass https://aegis_gateway_validator:8080/validate/audio;
+        proxy_set_header Host $host;
+        proxy_ssl_certificate /mesh/mesh_api_gateway.crt;
+        proxy_ssl_certificate_key /mesh/mesh_api_gateway.key;
+        proxy_ssl_trusted_certificate /mesh/mesh_ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_name aegis_gateway_validator;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+    }
+
+    location @payload_too_large {
+        default_type application/json;
+        return 413 '{"error": "Payload exceeds the 50 MB upload limit."}';
+    }
+
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"error": "Rate limit exceeded for this API key."}';
+    }
+}
+

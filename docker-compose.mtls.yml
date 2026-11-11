@@ -1,23 +1,65 @@
 # ==============================================================================
-# AEGIS strict internal mTLS overlay  (Month 3, Week 9 Task 6)
+# AEGIS strict internal mTLS overlay  (Month 3, Week 9 Task 6 -> Week 10 Task 1)
 #
 #   Relaxed / dev (default):   docker compose up
 #   Strict  / prod / CI:       docker compose -f docker-compose.yml -f docker-compose.mtls.yml up
 #
-# In strict mode, for video-classifier and aasist ONLY (the rest of the mesh follows
-# in Week 10 Task 1):
-#   * detectors listen on HTTPS and REQUIRE a client certificate issued by the
-#     dedicated mesh CA (a camera / main-CA certificate is rejected at the handshake);
-#   * orchestrator and gateway_validator present mesh client certificates and refuse
-#     plaintext http:// for these two detectors;
-#   * host ports 8001 / 8002 are no longer published (reachable only on aegis_net);
-#   * Docker healthchecks and Prometheus scrape over https with client certs.
+# In strict mode across ALL internal AEGIS services:
+#   * ALL active detectors (video-classifier, aasist, rppg, syncnet; certs & routing
+#     pre-provisioned for future image and text detectors) listen ONLY on HTTPS and
+#     REQUIRE a client certificate issued by `mesh_ca` (--ssl-cert-reqs=2);
+#   * ZERO detector host ports (8001, 8002, 8003, 8004) are published to the host;
+#   * gateway_validator listens ONLY on HTTPS mTLS (:8080) and api_gateway (nginx)
+#     proxies upstream over mutual TLS;
+#   * shared INTERNAL_API_KEY plain-HTTP fallback is stripped from internal detectors
+#     and suppressed in orchestrator dispatch (`AEGIS_MESH_STRICT=1`);
+#   * orchestrator enforces HTTPS+mTLS for all detectors, remote Judge/debate calls,
+#     internal LLM bridges, and Prometheus telemetry queries;
+#   * Prometheus server and scrape jobs use mutual TLS end to end.
 #
 # Generate the certificates first:   python security/transport/generate_certs.py
 # ==============================================================================
 x-mesh-certs: &mesh_certs ./security/transport/certs:/mesh:ro
 
 services:
+  api_gateway:
+    volumes:
+      - ./security/gateway/nginx.mtls.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - *mesh_certs
+
+  gateway_validator:
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --ssl-keyfile=/mesh/mesh_gateway_validator.key
+      - --ssl-certfile=/mesh/mesh_gateway_validator.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    volumes:
+      - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
+      - AEGIS_MESH_CA=/mesh/mesh_ca.crt
+      - AEGIS_MESH_CERT=/mesh/mesh_gateway_validator.crt
+      - AEGIS_MESH_KEY=/mesh/mesh_gateway_validator.key
+      - AEGIS_MESH_DETECTORS=video-classifier,aasist,rppg,syncnet,image,text
+      - VIDEO_DETECTOR_URL=https://aegis_detector_video_classifier:8000/detect
+      - AUDIO_DETECTOR_URL=https://aegis_detector_aasist:8000/detect
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_gateway_validator.crt",
+              "--key", "/mesh/mesh_gateway_validator.key",
+              "https://localhost:8080/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   detector_video_classifier:
     command:
       - uvicorn
@@ -33,6 +75,9 @@ services:
     ports: !reset []
     volumes:
       - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
     healthcheck:
       test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
               "--cert", "/mesh/mesh_detector_video_classifier.crt",
@@ -58,6 +103,9 @@ services:
     ports: !reset []
     volumes:
       - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
     healthcheck:
       test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
               "--cert", "/mesh/mesh_detector_aasist.crt",
@@ -68,30 +116,85 @@ services:
       retries: 3
       start_period: 10s
 
+  detector_rppg:
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --ssl-keyfile=/mesh/mesh_detector_rppg.key
+      - --ssl-certfile=/mesh/mesh_detector_rppg.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    ports: !reset []
+    volumes:
+      - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_detector_rppg.crt",
+              "--key", "/mesh/mesh_detector_rppg.key",
+              "https://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  detector_syncnet:
+    command:
+      - uvicorn
+      - main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --ssl-keyfile=/mesh/mesh_detector_syncnet.key
+      - --ssl-certfile=/mesh/mesh_detector_syncnet.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    ports: !reset []
+    volumes:
+      - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_detector_syncnet.crt",
+              "--key", "/mesh/mesh_detector_syncnet.key",
+              "https://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   orchestrator:
     volumes:
       - *mesh_certs
     environment:
+      - AEGIS_MESH_STRICT=1
       - AEGIS_MESH_CA=/mesh/mesh_ca.crt
       - AEGIS_MESH_CERT=/mesh/mesh_orchestrator.crt
       - AEGIS_MESH_KEY=/mesh/mesh_orchestrator.key
-      - AEGIS_MESH_DETECTORS=video-classifier,aasist
+      - AEGIS_MESH_DETECTORS=video-classifier,aasist,rppg,syncnet,image,text,judge,prometheus
       - DETECTOR_VIDEO_CLASSIFIER_URL=https://detector_video_classifier:8000
       - DETECTOR_AASIST_URL=https://detector_aasist:8000
-
-  gateway_validator:
-    volumes:
-      - *mesh_certs
-    environment:
-      - AEGIS_MESH_CA=/mesh/mesh_ca.crt
-      - AEGIS_MESH_CERT=/mesh/mesh_gateway_validator.crt
-      - AEGIS_MESH_KEY=/mesh/mesh_gateway_validator.key
-      - AEGIS_MESH_DETECTORS=video-classifier,aasist
-      - VIDEO_DETECTOR_URL=https://aegis_detector_video_classifier:8000/detect
-      - AUDIO_DETECTOR_URL=https://aegis_detector_aasist:8000/detect
+      - DETECTOR_RPPG_URL=https://detector_rppg:8000
+      - DETECTOR_SYNCNET_URL=https://detector_syncnet:8000
+      - DETECTOR_IMAGE_URL=https://detector_image:8000
+      - DETECTOR_TEXT_URL=https://detector_text:8000
+      - PROMETHEUS_URL=https://prometheus:9090
 
   prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.config.file=/etc/prometheus/web-config.yml
+    ports: !reset []
     volumes:
-      - ./security/telemetry/prometheus.mtls.yml:/etc/prometheus/prometheus.yml
+      - ./security/telemetry/prometheus.mtls.yml:/etc/prometheus/prometheus.yml:ro
+      - ./security/telemetry/web-config.mtls.yml:/etc/prometheus/web-config.yml:ro
       - *mesh_certs
-

@@ -39,6 +39,10 @@ from manifest_loader import load_all_manifests, ManifestError
 from eligibility import filter_detectors, apply_telemetry_constraints
 from prompt_builder import build_planning_prompt, PROMPT_VERSION
 from telemetry_client import get_telemetry_snapshot, DetectorTelemetry
+try:
+    from mesh_tls import MeshTLSConfigError, llm_tls_kwargs
+except ImportError:
+    from orchestrator.app.mesh_tls import MeshTLSConfigError, llm_tls_kwargs
 
 logger = logging.getLogger("aegis.orchestrator.planner")
 
@@ -177,6 +181,17 @@ def call_llm(
             return mock_plan or {}, "deterministic-reference-planner (mock-env)", round(time.time() - t0, 3)
         return None, "NO_API_KEY_SET", 0.0
 
+    target_url = (
+        os.environ.get("AEGIS_LLM_BRIDGE_URL")
+        or os.environ.get("OPENROUTER_URL")
+        or OPENROUTER_URL
+    )
+    try:
+        tls_kwargs = llm_tls_kwargs(target_url)
+    except MeshTLSConfigError as exc:
+        logger.error(f"Refusing LLM planner request due to TLS policy violation: {exc}")
+        return None, f"TLS_POLICY_VIOLATION: {exc}", 0.0
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -193,15 +208,17 @@ def call_llm(
         }
         try:
             if httpx is not None:
-                resp = httpx.post(
-                    OPENROUTER_URL,
-                    headers=headers,
-                    json=payload,
-                    timeout=PLANNER_TIMEOUT_S,
-                )
+                with httpx.Client(timeout=PLANNER_TIMEOUT_S, **tls_kwargs) as client:
+                    resp = client.post(
+                        target_url,
+                        headers=headers,
+                        json=payload,
+                    )
             elif requests is not None:
+                if "verify" in tls_kwargs and not isinstance(tls_kwargs["verify"], (bool, str)):
+                    return None, "TLS_POLICY_VIOLATION: httpx required for custom mTLS SSLContext", 0.0
                 resp = requests.post(
-                    OPENROUTER_URL,
+                    target_url,
                     headers=headers,
                     json=payload,
                     timeout=PLANNER_TIMEOUT_S,

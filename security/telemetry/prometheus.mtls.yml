@@ -1,6 +1,5 @@
-# Prometheus config for STRICT mode (docker-compose.mtls.yml).
-# video-classifier and aasist now require client certificates, so they are scraped
-# over https with the Prometheus mesh client certificate. Everything else is unchanged.
+# Prometheus scrape config for STRICT FULL-MESH mTLS mode (Week 10 Task 1).
+# All detector targets require mutual TLS using the Prometheus mesh client certificate.
 global:
   scrape_interval: 5s
 
@@ -27,14 +26,47 @@ scrape_configs:
     static_configs:
       - targets: ["aegis_detector_video_classifier:8000"]
 
-  # TODO: Uncomment these once AI team builds them
-  # - job_name: "aegis_detector_rppg"
-  #   metrics_path: "/metrics"
-  #   static_configs:
-  #     - targets: ["aegis_detector_rppg:8000"]
-  #
-  # - job_name: "aegis_detector_syncnet"
-  #   metrics_path: "/metrics"
-  #   static_configs:
-  #     - targets: ["aegis_detector_syncnet:8000"]
+  - job_name: "aegis_detector_rppg"
+    metrics_path: "/metrics"
+    scheme: https
+    tls_config:
+      ca_file: /mesh/mesh_ca.crt
+      cert_file: /mesh/mesh_prometheus.crt
+      key_file: /mesh/mesh_prometheus.key
+      server_name: aegis_detector_rppg
+    static_configs:
+      - targets: ["aegis_detector_rppg:8000"]
 
+  - job_name: "aegis_detector_syncnet"
+    metrics_path: "/metrics"
+    scheme: https
+    tls_config:
+      ca_file: /mesh/mesh_ca.crt
+      cert_file: /mesh/mesh_prometheus.crt
+      key_file: /mesh/mesh_prometheus.key
+      server_name: aegis_detector_syncnet
+    static_configs:
+      - targets: ["aegis_detector_syncnet:8000"]
+
+  # Future AI Week 1 containers (certs & scrape pattern pre-provisioned in mesh PKI):
+  # - job_name: "aegis_detector_image"
+  #   metrics_path: "/metrics"
+  #   scheme: https
+  #   tls_config:
+  #     ca_file: /mesh/mesh_ca.crt
+  #     cert_file: /mesh/mesh_prometheus.crt
+  #     key_file: /mesh/mesh_prometheus.key
+  #     server_name: aegis_detector_image
+  #   static_configs:
+  #     - targets: ["aegis_detector_image:8000"]
+  #
+  # - job_name: "aegis_detector_text"
+  #   metrics_path: "/metrics"
+  #   scheme: https
+  #   tls_config:
+  #     ca_file: /mesh/mesh_ca.crt
+  #     cert_file: /mesh/mesh_prometheus.crt
+  #     key_file: /mesh/mesh_prometheus.key
+  #     server_name: aegis_detector_text
+  #   static_configs:
+  #     - targets: ["aegis_detector_text:8000"]

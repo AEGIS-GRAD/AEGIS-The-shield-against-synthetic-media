@@ -14,7 +14,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import httpx
+
 from models import DetectorResult, InputMetadata
+try:
+    from mesh_tls import MeshTLSConfigError, client_tls_kwargs, url_allowed
+except ImportError:
+    from orchestrator.app.mesh_tls import MeshTLSConfigError, client_tls_kwargs, url_allowed
 
 # ---------------------------------------------------------------------------
 # Ensure debate package is importable.
@@ -117,18 +123,41 @@ def run_judge(
 ) -> JudgeReport:
     """
     Main entry point called by main.py.
+    Dispatches over mTLS to AEGIS_JUDGE_URL when configured; otherwise executes
+    JudgeAgent in-process (where outbound LLM calls still enforce LLM TLS policy).
     Returns a full JudgeReport (3-round debate transcript + CourtAdmissibleVerdict).
     """
-    judge = _get_judge()
     raw_responses = build_raw_responses(results)
     conditions = build_operating_conditions(metadata)
+    judge_url = os.environ.get("AEGIS_JUDGE_URL", "").strip()
 
-    logger.info(f"[{job_id}] Invoking JudgeAgent (mode={_JUDGE_MODE}) on {len(results)} detector results")
-    report: JudgeReport = judge.judge_file(
-        raw_responses=raw_responses,
-        conditions=conditions,
-        job_id=job_id,
-    )
+    if judge_url:
+        if not url_allowed("judge", judge_url):
+            raise MeshTLSConfigError(
+                f"mTLS required for 'judge' service but AEGIS_JUDGE_URL is not https: {judge_url}"
+            )
+        endpoint = f"{judge_url.rstrip('/')}/judge"
+        tls_kwargs = client_tls_kwargs()
+        timeout_s = float(os.environ.get("AEGIS_JUDGE_HTTP_TIMEOUT_S", "20.0"))
+        logger.info(f"[{job_id}] Calling remote Judge service over mesh: {endpoint}")
+        payload = {
+            "raw_responses": raw_responses,
+            "conditions": conditions.model_dump(),
+            "job_id": job_id,
+        }
+        with httpx.Client(timeout=timeout_s, **tls_kwargs) as client:
+            resp = client.post(endpoint, json=payload)
+            resp.raise_for_status()
+            report = JudgeReport(**resp.json())
+    else:
+        judge = _get_judge()
+        logger.info(f"[{job_id}] Invoking JudgeAgent (mode={_JUDGE_MODE}) on {len(results)} detector results")
+        report = judge.judge_file(
+            raw_responses=raw_responses,
+            conditions=conditions,
+            job_id=job_id,
+        )
+
     logger.info(
         f"[{job_id}] JudgeAgent verdict: {report.verdict.final_verdict.value} "
         f"(score={report.verdict.calibrated_score:.4f}, "
