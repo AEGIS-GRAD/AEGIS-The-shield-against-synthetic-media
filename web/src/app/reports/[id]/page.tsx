@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash, ShieldCheck, Copy, Check, ShieldAlert, Scale } from "lucide-react";
+import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash, ShieldCheck, Copy, Check, ShieldAlert, Scale, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { analyses, detectors, type Verdict } from "@/lib/mock";
-import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge, SiemTierBadge } from "@/components/aegis/ui";
+import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge, SiemTierBadge, DemoBadge, DemoBanner } from "@/components/aegis/ui";
+import { useDemoMode } from "@/lib/demoMode";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { cn } from "@/lib/utils";
 
@@ -35,20 +36,71 @@ const debate = [
 export default function ReportDetailPage() {
   const params = useParams();
   const id = (params?.id as string) || "AEG-1042";
+  const [demoMode, setDemoMode] = useDemoMode();
   const [customJob, setCustomJob] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [notFound, setNotFound] = useState<boolean>(false);
+  const [open, setOpen] = useState<string | null>("video");
+  const [copiedHash, setCopiedHash] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`/api/jobs?id=${encodeURIComponent(id)}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Job not found");
+        return res.json();
+      })
       .then((data) => {
         if (data && !data.error) {
           setCustomJob(data);
+          setNotFound(false);
+        } else {
+          setNotFound(true);
         }
       })
-      .catch((err) => console.warn("Failed to fetch /api/jobs:", err));
-  }, [id]);
+      .catch((err) => {
+        console.warn("Failed to fetch /api/jobs:", err);
+        const mockMatch = analyses.find((x) => x.id === id);
+        if (mockMatch) {
+          setCustomJob({ ...mockMatch, is_demo: true });
+          setNotFound(false);
+        } else if (demoMode) {
+          setCustomJob({ ...analyses[0], is_demo: true });
+          setNotFound(false);
+        } else {
+          setCustomJob(null);
+          setNotFound(true);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [id, demoMode]);
 
-  const fallback = analyses.find((x) => x.id === id) ?? analyses[0]!;
+  if (notFound && !customJob && !loading) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto py-8">
+        <Link href="/reports" className="caption hover:text-primary">
+          ← Back to Reports
+        </Link>
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-center space-y-4">
+          <AlertCircle className="size-10 mx-auto text-destructive" />
+          <h2 className="text-xl font-bold">Report Not Found</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Live report with ID <code>{id}</code> does not exist in local storage, or the backend service is offline.
+          </p>
+          <div className="flex justify-center gap-3 pt-2">
+            <Link href="/reports">
+              <Btn variant="outline">Browse Reports</Btn>
+            </Link>
+            <Btn variant="accent" onClick={() => setDemoMode(true)}>
+              Enable Demo Data
+            </Btn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isDemo = Boolean(customJob?.is_demo);
   const a = customJob
     ? {
         id: customJob.id,
@@ -62,14 +114,16 @@ export default function ReportDetailPage() {
         frame_scores: customJob.frame_scores,
       }
     : {
-        ...fallback,
+        id: "AEG-1042",
+        file: "press_briefing_0918.mp4",
+        verdict: "synthetic" as Verdict,
+        confidence: 0.91,
+        time: "09:42",
+        status: "Complete",
         thumbnail: "/subject.jpg",
         results: null,
         frame_scores: null,
       };
-
-  const [open, setOpen] = useState<string | null>("video");
-  const [copiedHash, setCopiedHash] = useState(false);
 
   const verdict = a.verdict;
   const siemTier = customJob?.siem_alert_tier || (verdict === "synthetic" ? "TIER_3_CRITICAL" : verdict === "authentic" ? "TIER_1_LOW" : "TIER_2_ELEVATED");
@@ -106,12 +160,27 @@ export default function ReportDetailPage() {
 
   return (
     <div className="space-y-6">
+      {isDemo && (
+        <DemoBanner
+          message="This report is a simulated forensic evaluation fixture. Real neural models were not dispatched on this file."
+        />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link href="/reports" className="caption hover:text-primary">
             ← Back to Reports
           </Link>
-          <h1 className="mt-1">{a.file}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <h1>{a.file}</h1>
+            {isDemo ? (
+              <DemoBadge />
+            ) : (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold">
+                REAL ADJUDICATED REPORT
+              </span>
+            )}
+          </div>
           <p className="mono mt-1 text-muted-foreground">{a.id} · analyzed today {a.time}</p>
         </div>
         <div className="flex flex-wrap gap-2">

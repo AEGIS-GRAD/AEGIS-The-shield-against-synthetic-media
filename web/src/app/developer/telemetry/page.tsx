@@ -2,7 +2,7 @@
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { detectors, reportJson } from "@/lib/mock";
-import { JsonViewer, Panel, StatusPill } from "@/components/aegis/ui";
+import { DemoBadge, JsonViewer, Panel, StatusPill } from "@/components/aegis/ui";
 
 const series = Array.from({ length: 30 }, (_, i) => ({
   t: `${9 + Math.floor(i / 6)}:${String((i % 6) * 10).padStart(2, "0")}`,
@@ -16,7 +16,7 @@ const colors = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-cha
 export default function TelemetryPage() {
   return (
     <div className="space-y-6">
-      <Panel title="Detector p95 latency (s)" subtitle="Last 5 hours">
+      <Panel title={<span className="flex items-center gap-2">Detector p95 latency (s) <DemoBadge /></span>} subtitle="Simulated data — connect a real backend for live metrics">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={series}>
@@ -33,7 +33,7 @@ export default function TelemetryPage() {
         </div>
       </Panel>
       <div className="grid gap-6 xl:grid-cols-2">
-        <Panel title="Model inventory">
+        <Panel title={<span className="flex items-center gap-2">Model inventory <DemoBadge /></span>}>
           <table className="w-full text-sm">
             <thead>
               <tr className="caption border-b text-left">
@@ -55,7 +55,7 @@ export default function TelemetryPage() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="Raw response" subtitle="Job AEG-1042 · judge output">
+        <Panel title={<span className="flex items-center gap-2">Raw response <DemoBadge /></span>} subtitle="Job AEG-1042 · judge output (demo)">
           <JsonViewer data={reportJson} />
         </Panel>
       </div>

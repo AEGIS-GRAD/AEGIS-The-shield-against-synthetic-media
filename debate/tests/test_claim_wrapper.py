@@ -246,8 +246,8 @@ def test_evidence_hash_is_deterministic_and_input_sensitive():
 
 
 def test_unknown_detector_raises():
-    with pytest.raises(ValueError, match="Unknown video detector"):
-        wrap_detector_response("aasist", vc(0.5))  # audio detector is out of scope for this module
+    with pytest.raises(ValueError, match="Unknown detector"):
+        wrap_detector_response("unknown-detector", vc(0.5))
 
 
 def test_batch_skips_missing_detectors_and_keeps_a_stable_order():
@@ -260,8 +260,65 @@ def test_batch_skips_missing_detectors_and_keeps_a_stable_order():
 
 
 def test_batch_rejects_unknown_detector_ids():
-    with pytest.raises(ValueError):
-        wrap_video_detector_outputs({"aasist": vc(0.5)})
+    with pytest.raises(ValueError, match="Unknown detector"):
+        wrap_video_detector_outputs({"unknown-detector": vc(0.5)})
+
+
+def test_aasist_claim_wrapping_synthetic():
+    resp = {
+        "job_id": JOB,
+        "confidence": 0.94,
+        "raw_score": 3.2,
+        "latency_ms": 250,
+        "model_version": "aasist-v1.0",
+        "evidence": {
+            "claim": "High probability of synthetic/cloned audio detected.",
+            "flags": ["high_spoof_confidence", "voice_cloning_suspected"],
+        },
+    }
+    claim = wrap_detector_response("aasist", resp)
+    assert claim.detector_id == "aasist"
+    assert claim.domain == EvidenceDomain.AUDIO_ACOUSTIC
+    assert claim.polarity == P.SYNTHETIC
+    assert claim.confidence == 0.94
+    assert "synthetic voice" in claim.claim.lower() or "cloned" in claim.claim.lower()
+    assert claim.observational_metrics is not None
+    assert claim.observational_metrics.audio.spectral_anomaly_detected is True
+
+
+def test_aasist_claim_wrapping_authentic():
+    resp = {
+        "job_id": JOB,
+        "confidence": 0.08,
+        "raw_score": -4.1,
+        "latency_ms": 240,
+        "model_version": "aasist-v1.0",
+        "evidence": {
+            "claim": "Audio conforms to authentic human vocal tract dynamics.",
+            "flags": ["bonafide_speech"],
+        },
+    }
+    claim = wrap_detector_response("aasist", resp)
+    assert claim.polarity == P.AUTHENTIC
+    assert claim.confidence == 0.08
+    assert "authentic human" in claim.claim.lower()
+
+
+def test_aasist_claim_wrapping_coverage_gap():
+    resp = {
+        "job_id": JOB,
+        "confidence": 0.50,
+        "raw_score": 0.0,
+        "latency_ms": 10,
+        "model_version": "aasist-v1.0",
+        "evidence": {
+            "claim": "No audio track found in media container.",
+            "flags": ["silent_video", "not_applicable"],
+        },
+    }
+    claim = wrap_detector_response("aasist", resp)
+    assert claim.polarity == P.NOT_APPLICABLE
+    assert claim.coverage_gap is True
 
 
 # ── Integration with the real debate engine ──────────────────────────────────

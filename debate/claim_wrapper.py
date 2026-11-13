@@ -80,6 +80,7 @@ from debate.prompt_security import (
 )
 from debate.schemas import (
     AttenuationFactors,
+    AudioMetrics,
     AudioVisualMetrics,
     ClaimPolarity,
     EvidenceDomain,
@@ -103,10 +104,12 @@ DOMAIN_BY_DETECTOR: Dict[str, EvidenceDomain] = {
     "video-classifier": EvidenceDomain.SPATIAL_PIXEL,
     "rppg": EvidenceDomain.PHYSIOLOGICAL_BVP,
     "syncnet": EvidenceDomain.AUDIOVISUAL_SYNC,
+    "aasist": EvidenceDomain.AUDIO_ACOUSTIC,
 }
 
 # Order used by wrap_video_detector_outputs (matches the arbitrator's precedence rules).
-VIDEO_DETECTOR_ORDER = ("video-classifier", "rppg", "syncnet")
+VIDEO_DETECTOR_ORDER = ("video-classifier", "rppg", "syncnet", "aasist")
+DETECTOR_ORDER = VIDEO_DETECTOR_ORDER
 
 
 # ── Internal result of a per-detector adapter ───────────────────────────────
@@ -354,10 +357,74 @@ def _adapt_syncnet(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     )
 
 
+# ── AASIST ───────────────────────────────────────────────────────────────────
+def _adapt_aasist(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    raw_detector_claim = (r.get("evidence") or {}).get("claim", "")
+    detector_claim = sanitize_claim_text(
+        raw_detector_claim, max_len=MAX_RAW_DETECTOR_CLAIM_LEN, source="aasist_claim"
+    ).sanitized
+
+    # Check for coverage gaps: silent video, non-speech, or not_applicable flag
+    if (
+        NOT_APPLICABLE_FLAG in flags
+        or "silent_video" in flags
+        or "insufficient_signal" in flags
+        or "no_speech" in flags
+    ):
+        return _Adapted(
+            p_synthetic=0.5,
+            polarity=ClaimPolarity.NOT_APPLICABLE,
+            claim=detector_claim or "Acoustic spoofing analysis was not applicable to this input.",
+            coverage_gap=True,
+        )
+
+    p = _clamp01(r["confidence"])  # P(synthetic)
+    polarity = _polarity_from_p(p)
+    pct = f"{p:.0%}"
+
+    spectral_anomaly = (
+        "graph_spectral_anomaly" in flags
+        or "voice_cloning_suspected" in flags
+        or "high_spoof_confidence" in flags
+    )
+
+    if polarity == ClaimPolarity.SYNTHETIC:
+        claim = (
+            f"Acoustic spectral-temporal analysis found {_strength(p)} evidence of synthetic voice / audio cloning "
+            f"(estimated {pct} probability of synthetic content)."
+        )
+        if "voice_cloning_suspected" in flags or "high_spoof_confidence" in flags:
+            claim += " Graph spectral attention irregularities indicate cloned or synthesized speech."
+    elif polarity == ClaimPolarity.AUTHENTIC:
+        claim = (
+            f"Acoustic analysis found spectral patterns consistent with authentic human vocal tract dynamics "
+            f"(estimated {pct} probability of synthetic content)."
+        )
+    else:
+        claim = (
+            f"Acoustic analysis was borderline ({pct} probability of synthetic content): "
+            "spectral features neither confirm nor rule out voice cloning."
+        )
+
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            audio=AudioMetrics(
+                spoof_score=p,
+                spectral_anomaly_detected=spectral_anomaly,
+                speech_detected=True,
+            )
+        ),
+    )
+
+
 _ADAPTERS: Dict[str, Callable[[Dict[str, Any], List[str]], _Adapted]] = {
     "video-classifier": _adapt_video_classifier,
     "rppg": _adapt_rppg,
     "syncnet": _adapt_syncnet,
+    "aasist": _adapt_aasist,
 }
 
 
@@ -371,7 +438,7 @@ def wrap_detector_response(
     adapter = _ADAPTERS.get(detector_id)
     if adapter is None:
         raise ValueError(
-            f"Unknown video detector '{detector_id}'. Expected one of {sorted(_ADAPTERS)}."
+            f"Unknown detector '{detector_id}'. Expected one of {sorted(_ADAPTERS)}."
         )
 
     evidence = response.get("evidence") or {}
@@ -416,10 +483,10 @@ def wrap_video_detector_outputs(
     """
     unknown = set(responses) - set(_ADAPTERS)
     if unknown:
-        raise ValueError(f"Unknown video detector(s): {sorted(unknown)}")
+        raise ValueError(f"Unknown detector(s): {sorted(unknown)}")
 
     return [
         wrap_detector_response(det_id, responses[det_id], conditions)
-        for det_id in VIDEO_DETECTOR_ORDER
+        for det_id in DETECTOR_ORDER
         if responses.get(det_id) is not None
     ]

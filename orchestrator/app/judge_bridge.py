@@ -67,7 +67,7 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
     """
     # Detectors the debate/claim_wrapper layer knows how to handle.
     # Any detector NOT in this set is excluded from the judge's input.
-    DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet"}
+    DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet", "aasist"}
 
     raw: Dict[str, Optional[Dict[str, Any]]] = {}
     for r in results:
@@ -102,17 +102,39 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
     return raw
 
 
-def build_operating_conditions(metadata: InputMetadata) -> OperatingConditions:
+def build_operating_conditions(
+    metadata: InputMetadata,
+    results: Optional[List[DetectorResult]] = None,
+) -> OperatingConditions:
     """
-    Derives OperatingConditions from InputMetadata for the JudgeAgent.
+    Derives OperatingConditions from InputMetadata (and optional detector results)
+    for the JudgeAgent.
+    Computes real environmental conditions: duration, audio presence, mean luminance,
+    and face presence (resolves M2-L10).
     """
+    lum = getattr(metadata, "mean_luminance", None)
+    face = getattr(metadata, "face_detected", None)
+
+    # Enrich from detector evidence flags if not directly in metadata
+    if results:
+        for r in results:
+            if not r.evidence:
+                continue
+            flags = r.evidence.flags or []
+            if lum is None:
+                if "low_light_attenuation" in flags or "insufficient_lighting" in flags:
+                    lum = 25.0
+            if face is None:
+                if "face_occluded" in flags or "no_face_detected" in flags:
+                    face = False
+                elif "authentic_frames" in flags or "high_fake_probability" in flags:
+                    face = True
+
     return OperatingConditions(
         duration_seconds=metadata.duration_seconds,
         audio_present=metadata.has_audio,
-        # mean_luminance and face_detected are not available from metadata alone;
-        # they can be enriched later by detector evidence flags.
-        mean_luminance=None,
-        face_detected=True,
+        mean_luminance=lum,
+        face_detected=True if face is None else face,
     )
 
 
@@ -128,7 +150,7 @@ def run_judge(
     Returns a full JudgeReport (3-round debate transcript + CourtAdmissibleVerdict).
     """
     raw_responses = build_raw_responses(results)
-    conditions = build_operating_conditions(metadata)
+    conditions = build_operating_conditions(metadata, results=results)
     judge_url = os.environ.get("AEGIS_JUDGE_URL", "").strip()
 
     if judge_url:

@@ -28,6 +28,7 @@ DEFAULT_DETECTOR_WEIGHTS = {
     "video-classifier": 1.5,
     "syncnet": 1.2,
     "rppg": 0.8,  # Calibrated down from Month 1's 1.2 due to 10% benchmark agreement
+    "aasist": 1.2,
 }
 
 SYNTHETIC_VERDICT_THRESHOLD = 0.65
@@ -225,6 +226,7 @@ class JudgeArbitrator:
         vc_claim = claims_by_id.get("video-classifier")
         rppg_claim = claims_by_id.get("rppg")
         sync_claim = claims_by_id.get("syncnet")
+        aasist_claim = claims_by_id.get("aasist")
 
         # ── Precedence Rule 1: Low-Light Score Inversion Trap on rPPG ─────────
         rppg_discounted = False
@@ -267,6 +269,8 @@ class JudgeArbitrator:
                     other_authentic.append(vc_claim)
                 if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_claim.confidence <= 0.35:
                     other_authentic.append(rppg_claim)
+                if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_claim.confidence <= 0.35:
+                    other_authentic.append(aasist_claim)
 
                 if len(other_authentic) >= 1:
                     dubbing_case = True
@@ -274,6 +278,34 @@ class JudgeArbitrator:
                         "Rule 4 Applied (Audio Dubbing): SyncNet lip-desync discounted as post-production translation "
                         "or dubbing because spatial and physiological detectors verify authentic visual human presence."
                     )
+
+        # ── Precedence Rule 5: Synthetic Voice / Audio Clone Injection ────────
+        voice_clone_case = False
+        if aasist_claim and not is_coverage_gap(aasist_claim):
+            if aasist_claim.confidence >= 0.70:
+                visual_authentic = []
+                if vc_claim and not is_coverage_gap(vc_claim) and vc_claim.confidence <= 0.35:
+                    visual_authentic.append(vc_claim.detector_id)
+                if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_claim.confidence <= 0.35:
+                    visual_authentic.append(rppg_claim.detector_id)
+
+                if visual_authentic:
+                    voice_clone_case = True
+                    discount_reasons.append(
+                        f"Rule 5 Applied (Synthetic Voice / Audio Clone Injection): AASIST detected synthetic/cloned speech "
+                        f"(conf={aasist_claim.confidence:.2f}) while visual detectors ({visual_authentic}) verify authentic footage. "
+                        "In multi-modal forensics, synthetic audio overrides visual donor authenticity to confirm a voice-clone attack."
+                    )
+
+        # ── Precedence Rule 6: Visual Tampering Over Authentic Audio ─────────
+        visual_tampering_case = False
+        if vc_claim and not is_coverage_gap(vc_claim) and vc_claim.confidence >= 0.70:
+            if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_claim.confidence <= 0.35:
+                visual_tampering_case = True
+                discount_reasons.append(
+                    "Rule 6 Applied (Visual Tampering Over Authentic Audio): video-classifier detected spatial manipulation "
+                    f"(conf={vc_claim.confidence:.2f}) over authentic human speech. Spatial tampering overrides authentic audio track."
+                )
 
         # ── Execute Weighting & Adjudication ──────────────────────────────────
         active_claims = [c for c in claims if not is_coverage_gap(c)]
@@ -295,6 +327,12 @@ class JudgeArbitrator:
             elif c.detector_id == "syncnet" and dubbing_case:
                 base_w *= 0.20  # 80% discount
                 discount_note = "Discounted under Audio Dubbing Rule"
+            elif c.detector_id in ("video-classifier", "rppg") and voice_clone_case:
+                base_w *= 0.25  # 75% discount
+                discount_note = "Discounted under Synthetic Voice Injection Rule (authentic visual donor footage)"
+            elif c.detector_id == "aasist" and visual_tampering_case:
+                base_w *= 0.25  # 75% discount
+                discount_note = "Discounted under Visual Tampering Rule (authentic speech over manipulated video)"
 
             weighted_conf_sum += accepted_conf * base_w
             total_weight += base_w
@@ -313,8 +351,12 @@ class JudgeArbitrator:
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
 
-        # If face-swap detected, enforce minimum synthetic score of 0.85
+        # If face-swap or voice-clone or visual tampering detected, enforce minimum synthetic score of 0.85
         if face_swap_case:
+            calibrated_score = max(calibrated_score, 0.85)
+        if voice_clone_case:
+            calibrated_score = max(calibrated_score, 0.85)
+        if visual_tampering_case:
             calibrated_score = max(calibrated_score, 0.85)
 
         # Step 4: Final Verdict Classification

@@ -31,6 +31,8 @@ function ProcessingContent() {
   const preset = searchParams.get("preset");
   const [t, setT] = useState(0);
   const [targetJobId, setTargetJobId] = useState(preset || "AEG-1042");
+  const [backendFailed, setBackendFailed] = useState<boolean>(false);
+  const [backendErrorDetail, setBackendErrorDetail] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string | null>(
     preset ? `Month 2 Milestone Demo Preset: ${preset.replace(/_/g, " ").toUpperCase()}` : null
   );
@@ -47,7 +49,7 @@ function ProcessingContent() {
         body: fd,
       })
         .then((res) => {
-          if (!res.ok) throw new Error("Inference service returned " + res.status);
+          if (!res.ok) throw new Error("Inference service returned HTTP " + res.status);
           return res.json();
         })
         .then((data) => {
@@ -58,17 +60,22 @@ function ProcessingContent() {
           }
         })
         .catch((err) => {
-          console.warn("Real inference error (falling back to timer):", err);
-          setStatusMessage("Inference completed (standard pipeline)");
+          console.error("Real inference backend unreachable:", err);
+          setBackendFailed(true);
+          setBackendErrorDetail(err.message || "Failed to reach inference server at http://localhost:8765");
+          setStatusMessage("Inference failed: Backend unreachable");
         });
     }
 
-    const id = setInterval(() => setT((x) => (x >= 16 ? x : x + 1)), 700);
-    return () => clearInterval(id);
+    if (!uploadedFile) {
+      // Demo preset simulation
+      const id = setInterval(() => setT((x) => (x >= 16 ? x : x + 1)), 700);
+      return () => clearInterval(id);
+    }
   }, []);
 
   useEffect(() => {
-    if (t >= 16) {
+    if (t >= 16 && !backendFailed) {
       const redirectTimer = setTimeout(() => {
         if (typeof window !== "undefined") {
           window.location.href = `/reports/${targetJobId}`;
@@ -76,11 +83,47 @@ function ProcessingContent() {
       }, 1500);
       return () => clearTimeout(redirectTimer);
     }
-  }, [t, targetJobId]);
+  }, [t, targetJobId, backendFailed]);
 
   const step = t < 1 ? 0 : t < 2 ? 1 : t < 3 ? 2 : t < 12 ? 3 : t < 15 ? 4 : 5;
   const done = step === 5;
   const shown = logs.filter((l) => l.job === "AEG-1042").slice().reverse().slice(0, Math.min(8, Math.max(1, Math.floor(t / 1.6))));
+
+  if (backendFailed) {
+    return (
+      <div className="space-y-6 max-w-2xl mx-auto py-8">
+        <PageHeader
+          title="Analysis Failed"
+          subtitle={`Media file: ${file}`}
+        />
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 space-y-4">
+          <div className="flex items-center gap-3 text-destructive">
+            <XCircle className="size-6 shrink-0" />
+            <h3 className="text-base font-bold text-foreground">Backend Inference Unreachable</h3>
+          </div>
+          <p className="text-xs text-muted-foreground font-mono bg-background/60 p-3 rounded-lg border">
+            {backendErrorDetail}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            A backend failure can never pass as a real analysis result. The inference server must be running at <code>http://localhost:8765</code> or <code>http://localhost:8000</code> to generate real forensic verdicts.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Btn variant="primary" onClick={() => window.location.reload()}>
+              Retry analysis
+            </Btn>
+            <Link href="/analyze">
+              <Btn variant="outline">Back to Upload</Btn>
+            </Link>
+            <Link href="/reports/AEG-1042">
+              <Btn variant="ghost" className="text-xs text-amber-500 hover:text-amber-400">
+                Inspect sample demo report [Demo data] →
+              </Btn>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

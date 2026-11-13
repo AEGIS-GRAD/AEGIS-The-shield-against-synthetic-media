@@ -138,3 +138,39 @@ def test_empty_claims_handling(arbitrator):
     verdict = arbitrator.arbitrate([], job_id="empty-job")
     assert verdict.final_verdict == JudgeVerdictClass.INTEGRITY_UNKNOWN
     assert verdict.arbitration_mode == "no_evidence_fallback"
+
+
+def test_scenario_6_voice_clone_clip(arbitrator):
+    """Scenario 6: Authentic video footage with AI-synthesized cloned voice track.
+
+    Rule 5 applies: AASIST synthetic voice overrides authentic visual donor footage.
+    """
+    claims = [
+        make_claim("video-classifier", 0.12, ClaimPolarity.AUTHENTIC, EvidenceDomain.SPATIAL_PIXEL, ["authentic_frames"]),
+        make_claim("rppg", 0.18, ClaimPolarity.AUTHENTIC, EvidenceDomain.PHYSIOLOGICAL_BVP, ["nominal_pulse_70_bpm"]),
+        make_claim("aasist", 0.94, ClaimPolarity.SYNTHETIC, EvidenceDomain.AUDIO_ACOUSTIC, ["high_spoof_confidence", "voice_cloning_suspected"]),
+    ]
+
+    verdict = arbitrator.arbitrate(claims, job_id="job-scenario-voice-clone")
+
+    assert verdict.final_verdict == JudgeVerdictClass.SYNTHETIC
+    assert verdict.calibrated_score >= 0.85
+    assert verdict.siem_alert_tier == "P1_CRITICAL"
+    assert "Rule 5" in verdict.forensic_justification
+
+
+def test_scenario_7_visual_tampering_authentic_audio(arbitrator):
+    """Scenario 7: Manipulated facial video accompanied by real authentic speech.
+
+    Rule 6 applies: Spatial face manipulation overrides authentic audio track.
+    """
+    claims = [
+        make_claim("video-classifier", 0.92, ClaimPolarity.SYNTHETIC, EvidenceDomain.SPATIAL_PIXEL, ["high_fake_probability"]),
+        make_claim("aasist", 0.10, ClaimPolarity.AUTHENTIC, EvidenceDomain.AUDIO_ACOUSTIC, ["bonafide_speech"]),
+    ]
+
+    verdict = arbitrator.arbitrate(claims, job_id="job-scenario-visual-tampering")
+
+    assert verdict.final_verdict == JudgeVerdictClass.SYNTHETIC
+    assert verdict.calibrated_score >= 0.85
+    assert "Rule 6" in verdict.forensic_justification

@@ -209,3 +209,71 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
 }
+
+export function DemoBadge({ className, label = "Demo data" }: { className?: string; label?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 font-mono font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-amber-500/15 text-amber-500 border-amber-500/30 shrink-0",
+        className
+      )}
+    >
+      <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+      {label}
+    </span>
+  );
+}
+
+export function DemoBanner({
+  message = "Displaying simulated evaluation fixtures. Live backend is offline or no real reports exist.",
+  onDisable,
+  className,
+}: {
+  message?: string;
+  onDisable?: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <DemoBadge />
+        <span>{message}</span>
+      </div>
+      {onDisable && (
+        <button
+          onClick={onDisable}
+          className="font-medium underline hover:text-amber-800 dark:hover:text-amber-200 cursor-pointer"
+        >
+          Switch to live data
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function DemoSwitch({
+  checked,
+  onChange,
+  label = "Demo data",
+  className,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("inline-flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs", className)}>
+      <span className={cn("font-medium", checked ? "text-amber-500 font-semibold" : "text-muted-foreground")}>
+        {label}
+      </span>
+      <Toggle checked={checked} onChange={onChange} label={label} />
+    </div>
+  );
+}

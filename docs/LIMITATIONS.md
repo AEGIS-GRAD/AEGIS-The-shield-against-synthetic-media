@@ -301,8 +301,8 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 - [ ] **Calibrate Feed-Integrity Fusion Weights (M2-L6)** — Eliminate dead-zone where `ai_score in (0.35, 0.65)` trivially yields `UNCERTAIN`.
 - [ ] **Remove Placeholder Evidence Fallbacks in SIEM Alerts (M2-L7)** — Replace empty-string SHA-256 and dummy camera IP with authentic forensic hardware bindings.
 - [ ] **Fix Sliding Window Anomaly Attribution (M2-L8)** — Attribute stream anomalies across all overlapping temporal windows in `live_pipeline.py`.
-- [ ] **Develop AASIST Debate Adapter (M2-L9)** — Enable Judge Agent to adjudicate audio deepfake claims alongside video detectors.
-- [ ] **Dynamic Operating Conditions Binding in Orchestrator (M2-L10)** — Replace hardcoded `mean_luminance=None, face_detected=True` in `judge_bridge.py`.
+- [x] **Develop AASIST Debate Adapter (M2-L9)** — Resolved in Month 3: AASIST adapter implemented in `debate/claim_wrapper.py`, filter removed from `judge_bridge.py`, and Precedence Rule 5 added for voice-clone arbitration.
+- [x] **Dynamic Operating Conditions Binding in Orchestrator (M2-L10)** — Resolved in Month 3: Replaced hardcoded constants with dynamic metadata extraction (luminance, face presence, duration, audio presence) in `media_metadata.py` and `judge_bridge.py`.
 - [ ] **Mitigate Judge Agent Over-Abstention & False-Alerts (M2-L11)** — Refine consensus thresholds to reduce 65% `INTEGRITY_UNKNOWN` rate and fix false-synthetic classifications.
 - [ ] **Regenerate Clean Benchmark Fixtures (M2-L12, M2-L13)** — Replace random-weight Month 1 fixtures and commit authentic tampered stream datasets.
 - [ ] **Resolve LLM Planner Latency SLA (M2-L14)** — Transition from high-latency shared free endpoints (21.8s–365s) to dedicated low-latency inference.
@@ -410,27 +410,27 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 
 ### 8.3 Judge Agent Integration & Production Bridge (`orchestrator/app/judge_bridge.py`)
 
-#### M2-L9: Complete Audio Modality Suppression (AASIST Dropped from Adjudication)
+#### M2-L9: Complete Audio Modality Suppression (AASIST Dropped from Adjudication) [RESOLVED in Month 3]
 | Attribute | Detail |
 |---|---|
 | **Failure mode** | Audio spoofing and synthetic voice claims are completely excluded from Judge Agent arbitration. |
-| **Root cause** | `orchestrator/app/judge_bridge.py` defines `DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet"}`. Any detector not in this set (including `aasist`) is filtered out before calling `judge.judge_file()`. |
+| **Root cause** | `orchestrator/app/judge_bridge.py` defined `DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet"}`. Any detector not in this set (including `aasist`) was filtered out before calling `judge.judge_file()`. |
 | **Observed behaviour** | When AASIST detects a synthetic voice attack with 100% confidence, the Judge Agent never sees the evidence and rules solely on video consensus. |
-| **Current mitigation** | AASIST raw results are preserved in `OrchestrationResponse.raw_results`. |
-| **Residual risk** | Complete blind spot to audio-driven deepfake attacks in final adjudicated forensic reports. |
-| **Debate-layer / System implication** | High priority for Month 3: implement AASIST claim adapter in `debate/claim_wrapper.py`. |
-| **Evidence** | [orchestrator/app/judge_bridge.py:L64-L73](../orchestrator/app/judge_bridge.py#L64-L73). |
+| **Resolution** | Implemented AASIST claim adapter in `debate/claim_wrapper.py`, included `aasist` in `DEBATE_KNOWN_DETECTORS`, and added Precedence Rule 5 (voice-clone injection) to `debate/arbitrator.py`. |
+| **Residual risk** | Resolved. Audio claims now reach the Judge Agent and voice-clone deepfakes receive dedicated forensic transcripts. |
+| **Debate-layer / System implication** | Audio claims participate in 3-round debate and cross-modal arbitration. |
+| **Evidence** | [orchestrator/app/judge_bridge.py](../orchestrator/app/judge_bridge.py), [debate/claim_wrapper.py](../debate/claim_wrapper.py). |
 
-#### M2-L10: Static Environmental Operating Conditions Bypass Precedence Matrix
+#### M2-L10: Static Environmental Operating Conditions Bypass Precedence Matrix [RESOLVED in Month 3]
 | Attribute | Detail |
 |---|---|
 | **Failure mode** | Specialized precedence rules (low-light attenuation, facial occlusion discounting) cannot fire in production. |
-| **Root cause** | In `build_operating_conditions()`, the bridge hardcodes `mean_luminance = None` and `face_detected = True`. |
-| **Observed behaviour** | Video clips shot in pitch-dark conditions or with heavily masked faces never trigger Rule 1 (low light) or Rule 2 (face occlusion) in the Forensic Precedence Matrix. |
-| **Current mitigation** | Baseline consensus and cross-examination still execute. |
-| **Residual risk** | Degraded inputs receive full analytical weight rather than being discounted. |
-| **Debate-layer / System implication** | Enrich `InputMetadata` with runtime luminance and face-detection ratios extracted by detector preprocessors. |
-| **Evidence** | [orchestrator/app/judge_bridge.py:L108-L110](../orchestrator/app/judge_bridge.py#L108-L110). |
+| **Root cause** | In `build_operating_conditions()`, the bridge hardcoded `mean_luminance = None` and `face_detected = True`. |
+| **Observed behaviour** | Video clips shot in pitch-dark conditions or with heavily masked faces never triggered Rule 1 (low light) or Rule 2 (face occlusion) in the Forensic Precedence Matrix. |
+| **Resolution** | Replaced constants with dynamic extraction in `media_metadata.py` (runtime luminance from frames and face presence via OpenCV), dynamically bound in `judge_bridge.py`. |
+| **Residual risk** | Resolved. Precedence rules 1 and 2 fire dynamically based on real media measurements. |
+| **Debate-layer / System implication** | Enriched `InputMetadata` with runtime luminance and face detection ratios extracted by media preprocessors. |
+| **Evidence** | [orchestrator/app/judge_bridge.py](../orchestrator/app/judge_bridge.py), [orchestrator/app/media_metadata.py](../orchestrator/app/media_metadata.py). |
 
 #### M2-L11: High Abstention Rate (65% INTEGRITY_UNKNOWN) and Single-Sample False-Synthetic P1 Failure
 | Attribute | Detail |

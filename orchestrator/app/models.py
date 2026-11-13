@@ -12,6 +12,8 @@ class InputMetadata(BaseModel):
     resolution: Optional[List[int]] = None  # [width, height] — List[int] serialises cleanly in JSON
     metadata_tags: Dict[str, str] = Field(default_factory=dict)
     sanitization_flags: List[str] = Field(default_factory=list)
+    mean_luminance: Optional[float] = None
+    face_detected: Optional[bool] = None
 
 
 class DetectorEvidence(BaseModel):

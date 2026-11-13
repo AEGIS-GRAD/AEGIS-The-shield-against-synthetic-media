@@ -2,26 +2,52 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { UploadCloud, Cctv, ArrowRight, ShieldCheck } from "lucide-react";
-import { analyses } from "@/lib/mock";
-import { ModalityIcon, VerdictBadge } from "@/components/aegis/ui";
+import { UploadCloud, Cctv, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { ModalityIcon, VerdictBadge, DemoBadge, DemoBanner, DemoSwitch } from "@/components/aegis/ui";
+import { useDemoMode } from "@/lib/demoMode";
 
 export default function Home() {
-  const [recent, setRecent] = useState<any[]>(analyses.slice(0, 3).map((a) => ({ ...a, is_demo: true })));
+  const [demoMode, setDemoMode] = useDemoMode();
+  const [recent, setRecent] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [backendError, setBackendError] = useState<boolean>(false);
 
   useEffect(() => {
-    fetch("/api/jobs")
-      .then((r) => r.json())
+    setLoading(true);
+    fetch("/api/jobs?demo=false")
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to reach /api/jobs");
+        return r.json();
+      })
       .then((data) => {
+        setBackendError(false);
         if (Array.isArray(data) && data.length > 0) {
           setRecent(data.slice(0, 3));
+        } else if (demoMode) {
+          fetch("/api/jobs?demo=true")
+            .then((r) => r.json())
+            .then((demo) => setRecent(Array.isArray(demo) ? demo.slice(0, 3) : []))
+            .catch(() => setRecent([]));
+        } else {
+          setRecent([]);
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        setBackendError(true);
+        if (demoMode) {
+          fetch("/api/jobs?demo=true")
+            .then((r) => r.json())
+            .then((demo) => setRecent(Array.isArray(demo) ? demo.slice(0, 3) : []))
+            .catch(() => setRecent([]));
+        } else {
+          setRecent([]);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [demoMode]);
 
   return (
-    <div className="mx-auto max-w-5xl py-6">
+    <div className="mx-auto max-w-5xl py-6 space-y-6">
       <div className="text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
           <ShieldCheck className="size-3.5" />Forensic-grade verification
@@ -32,7 +58,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
+      <div className="mt-4 grid gap-5 md:grid-cols-2">
         <EntryCard
           href="/analyze"
           icon={<UploadCloud className="size-7" />}
@@ -50,18 +76,49 @@ export default function Home() {
         />
       </div>
 
-      <div className="mt-12">
+      {backendError && !demoMode && (
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-xs text-destructive-foreground flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="size-4 shrink-0 text-destructive" />
+            <span>Backend service unreachable. Showing 0 live reports. Toggle <strong>Demo data</strong> to preview sample reports.</span>
+          </div>
+          <DemoSwitch checked={demoMode} onChange={setDemoMode} />
+        </div>
+      )}
+
+      {demoMode && (
+        <DemoBanner
+          message="Displaying sample evaluation reports because Demo data mode is active."
+          onDisable={() => setDemoMode(false)}
+        />
+      )}
+
+      <div className="mt-8">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3>Recent forensic reports</h3>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
-              LIVE STORE
-            </span>
+            {demoMode ? (
+              <DemoBadge />
+            ) : (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold">
+                LIVE STORE
+              </span>
+            )}
           </div>
-          <Link href="/reports" className="text-xs font-medium text-accent hover:underline">
-            See all →
-          </Link>
+          <div className="flex items-center gap-3">
+            <DemoSwitch checked={demoMode} onChange={setDemoMode} />
+            <Link href="/reports" className="text-xs font-medium text-accent hover:underline">
+              See all →
+            </Link>
+          </div>
         </div>
+
+        {recent.length === 0 && !loading && (
+          <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+            No reports in live store. Click &quot;Start analysis&quot; above to submit media, or toggle &quot;Demo data&quot; to inspect fixtures.
+          </div>
+        )}
+
         <div className="grid gap-3 md:grid-cols-3">
           {recent.map((a) => (
             <Link key={a.id} href={`/reports/${a.id}`} className="surface p-4 transition-soft hover:shadow-lift">
@@ -71,11 +128,9 @@ export default function Home() {
                   <span className="truncate text-sm font-medium">{a.file}</span>
                 </div>
                 {a.is_demo ? (
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-muted text-muted-foreground border shrink-0">
-                    DEMO
-                  </span>
+                  <DemoBadge />
                 ) : (
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold shrink-0">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-authentic-soft text-authentic-ink border border-authentic/30 font-bold shrink-0">
                     REAL
                   </span>
                 )}
