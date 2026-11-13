@@ -150,20 +150,23 @@ const presetReports: Record<string, any> = {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const demoParam = searchParams.get("demo"); // "true" | "false" | "all"
+  const aggregateParam = searchParams.get("aggregate");
   const realJobs = readJobs();
 
   if (id) {
-    // Check preset reports first
-    if (presetReports[id]) {
-      return NextResponse.json(presetReports[id]);
-    }
-
-    // Check real jobs
+    // 1. Check real jobs first
     const found = realJobs.find((j: any) => j.id === id || j.job_id === id);
     if (found) {
-      return NextResponse.json(found);
+      return NextResponse.json({ ...found, is_demo: false });
     }
-    // Fallback to mock demo report if AEG-1042 or matching demo ID
+
+    // 2. Check preset evaluation reports (visibly flagged as demo)
+    if (presetReports[id]) {
+      return NextResponse.json({ ...presetReports[id], is_demo: true });
+    }
+
+    // 3. Check mock demo reports if requested or matching demo ID
     if (id === "AEG-1042" || mockAnalyses.some((a) => a.id === id)) {
       return NextResponse.json({
         ...mockReport,
@@ -171,17 +174,72 @@ export async function GET(req: NextRequest) {
         is_demo: true,
       });
     }
-    return NextResponse.json({ error: "Job not found" }, { status: 404 });
+
+    return NextResponse.json({ error: "Job not found", is_demo: false }, { status: 404 });
   }
 
-  // Return real jobs merged with mock demo analyses labeled with is_demo: true
-  const labeledDemos = mockAnalyses.map((a) => ({
-    ...a,
-    is_demo: true,
-  }));
+  // Aggregate statistics endpoint for Overview and Developer dashboard
+  if (aggregateParam === "true") {
+    const isDemo = demoParam === "true" || (realJobs.length === 0 && demoParam !== "false");
+    const dataset = isDemo
+      ? mockAnalyses.map((a) => ({
+          ...a,
+          is_demo: true,
+          latency_ms: 2400,
+        }))
+      : realJobs.map((j: any) => ({ ...j, is_demo: false }));
 
-  const all = [...realJobs, ...labeledDemos];
-  return NextResponse.json(all);
+    const total = dataset.length;
+    const synthetic = dataset.filter((j: any) => (j.verdict || "").toLowerCase() === "synthetic").length;
+    const authentic = dataset.filter((j: any) => (j.verdict || "").toLowerCase() === "authentic").length;
+    const inconclusive = dataset.filter((j: any) => (j.verdict || "").toLowerCase() === "inconclusive").length;
+    const syntheticPercent = total > 0 ? Math.round((synthetic / total) * 1000) / 10 : 0;
+
+    let totalLatency = 0;
+    let latencyCount = 0;
+    for (const j of dataset) {
+      const lat = j.raw_result?.raw_results?.reduce((acc: number, r: any) => acc + (r.latency_ms || 0), 0) || j.latency_ms;
+      if (lat && typeof lat === "number") {
+        totalLatency += lat;
+        latencyCount++;
+      }
+    }
+    const avgLatencyMs = latencyCount > 0 ? Math.round(totalLatency / latencyCount) : 1850;
+
+    return NextResponse.json({
+      is_demo: isDemo,
+      total_analyses: total,
+      synthetic_count: synthetic,
+      authentic_count: authentic,
+      inconclusive_count: inconclusive,
+      synthetic_rate_pct: syntheticPercent,
+      avg_latency_ms: avgLatencyMs,
+      recent_analyses: dataset.slice(0, 5),
+    });
+  }
+
+  // List jobs
+  if (demoParam === "false") {
+    // Strictly real jobs only
+    return NextResponse.json(realJobs.map((j: any) => ({ ...j, is_demo: false })));
+  }
+
+  if (demoParam === "true") {
+    // Demo mock jobs only
+    return NextResponse.json(mockAnalyses.map((a) => ({ ...a, is_demo: true })));
+  }
+
+  if (demoParam === "all") {
+    const labeledDemos = mockAnalyses.map((a) => ({ ...a, is_demo: true }));
+    return NextResponse.json([...realJobs.map((j: any) => ({ ...j, is_demo: false })), ...labeledDemos]);
+  }
+
+  // Default: Return real jobs if available; otherwise return demo jobs flagged as is_demo: true
+  if (realJobs.length > 0) {
+    return NextResponse.json(realJobs.map((j: any) => ({ ...j, is_demo: false })));
+  }
+
+  return NextResponse.json(mockAnalyses.map((a) => ({ ...a, is_demo: true })));
 }
 
 export async function POST(req: NextRequest) {

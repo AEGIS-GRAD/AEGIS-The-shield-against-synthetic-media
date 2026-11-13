@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { logs, type Level } from "@/lib/mock";
-import { EmptyState, LogRow, Panel } from "@/components/aegis/ui";
+import { DemoBadge, EmptyState, LogRow, Panel } from "@/components/aegis/ui";
 import { cn } from "@/lib/utils";
 
 const levels: Level[] = ["DEBUG", "INFO", "WARN", "ERROR"];
@@ -18,7 +18,7 @@ function LogsContent() {
   const rows = logs.filter((l) => (!job || l.job === job) && on.includes(l.level) && (l.msg + l.svc).toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <Panel>
+    <Panel title={<span className="flex items-center gap-2">System Logs <DemoBadge /></span>} subtitle="Simulated log stream — no real backend connected">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative w-72">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

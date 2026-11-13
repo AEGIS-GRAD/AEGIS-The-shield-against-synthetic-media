@@ -376,6 +376,30 @@ class JudgeAgent:
                         )
                     )
 
+            if det == "aasist":
+                if "voice_cloning_suspected" in c.flags or "graph_spectral_anomaly" in c.flags:
+                    findings.append(
+                        CrossExaminationFinding(
+                            detector_id="aasist",
+                            check_category="known_failure_mode",
+                            severity="HIGH",
+                            finding="Acoustic spectral-temporal graph attention detected synthetic voice cloning artifacts.",
+                            rule_reference="Rule 5 (Synthetic Voice Injection)",
+                            source="capability_manifest",
+                        )
+                    )
+                if cond.audio_present is False or "silent_video" in c.flags:
+                    findings.append(
+                        CrossExaminationFinding(
+                            detector_id="aasist",
+                            check_category="operating_constraint",
+                            severity="HIGH",
+                            finding="Media has no audio track; acoustic spoofing analysis was skipped.",
+                            rule_reference="Coverage Gap Isolation",
+                            source="capability_manifest",
+                        )
+                    )
+
             # 3. Check Borderline Scores Treated as Coverage Gaps
             if c.polarity == ClaimPolarity.INCONCLUSIVE and not c.coverage_gap:
                 findings.append(

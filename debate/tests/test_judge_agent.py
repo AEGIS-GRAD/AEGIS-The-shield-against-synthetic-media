@@ -218,3 +218,44 @@ def test_llm_mode_fallback_on_mock_environment(sample_raw_responses, monkeypatch
     assert report.verdict.final_verdict == JudgeVerdictClass.SYNTHETIC
     assert len(report.verdict.forensic_justification) > 50
     assert report.prompt_version == "judge-v1.0"
+
+
+def test_judge_file_with_voice_clone_clip(judge):
+    """Verifies that an audio-only cloned voice deepfake produces a SYNTHETIC verdict in JudgeAgent."""
+    raw = {
+        "video-classifier": {
+            "job_id": "vc-job",
+            "confidence": 0.12,
+            "raw_score": 0.12,
+            "latency_ms": 110,
+            "model_version": "v1",
+            "evidence": {"claim": "Authentic facial frames.", "flags": ["authentic_frames"]},
+        },
+        "rppg": {
+            "job_id": "vc-job",
+            "confidence": 0.18,
+            "score": 0.18,
+            "raw_score": 0.18,
+            "verdict": "authentic",
+            "latency_ms": 250,
+            "evidence": {"claim": "Authentic pulse.", "flags": ["nominal_pulse_70_bpm"]},
+        },
+        "aasist": {
+            "job_id": "vc-job",
+            "confidence": 0.95,
+            "raw_score": 3.4,
+            "latency_ms": 190,
+            "model_version": "aasist-v1.0",
+            "evidence": {
+                "claim": "High probability of synthetic cloned audio.",
+                "flags": ["high_spoof_confidence", "voice_cloning_suspected"],
+            },
+        },
+    }
+    report = judge.judge_file(raw, job_id="vc-job")
+
+    assert report.verdict.final_verdict == JudgeVerdictClass.SYNTHETIC
+    assert report.verdict.calibrated_score >= 0.85
+    assert report.verdict.siem_alert_tier == "P1_CRITICAL"
+    assert "Rule 5" in report.verdict.forensic_justification
+    assert any(c["detector_id"] == "aasist" for c in report.rounds[0].details["claims"])

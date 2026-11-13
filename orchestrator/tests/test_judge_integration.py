@@ -29,11 +29,43 @@ class TestJudgeBridgeTranslation:
         raw = build_raw_responses([r])
         assert raw["rppg"] is None
 
+    def test_build_raw_responses_includes_aasist(self):
+        """M2-L9 fix: aasist audio detector claims must NOT be filtered out."""
+        r = DetectorResult(
+            detector="aasist", status="ok", job_id="j-audio",
+            confidence=0.95, raw_score=3.5, latency_ms=180, model_version="aasist-v1.0",
+            evidence=DetectorEvidence(
+                claim="Voice cloning suspected with high confidence.",
+                flags=["voice_cloning_suspected", "high_spoof_confidence"],
+            ),
+        )
+        raw = build_raw_responses([r])
+        assert "aasist" in raw
+        assert raw["aasist"]["confidence"] == 0.95
+        assert "voice_cloning_suspected" in raw["aasist"]["evidence"]["flags"]
+
     def test_operating_conditions_from_metadata(self):
-        meta = InputMetadata(filename="f.mp4", modality="video", has_audio=True, duration_seconds=10.0)
+        meta = InputMetadata(
+            filename="f.mp4", modality="video", has_audio=True, duration_seconds=10.0,
+            mean_luminance=78.5, face_detected=True,
+        )
         cond = build_operating_conditions(meta)
         assert cond.duration_seconds == 10.0
         assert cond.audio_present is True
+        assert cond.mean_luminance == 78.5
+        assert cond.face_detected is True
+
+    def test_operating_conditions_enrichment_from_results(self):
+        meta = InputMetadata(filename="dark.mp4", modality="video", has_audio=True, duration_seconds=5.0)
+        res = [
+            DetectorResult(
+                detector="rppg", status="ok", job_id="j-dark",
+                confidence=0.75, raw_score=0.75, latency_ms=200, model_version="v1",
+                evidence=DetectorEvidence(claim="Low lighting.", flags=["low_light_attenuation"]),
+            )
+        ]
+        cond = build_operating_conditions(meta, results=res)
+        assert cond.mean_luminance == 25.0
 
 
 class TestJudgeReportStructure:
@@ -97,3 +129,87 @@ class TestJudgeReportStructure:
         # Guard 1 must have prevented a false AUTHENTIC verdict
         assert report.verdict.final_verdict.value != "AUTHENTIC", \
             "Guard 1 must block AUTHENTIC when detectors disagree without a resolved precedence rule"
+
+    def test_cloned_voice_clip_reaches_judge_and_adjudicates_synthetic(self):
+        """Task 5 test: Voice clone clip with authentic video + synthetic audio.
+
+        AASIST claim must reach judge, Rule 5 must fire, and final verdict must be SYNTHETIC.
+        """
+        results = [
+            DetectorResult(
+                detector="video-classifier", status="ok", job_id="vc-clone-01",
+                confidence=0.10, raw_score=0.10, latency_ms=120, model_version="v1",
+                evidence=DetectorEvidence(claim="Authentic facial frames.", flags=["authentic_frames"]),
+            ),
+            DetectorResult(
+                detector="rppg", status="ok", job_id="vc-clone-01",
+                confidence=0.15, raw_score=0.15, latency_ms=250, model_version="v1",
+                evidence=DetectorEvidence(claim="Nominal pulse 72 BPM.", flags=["nominal_pulse_72_bpm"]),
+            ),
+            DetectorResult(
+                detector="aasist", status="ok", job_id="vc-clone-01",
+                confidence=0.96, raw_score=3.8, latency_ms=200, model_version="aasist-v1.0",
+                evidence=DetectorEvidence(
+                    claim="Synthetic cloned audio detected with high confidence.",
+                    flags=["high_spoof_confidence", "voice_cloning_suspected"],
+                ),
+            ),
+        ]
+        meta = InputMetadata(
+            filename="voice_clone_clip.mp4",
+            modality="video",
+            has_audio=True,
+            duration_seconds=5.0,
+            mean_luminance=90.0,
+            face_detected=True,
+        )
+
+        report = run_judge(results, meta, "vc-clone-01")
+
+        # Confirm audio claim reached the judge debate rounds
+        r1_claims = report.rounds[0].details.get("claims", [])
+        assert any(c["detector_id"] == "aasist" for c in r1_claims), "AASIST claim must appear in Round 1"
+
+        # Confirm Rule 5 applied
+        assert report.verdict.final_verdict.value == "SYNTHETIC"
+        assert report.verdict.calibrated_score >= 0.85
+        assert report.verdict.siem_alert_tier == "P1_CRITICAL"
+        assert "Rule 5" in report.verdict.forensic_justification
+
+    def test_low_light_clip_triggers_rule1_dynamically(self):
+        """Task 5 test: Low-light video where rPPG chromatic collapse emits false synthetic.
+
+        Real metadata luminance < 40 must dynamically trigger Precedence Rule 1.
+        """
+        results = [
+            DetectorResult(
+                detector="video-classifier", status="ok", job_id="lowlight-01",
+                confidence=0.15, raw_score=0.15, latency_ms=110, model_version="v1",
+                evidence=DetectorEvidence(claim="No artifacts found in frames.", flags=["authentic_frames"]),
+            ),
+            DetectorResult(
+                detector="rppg", status="ok", job_id="lowlight-01",
+                confidence=0.88, raw_score=0.88, latency_ms=210, model_version="v1",
+                evidence=DetectorEvidence(claim="Low lighting attenuation.", flags=["low_light_attenuation"]),
+            ),
+        ]
+        meta = InputMetadata(
+            filename="night_clip.mp4",
+            modality="video",
+            has_audio=False,
+            duration_seconds=8.0,
+            mean_luminance=20.5,  # Real computed low luminance (< 40)
+            face_detected=True,
+        )
+
+        report = run_judge(results, meta, "lowlight-01")
+
+        # Operating conditions must reflect real metadata
+        r2_findings = report.rounds[1].details.get("findings", [])
+        assert any("Rule 1" in (f.get("rule_reference") or "") for f in r2_findings), \
+            "Cross-examination should note Rule 1 under low-light operating conditions"
+
+        # rPPG is discounted under Rule 1, authentic visual consensus prevails
+        assert "Rule 1" in report.verdict.forensic_justification
+        assert report.verdict.final_verdict.value == "AUTHENTIC"
+        assert report.verdict.calibrated_score <= 0.35

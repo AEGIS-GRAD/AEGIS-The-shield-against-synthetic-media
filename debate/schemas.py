@@ -47,10 +47,17 @@ class AudioVisualMetrics(BaseModel):
     sync_confidence: Optional[float] = None
 
 
+class AudioMetrics(BaseModel):
+    spoof_score: Optional[float] = None
+    spectral_anomaly_detected: bool = False
+    speech_detected: bool = True
+
+
 class ObservationalMetrics(BaseModel):
     spatial: Optional[SpatialMetrics] = None
     physiological: Optional[PhysiologicalMetrics] = None
     audiovisual: Optional[AudioVisualMetrics] = None
+    audio: Optional[AudioMetrics] = None
 
 
 class AttenuationFactors(BaseModel):

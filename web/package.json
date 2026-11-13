@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --experimental-strip-types --test src/__tests__/**/*.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

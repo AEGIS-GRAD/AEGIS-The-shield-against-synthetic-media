@@ -51,6 +51,73 @@ def extract_sanitized_media_tags(
     return sanitize_exif_metadata(combined)
 
 
+def _compute_visual_conditions(
+    file_path: str,
+    modality: str,
+) -> tuple[Optional[float], Optional[bool]]:
+    """
+    Computes mean luminance (0-255 scale) and face presence from visual media.
+    For audio or non-visual content, returns (None, False).
+    """
+    if modality == "audio":
+        return None, False
+
+    if not os.path.exists(file_path):
+        return None, None
+
+    try:
+        import cv2
+
+        face_cascade_path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
+        cascade = cv2.CascadeClassifier(face_cascade_path) if os.path.exists(face_cascade_path) else None
+
+        if modality == "image":
+            img = cv2.imread(os.path.abspath(file_path))
+            if img is not None:
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                lum = float(gray.mean())
+                face_detected = False
+                if cascade:
+                    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(20, 20))
+                    face_detected = len(faces) > 0
+                return round(lum, 2), face_detected
+
+        elif modality == "video":
+            cap = cv2.VideoCapture(os.path.abspath(file_path))
+            if cap.isOpened():
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                sample_count = 10
+                if total_frames > 0:
+                    step = max(1, total_frames // sample_count)
+                    sample_indices = list(range(0, total_frames, step))[:sample_count]
+                else:
+                    sample_indices = list(range(sample_count))
+
+                luminances: list[float] = []
+                face_detected = False
+
+                for idx in sample_indices:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+                    ret, frame = cap.read()
+                    if not ret or frame is None:
+                        continue
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    luminances.append(float(gray.mean()))
+                    if cascade and not face_detected:
+                        faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(20, 20))
+                        if len(faces) > 0:
+                            face_detected = True
+                cap.release()
+                if luminances:
+                    return round(sum(luminances) / len(luminances), 2), face_detected
+            cap.release()
+
+    except Exception:
+        pass
+
+    return None, None
+
+
 def get_input_metadata(
     file_path: str,
     original_filename: str | None = None,
@@ -122,6 +189,7 @@ def get_input_metadata(
     fn_res = sanitize_filename(original_filename or os.path.basename(file_path))
     safe_tags, tag_flags = extract_sanitized_media_tags(file_path, merged_raw_tags)
     all_flags = list(fn_res.flags) + tag_flags
+    mean_lum, face_det = _compute_visual_conditions(file_path, modality)
 
     return InputMetadata(
         filename=fn_res.sanitized,
@@ -131,4 +199,6 @@ def get_input_metadata(
         resolution=resolution,
         metadata_tags=safe_tags,
         sanitization_flags=all_flags,
+        mean_luminance=mean_lum,
+        face_detected=face_det,
     )
