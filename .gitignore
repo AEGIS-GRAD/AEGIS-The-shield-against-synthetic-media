@@ -52,3 +52,10 @@ web/.jobs/
 
 # Intermediate checkpoints (final weights remain tracked)
 *_ckpt_ep*.pth
+
+# Large model weights (Hugging Face models & safetensors)
+*.safetensors
+*.bin
+*.pth
+detectors/text-detector/models/
+
