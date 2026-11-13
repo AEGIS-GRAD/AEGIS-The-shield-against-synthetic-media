@@ -67,7 +67,11 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
     """
     # Detectors the debate/claim_wrapper layer knows how to handle.
     # Any detector NOT in this set is excluded from the judge's input.
-    DEBATE_KNOWN_DETECTORS = {"video-classifier", "rppg", "syncnet", "aasist"}
+    DEBATE_KNOWN_DETECTORS = {
+        "video-classifier", "rppg", "syncnet", "aasist",
+        # Image and text modality detectors — added in routing task (Week 1).
+        "detector_image", "detector_text",
+    }
 
     raw: Dict[str, Optional[Dict[str, Any]]] = {}
     for r in results:

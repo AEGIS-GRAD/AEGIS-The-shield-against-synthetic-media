@@ -27,3 +27,26 @@ class TextAnalysisResponse(BaseModel):
     confidence: float = Field(..., description="Confidence score")
     stylometry: Optional[StylometryMetrics] = None
     execution_time_ms: float = Field(..., description="Inference latency in milliseconds")
+
+
+class DetectRequest(BaseModel):
+    job_id: str
+    modality: str
+    payload: str
+
+
+class DetectEvidence(BaseModel):
+    claim: str
+    flags: List[str] = Field(default_factory=list)
+
+
+class DetectResponse(BaseModel):
+    status: str = "ok"
+    job_id: str
+    confidence: float
+    raw_score: float
+    latency_ms: int
+    model_version: str = "desklib-deberta-v1.01"
+    evidence: DetectEvidence
+    ram_usage_mb: Optional[float] = None
+    vram_usage_mb: Optional[float] = None

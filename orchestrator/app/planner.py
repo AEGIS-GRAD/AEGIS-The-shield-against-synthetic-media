@@ -52,7 +52,7 @@ from rules import decide_detectors_to_call
 from manifest_loader import load_all_manifests, ManifestError
 from eligibility import filter_detectors, apply_telemetry_constraints
 from prompt_builder import build_planning_prompt, PROMPT_VERSION
-from telemetry_client import get_telemetry_snapshot, DetectorTelemetry
+from telemetry_client import get_telemetry_snapshot, DetectorTelemetry, BASELINE_LATENCIES_MS
 try:
     from mesh_tls import MeshTLSConfigError, llm_tls_kwargs
 except ImportError:
@@ -140,7 +140,12 @@ def _simulate_reference_plan(
         tel = telemetry.get(name) if telemetry else None
         status = getattr(tel, "status", None) if tel else None
         p95 = getattr(tel, "p95_latency_ms", None) if tel else None
-        latency_s = (p95 / 1000.0) if p95 else 5.0
+        if p95 is None:
+            perf = m.get("performance", {})
+            p95 = perf.get("p95_latency_ms")
+        if p95 is None and name in BASELINE_LATENCIES_MS:
+            p95 = BASELINE_LATENCIES_MS[name].get("p95")
+        latency_s = (p95 / 1000.0) if p95 else 1.0
 
         if status == "degraded" and (total_latency + latency_s > budget_s):
             skipped.append({
@@ -148,7 +153,7 @@ def _simulate_reference_plan(
                 "reason": f"live telemetry indicates latency degradation ({latency_s:.1f}s p95); deprioritized to preserve budget"
             })
             coverage_warnings.append(f"{name} deprioritized due to real-time latency degradation.")
-        elif total_latency + latency_s <= budget_s or not run_detectors:
+        elif total_latency + latency_s <= budget_s:
             run_detectors.append(name)
             total_latency += latency_s
         else:

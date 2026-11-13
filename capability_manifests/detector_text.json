@@ -1,0 +1,48 @@
+{
+    "detector_name": "detector_text",
+    "modality": [
+        "text"
+    ],
+    "version": "desklib-deberta-v1.01",
+    "description": "Fine-tuned Desklib AI-text detection paired with stylometry explainability (vocabulary diversity, n-gram repetition, and sentence variation).",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".txt",
+            ".md",
+            ".json"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": 150.0,
+        "p95_latency_ms": 400.0,
+        "avg_ram_usage_mb": 800.0,
+        "avg_vram_usage_mb": null,
+        "measured_on": "Local CPU/GPU inference baseline"
+    },
+    "circuit_breaker": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 2.0
+    },
+    "known_failure_modes": [
+        {
+            "condition": "short text under 50 words",
+            "effect": "unreliable stylometric distributions and degraded classifier confidence",
+            "source": "Desklib model limitations card"
+        },
+        {
+            "condition": "code-heavy or programmatic scripts in text files",
+            "effect": "elevated false positive rates due to unnatural n-gram repetition inherent to programming syntax",
+            "source": "Stylometry evaluation benchmarks"
+        }
+    ],
+    "reliability_notes": "Primary detector for text documents. Combines neural transformer embeddings with stylometric feature verification.",
+    "evidence_flags": [
+        "stylometry_synthetic",
+        "low_vocabulary_diversity"
+    ],
+    "license": "Apache-2.0"
+}

@@ -85,6 +85,8 @@ services:
       - DETECTOR_RPPG_URL=http://detector_rppg:8000
       - DETECTOR_AASIST_URL=http://detector_aasist:8000
       - DETECTOR_SYNCNET_URL=http://detector_syncnet:8000
+      - DETECTOR_DETECTOR_IMAGE_URL=http://detector_image:8000
+      - DETECTOR_DETECTOR_TEXT_URL=http://detector_text:8000
       - PYTHONPATH=/app/app:/repo  # /repo/debate/__init__.py → `import debate` resolves correctly
       - AEGIS_JUDGE_MODE=${AEGIS_JUDGE_MODE:-deterministic}
     healthcheck:
@@ -247,29 +249,49 @@ services:
         limits:
           memory: 3G
 
-  detector_dire:
-    image: python:3.11-slim
-    command: tail -f /dev/null
-    container_name: aegis_detector_dire
+  detector_image:
+    build:
+      context: ./detectors/detector_image
+      dockerfile: Dockerfile
+    container_name: aegis_detector_image
+    ports:
+      - "8006:8000"
     volumes:
-      - ./detectors/dire:/app
+      - ./detectors/detector_image:/app
     networks:
       - aegis_net
-    # TODO: Placeholder limit. AI team must profile DIRE on Jetson and adjust.
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G
 
-  detector_binoculars:
-    image: python:3.11-slim
-    command: tail -f /dev/null
-    container_name: aegis_detector_binoculars
+  detector_text:
+    build:
+      context: ./detectors/text-detector
+      dockerfile: Dockerfile
+    container_name: aegis_detector_text
+    ports:
+      - "8005:8000"
     volumes:
-      - ./detectors/binoculars:/app
+      - ./detectors/text-detector:/app
     networks:
       - aegis_net
-    # TODO: Placeholder limit. AI team must profile Binoculars on Jetson and adjust.
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

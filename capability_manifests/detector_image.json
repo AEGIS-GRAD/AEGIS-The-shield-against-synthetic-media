@@ -1,0 +1,50 @@
+{
+    "detector_name": "detector_image",
+    "modality": [
+        "image"
+    ],
+    "version": "mirror-dinov3-v1",
+    "description": "MIRROR image deepfake detector with DINOv3 backbone, featuring frequency domain FFT/DCT grid artifact detection and EXIF metadata verification.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".bmp"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": 800.0,
+        "p95_latency_ms": 2000.0,
+        "avg_ram_usage_mb": 2048.0,
+        "avg_vram_usage_mb": 6144.0,
+        "measured_on": "Estimated baseline fp16 for 8GB GPU (DINOv3-L)"
+    },
+    "circuit_breaker": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 10.0,
+        "latency_threshold_sec": 5.0
+    },
+    "known_failure_modes": [
+        {
+            "condition": "heavy JPEG recompression with quality < 50",
+            "effect": "washing out of high-frequency DCT grid artifacts causing potential false negatives",
+            "source": "MIRROR technical specification"
+        },
+        {
+            "condition": "social media platform upload stripping EXIF",
+            "effect": "exif_missing flag triggers universally, requiring reliance on neural and frequency evidence",
+            "source": "Forensic validation note"
+        }
+    ],
+    "reliability_notes": "Primary image forensic detector. Analyzes global semantic representations via DINOv3 alongside upsampling artifacts via FFT/DCT.",
+    "evidence_flags": [
+        "frequency_anomaly",
+        "exif_missing"
+    ],
+    "license": "Research and non-commercial license (MIRROR github.com/349793927/MIRROR)"
+}

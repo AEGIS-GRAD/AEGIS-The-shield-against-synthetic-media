@@ -8,7 +8,14 @@ import time
 import os
 import torch
 from fastapi import FastAPI, HTTPException
-from schemas import TextAnalysisRequest, TextAnalysisResponse, StylometryMetrics
+from schemas import (
+    TextAnalysisRequest,
+    TextAnalysisResponse,
+    StylometryMetrics,
+    DetectRequest,
+    DetectResponse,
+    DetectEvidence,
+)
 from desklib_model import load_desklib, predict_text
 from stylometry import extract_stylometry_features
 
@@ -73,6 +80,69 @@ def analyze_text(request: TextAnalysisRequest):
         confidence=pred["confidence"],
         stylometry=stylometry_res,
         execution_time_ms=latency_ms
+    )
+
+
+@app.post("/detect", response_model=DetectResponse)
+def detect(request: DetectRequest):
+    t0 = time.time()
+    text_content = ""
+    if os.path.isfile(request.payload):
+        try:
+            with open(request.payload, "r", encoding="utf-8", errors="replace") as f:
+                text_content = f.read(50_000)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to read payload file: {e}")
+    else:
+        text_content = request.payload
+
+    if not text_content.strip():
+        return DetectResponse(
+            status="ok",
+            job_id=request.job_id,
+            confidence=0.5,
+            raw_score=0.5,
+            latency_ms=0,
+            model_version="desklib-deberta-v1.01",
+            evidence=DetectEvidence(
+                claim="Empty text provided",
+                flags=["empty_text"]
+            )
+        )
+
+    ai_score = 0.5
+    confidence = 0.5
+    prediction = "uncertain"
+    if MODEL is not None and TOKENIZER is not None:
+        pred = predict_text(text_content, MODEL, TOKENIZER, DEVICE)
+        ai_score = pred["ai_score"]
+        confidence = pred["confidence"]
+        prediction = pred["prediction"]
+
+    feat = extract_stylometry_features(text_content)
+    flags = []
+    if feat.get("stylometry_verdict") == "synthetic":
+        flags.append("stylometry_synthetic")
+    vocab = feat.get("vocabulary_diversity", {})
+    if vocab.get("type_token_ratio", 1.0) < 0.4:
+        flags.append("low_vocabulary_diversity")
+    repetition = feat.get("ngram_repetition", {})
+    if repetition.get("repetition_ratio_2gram", 0.0) > 0.25:
+        flags.append("high_ngram_repetition")
+
+    latency_ms = int(round((time.time() - t0) * 1000))
+
+    return DetectResponse(
+        status="ok",
+        job_id=request.job_id,
+        confidence=confidence,
+        raw_score=ai_score,
+        latency_ms=latency_ms,
+        model_version="desklib-deberta-v1.01",
+        evidence=DetectEvidence(
+            claim=f"Text classified as {prediction} with synthetic score {ai_score:.3f}. {feat.get('summary', '')}",
+            flags=flags
+        )
     )
 
 if __name__ == "__main__":
