@@ -319,29 +319,32 @@ def sanitize_filename(filename: Optional[str], max_len: int = MAX_FILENAME_LEN) 
         )
     )
 
-    safe = cleaned
+    raw_stem, raw_ext = os.path.splitext(cleaned)
+    has_clean_ext = bool(re.fullmatch(r"\.[A-Za-z0-9]{1,10}", raw_ext))
+    stem_part = raw_stem if has_clean_ext else cleaned
+    safe_ext = raw_ext if has_clean_ext else ""
+
     if hits:
         # Neutralize both direct matches and separator-joined injection stems while preserving extension
-        stem, ext = os.path.splitext(cleaned)
-        stem_spaced = re.sub(r"[_./-]+", " ", stem)
+        stem_spaced = re.sub(r"[_./-]+", " ", stem_part)
         for _, pattern in _INJECTION_RULES:
             stem_spaced = pattern.sub("_", stem_spaced)
-        safe = stem_spaced + ext
+        stem_part = stem_spaced
         SECURITY_ANOMALIES.record(
             "INPUT_INJECTION_DETECTED",
             source="filename",
             detail=f"rules={hits}",
         )
 
-    safe = _SAFE_FILENAME_CHARS_RE.sub("_", safe).strip(" ._-")
-    if not safe:
-        safe = "sanitized_media"
+    safe_stem = _SAFE_FILENAME_CHARS_RE.sub("_", stem_part).strip(" ._-")
+    if not safe_stem:
+        safe_stem = "sanitized_media"
 
+    safe = f"{safe_stem}{safe_ext}"
     truncated = len(safe) > max_len
     if truncated:
-        stem, ext = os.path.splitext(safe)
-        ext = ext[:10] if len(ext) <= 10 else ""
-        safe = stem[: max(1, max_len - len(ext))] + ext
+        ext_cap = safe_ext[:10] if len(safe_ext) <= 10 else ""
+        safe = safe_stem[: max(1, max_len - len(ext_cap))] + ext_cap
 
     flags = [f"filename_injection:{h}" for h in hits]
     if had_ctrl:

@@ -13,6 +13,15 @@ except ImportError:
 
 INTERNAL_TOKEN = os.environ.get("INTERNAL_API_TOKEN", "")
 
+
+def _resolve_internal_token() -> str:
+    """Resolves internal shared token in relaxed dev mode (prefers INTERNAL_API_KEY)."""
+    return (
+        os.environ.get("INTERNAL_API_KEY")
+        or os.environ.get("INTERNAL_API_TOKEN")
+        or INTERNAL_TOKEN
+    )
+
 _breakers = {}
 
 
@@ -39,7 +48,8 @@ async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modal
         )
     body = {"job_id": job_id, "modality": modality, "payload": file_path}
     # In mTLS mesh mode, authentication is cryptographic client cert; shared X-Internal-Token is removed.
-    headers = {} if (mesh_enabled() or mesh_strict()) else ({"X-Internal-Token": INTERNAL_TOKEN} if INTERNAL_TOKEN else {})
+    token = "" if (mesh_enabled() or mesh_strict()) else _resolve_internal_token()
+    headers = {"X-Internal-Token": token} if token else {}
     breaker = _get_breaker(detector)
 
     try:

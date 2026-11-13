@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # Pin to the directory this file lives in so the DB is always found at the
@@ -74,8 +74,46 @@ class JudgeAuditLog(Base):
     debate_transcript_json = Column(String)  # full JSON of all 3 DebateRound objects
 
 
-def init_db():
-    Base.metadata.create_all(bind=engine)
+def _column_default_sql(col) -> str:
+    """Builds a safe SQLite DEFAULT clause for scalar model column defaults."""
+    if col.default is None or not col.default.is_scalar:
+        return ""
+    arg = col.default.arg
+    if isinstance(arg, bool):
+        return f" DEFAULT {1 if arg else 0}"
+    if isinstance(arg, (int, float)):
+        return f" DEFAULT {arg}"
+    if isinstance(arg, str):
+        escaped = arg.replace("'", "''")
+        return f" DEFAULT '{escaped}'"
+    return ""
+
+
+def _sync_sqlite_columns(target_engine) -> None:
+    """Adds missing ORM columns to pre-existing SQLite tables idempotently."""
+    inspector = inspect(target_engine)
+    existing_tables = set(inspector.get_table_names())
+    with target_engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue
+            existing_cols = {c["name"] for c in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing_cols:
+                    continue
+                col_type = col.type.compile(dialect=target_engine.dialect)
+                default_clause = _column_default_sql(col)
+                conn.execute(
+                    text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}{default_clause}')
+                )
+
+
+def init_db(target_engine=None):
+    """Creates tables and upgrades pre-existing SQLite schemas with missing columns."""
+    db_engine = target_engine or engine
+    Base.metadata.create_all(bind=db_engine)
+    if db_engine.dialect.name == "sqlite":
+        _sync_sqlite_columns(db_engine)
 
 
 def log_judge_report(job_id: str, report) -> None:

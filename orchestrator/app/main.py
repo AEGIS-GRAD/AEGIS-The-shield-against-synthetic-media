@@ -109,8 +109,9 @@ async def orchestrate(
         raise HTTPException(status_code=HTTP_413_TOO_LARGE, detail="File too large (exceeds 100MB)")
     file.file.seek(0)
 
-    # Path traversal protection: sanitize filename
-    safe_filename = os.path.basename(file.filename) if file.filename else "unknown_media"
+    # Path traversal protection: sanitize filename and strip Windows/POSIX separators
+    raw_upload_name = file.filename or "unknown_media"
+    safe_filename = os.path.basename(raw_upload_name.replace("\\", "/")) or "unknown_media"
 
     # In prod profile, prevent arbitrary executable uploads
     profile = os.environ.get("AEGIS_SECURITY_PROFILE", "dev").lower()
@@ -120,13 +121,14 @@ async def orchestrate(
         logger.error(f"Rejected executable file upload in prod mode: '{safe_filename}'")
         raise HTTPException(status_code=415, detail=f"Unsupported media type: executable files are prohibited ({suffix})")
 
+    metadata = None
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
     try:
         logger.info(f"Extracting metadata from temporary file '{tmp_path}'...")
-        metadata = get_input_metadata(tmp_path, original_filename=safe_filename)
+        metadata = get_input_metadata(tmp_path, original_filename=raw_upload_name)
         logger.info(f"Extracted metadata: Modality={metadata.modality}, Duration={metadata.duration_seconds}s, HasAudio={metadata.has_audio}")
 
         # Determine effective planning mode (query param > header > environment config)
@@ -175,7 +177,7 @@ async def orchestrate(
 
         log_decision(
             job_id=job_id,
-            input_file=safe_filename,
+            input_file=metadata.filename,
             metadata=metadata.model_dump(),
             detectors_called=detectors_to_call,
             raw_results=[r.model_dump() for r in results],
@@ -190,7 +192,7 @@ async def orchestrate(
         log_judge_report(job_id=job_id, report=judge_report)
 
         return OrchestrationResponse(
-            input_file=safe_filename,
+            input_file=metadata.filename,
             metadata=metadata,
             detectors_called=detectors_to_call,
             raw_results=results,
@@ -213,7 +215,8 @@ async def orchestrate(
             adjudication_latency_ms=judge_report.adjudication_latency_ms,
         )
     except Exception as exc:
-        logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{file.filename}': {exc}")
+        err_name = metadata.filename if metadata is not None else safe_filename
+        logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{err_name}': {exc}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Orchestration Error: {str(exc)}. Check terminal logs.")
     finally:
