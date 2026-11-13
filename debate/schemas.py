@@ -136,6 +136,7 @@ class JudgeVerdictClass(str, Enum):
     AUTHENTIC = "AUTHENTIC"
     SYNTHETIC = "SYNTHETIC"
     INTEGRITY_UNKNOWN = "INTEGRITY_UNKNOWN"
+    UNCERTAIN = "UNCERTAIN"
 
 
 class ClaimAdjudication(BaseModel):
@@ -161,6 +162,21 @@ class CourtAdmissibleVerdict(BaseModel):
     siem_alert_tier: str  # "P1_CRITICAL" | "P2_ELEVATED" | "P4_INFORMATIONAL"
     evidence_manifest_hash: str  # SHA-256 digest of all considered inputs & claims
     signed_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    @property
+    def is_decisive(self) -> bool:
+        """Returns True if the verdict is decisive (AUTHENTIC or SYNTHETIC)."""
+        return self.final_verdict in (JudgeVerdictClass.AUTHENTIC, JudgeVerdictClass.SYNTHETIC)
+
+    @property
+    def is_uncertain(self) -> bool:
+        """Returns True if the verdict is explicitly UNCERTAIN."""
+        return self.final_verdict == JudgeVerdictClass.UNCERTAIN
+
+    @property
+    def is_integrity_unknown(self) -> bool:
+        """Returns True if the verdict is INTEGRITY_UNKNOWN (integrity failure/gap)."""
+        return self.final_verdict == JudgeVerdictClass.INTEGRITY_UNKNOWN
 
 
 class CrossExaminationFinding(BaseModel):

@@ -655,12 +655,12 @@ def validate_judge_output(
                 detail="LLM narrative omitted synthetic/manipulation terms for locked SYNTHETIC verdict",
             )
             return False, "NARRATIVE_MISSING_SYNTHETIC_FINDING"
-    elif verdict_upper == "INTEGRITY_UNKNOWN":
+    elif verdict_upper in ("INTEGRITY_UNKNOWN", "UNCERTAIN"):
         if _FALSE_AUTHENTIC_PHRASES_RE.search(combined_text):
             SECURITY_ANOMALIES.record(
                 "SEMANTIC_VERDICT_CONTRADICTION",
                 source="judge_llm",
-                detail="LLM narrative certified authentic despite INTEGRITY_UNKNOWN verdict",
+                detail=f"LLM narrative certified authentic despite {verdict_upper} verdict",
             )
             return False, "NARRATIVE_CONTRADICTS_UNKNOWN_VERDICT"
     elif verdict_upper == "AUTHENTIC":

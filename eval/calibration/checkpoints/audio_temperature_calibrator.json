@@ -1,0 +1,12 @@
+{
+  "calibrator_type": "temperature",
+  "name": "temperature",
+  "temperature": 0.1872312627108382,
+  "input_is_probability": true,
+  "is_fitted": true,
+  "metadata": {
+    "loss": 0.05580087651214312,
+    "converged": true,
+    "num_samples": 100
+  }
+}

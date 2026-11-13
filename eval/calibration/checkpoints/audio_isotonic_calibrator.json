@@ -1,0 +1,25 @@
+{
+  "calibrator_type": "isotonic",
+  "name": "isotonic",
+  "x_thresholds": [
+    0.03212150997106876,
+    0.3968145650838533,
+    0.4315320436004646,
+    0.5492132016294118,
+    0.562621116920139,
+    0.9898687697430972
+  ],
+  "y_thresholds": [
+    0.0,
+    0.0,
+    0.5,
+    0.5,
+    1.0,
+    1.0
+  ],
+  "is_fitted": true,
+  "metadata": {
+    "num_samples": 100,
+    "num_thresholds": 6
+  }
+}

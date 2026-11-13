@@ -178,8 +178,11 @@ class JudgeArbitrator:
         elif calibrated_score <= AUTHENTIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.AUTHENTIC
             siem_tier = "P4_INFORMATIONAL"
-        else:
+        elif coverage_warnings:
             final_verdict = JudgeVerdictClass.INTEGRITY_UNKNOWN
+            siem_tier = "P2_ELEVATED"
+        else:
+            final_verdict = JudgeVerdictClass.UNCERTAIN
             siem_tier = "P2_ELEVATED"
 
         conf_margin = round(analysis.confidence_spread / 2.0, 3)
@@ -366,8 +369,11 @@ class JudgeArbitrator:
         elif calibrated_score <= AUTHENTIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.AUTHENTIC
             siem_tier = "P4_INFORMATIONAL"
-        else:
+        elif coverage_warnings:
             final_verdict = JudgeVerdictClass.INTEGRITY_UNKNOWN
+            siem_tier = "P2_ELEVATED"
+        else:
+            final_verdict = JudgeVerdictClass.UNCERTAIN
             siem_tier = "P2_ELEVATED"
 
         # Forensic Justification Narrative
