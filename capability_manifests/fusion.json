@@ -1,0 +1,43 @@
+{
+    "detector_name": "fusion",
+    "modality": [
+        "video"
+    ],
+    "version": "tiered-v2",
+    "description": "Tiered feed-integrity and content anomaly fusion engine combining cryptographic hash chain, timestamp/sequence continuity, PRNU sensor verification, and calibrated AI scores with anti-flapping hysteresis.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0.53,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".mkv",
+            ".mp4"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": 0.15,
+        "p95_latency_ms": 0.35,
+        "avg_ram_usage_mb": 15.0,
+        "avg_vram_usage_mb": null,
+        "measured_on": "Intel CPU (FeedFusionEngine sliding-window integration)"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "uncalibrated AI scores near decision boundary without hysteresis",
+            "effect": "verdict flapping between AUTHENTIC and UNCERTAIN",
+            "source": "docs/LIMITATIONS.md (M2-L6)"
+        },
+        {
+            "condition": "feed integrity failure (hash break, sequence gap, PRNU mismatch)",
+            "effect": "immediate Tier 1 hard alert INTEGRITY_UNKNOWN overriding content score",
+            "source": "security/fusion/feed_fusion.py"
+        },
+        {
+            "condition": "hardware sensor PRNU correlation drop (PCE < 50.0)",
+            "effect": "flags foreign camera sensor mismatch in Tier 1",
+            "source": "security/fusion/feed_fusion.py (M2-L8)"
+        }
+    ],
+    "reliability_notes": "Tier 1 enforces hard alert on any feed integrity failure. Tier 2 evaluates calibrated AI anomaly scores with anti-flapping hysteresis for clean streams, resolving equal-weight dilution (M2-L6)."
+}
+
