@@ -172,6 +172,34 @@ services:
       retries: 3
       start_period: 10s
 
+  detector_text:
+    command:
+      - uvicorn
+      - app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --ssl-keyfile=/mesh/mesh_detector_text.key
+      - --ssl-certfile=/mesh/mesh_detector_text.crt
+      - --ssl-ca-certs=/mesh/mesh_ca.crt
+      - --ssl-cert-reqs=2
+    ports: !reset []
+    volumes:
+      - *mesh_certs
+    environment:
+      - INTERNAL_API_KEY=
+      - AEGIS_MESH_STRICT=1
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
+              "--cert", "/mesh/mesh_detector_text.crt",
+              "--key", "/mesh/mesh_detector_text.key",
+              "https://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
   orchestrator:
     volumes:
       - *mesh_certs

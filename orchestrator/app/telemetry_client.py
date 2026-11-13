@@ -47,6 +47,7 @@ BASELINE_LATENCIES_MS: Dict[str, Dict[str, float]] = {
     "rppg": {"avg": 6607.7, "p95": 15850.0},
     "aasist": {"avg": 234.8, "p95": 334.0},
     "syncnet": {"avg": 9587.4, "p95": 22834.0},
+    "text": {"avg": 225.65, "p95": 643.46},
 }
 
 # Mapping Prometheus jobs/targets to canonical detector names
@@ -55,6 +56,7 @@ JOB_TO_DETECTOR = {
     "aegis_detector_video_classifier": "video-classifier",
     "aegis_detector_rppg": "rppg",
     "aegis_detector_syncnet": "syncnet",
+    "aegis_detector_text": "text",
 }
 
 

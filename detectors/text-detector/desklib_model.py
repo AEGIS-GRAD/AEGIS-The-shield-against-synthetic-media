@@ -29,6 +29,9 @@ class DesklibAIDetectionModel(PreTrainedModel):
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, dim=1)
         sum_mask = torch.clamp(input_mask_expanded.sum(dim=1), min=1e-9)
         pooled_output = sum_embeddings / sum_mask
+        classifier_param = next(self.classifier.parameters(), None)
+        if classifier_param is not None and pooled_output.dtype != classifier_param.dtype:
+            pooled_output = pooled_output.to(dtype=classifier_param.dtype)
 
         logits = self.classifier(pooled_output)
         loss = None

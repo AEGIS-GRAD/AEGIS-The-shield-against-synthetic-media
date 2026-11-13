@@ -20,8 +20,8 @@ def test_baseline_fallback_on_unreachable_prometheus():
     client = PrometheusTelemetryClient(prometheus_url="http://127.0.0.1:59999", timeout_s=0.1)
     snapshot = client.get_telemetry_snapshot()
 
-    assert len(snapshot) == 4
-    for det in ["video-classifier", "rppg", "aasist", "syncnet"]:
+    assert len(snapshot) == 5
+    for det in ["video-classifier", "rppg", "aasist", "syncnet", "text"]:
         assert det in snapshot
         t = snapshot[det]
         assert t.detector_name == det

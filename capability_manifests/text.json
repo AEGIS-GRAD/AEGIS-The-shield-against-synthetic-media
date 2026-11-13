@@ -1,0 +1,64 @@
+{
+    "detector_name": "text",
+    "modality": [
+        "text"
+    ],
+    "version": "desklib-ai-text-detector-v1.01-fp16",
+    "description": "Transformer-based synthetic text detector using desklib/ai-text-detector-v1.01 (DeBERTa-v3-large mean-pooling head) with overlapping 510-token window aggregation, sentence-level GPT-2 perplexity/burstiness, linguistic stylometry, minimum-length gating, and opt-in Binoculars-small corroboration.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0.0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".txt",
+            ".md",
+            "base64"
+        ],
+        "min_words": 40,
+        "reliable_words": 150,
+        "max_chars": 200000
+    },
+    "performance": {
+        "avg_latency_ms": 225.65,
+        "p95_latency_ms": 643.46,
+        "avg_ram_usage_mb": 1887.67,
+        "avg_vram_usage_mb": 1913.95,
+        "measured_on": "NVIDIA RTX 3050 4GB fp16 (Desklib v1.01 + GPT-2 perplexity on 440 interim MAGE texts)"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "short text (< 40 words)",
+            "effect": "insufficient lexical and perplexity statistics; service returns status='not_applicable' with neutral confidence=0.50",
+            "source": "detectors/text-detector/README.md"
+        },
+        {
+            "condition": "marginal length text (40-149 words)",
+            "effect": "reduced discriminative stability; confidence is linearly attenuated toward 0.50 and flagged short_text_attenuated",
+            "source": "detectors/text-detector/README.md"
+        },
+        {
+            "condition": "post-cutoff LLMs and heavily paraphrased synthetic prose",
+            "effect": "higher false-negative rate for unadapted as-is desklib checkpoint until Task 3 LoRA adapter is loaded",
+            "source": "detectors/text-detector/eval/text_detector_baseline.md"
+        },
+        {
+            "condition": "mixed human/AI collaborative documents",
+            "effect": "divergent chunk scores across sections; flagged chunk_disagreement for Debate cross-examination",
+            "source": "detectors/text-detector/evidence.py"
+        }
+    ],
+    "reliability_notes": "Primary text authenticity detector for >=150-word documents. Below 40 words returns not_applicable; 40-149 words is attenuated toward 0.50. Runs in fp16 within a 4-8 GB GPU budget using dynamic-padded batch_size=4 with automatic OOM backoff.",
+    "model_metadata": {
+        "checkpoint": "desklib/ai-text-detector-v1.01",
+        "backbone": "microsoft/deberta-v3-large",
+        "license": "MIT",
+        "training_data": "liamdugan/raid",
+        "auxiliary_signals": [
+            "gpt2-perplexity",
+            "sentence-burstiness-cov",
+            "stylometry",
+            "binoculars-small (opt-in)"
+        ]
+    }
+}
+

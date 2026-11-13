@@ -34,7 +34,7 @@ graph TD
                 D_RPPG(detector_rppg)
                 D_SYNCNET(detector_syncnet)
                 D_DIRE(detector_dire)
-                D_BINOCULARS(detector_binoculars)
+                D_TEXT(detector_text)
             end
         end
     end
@@ -55,7 +55,7 @@ graph TD
     Orch -->|Invokes| D_RPPG
     Orch -->|Invokes| D_SYNCNET
     Orch -->|Invokes| D_DIRE
-    Orch -->|Invokes| D_BINOCULARS
+    Orch -->|Invokes| D_TEXT
     
     %% Styling
     classDef exposed fill:#2d5e2d,stroke:#fff,stroke-width:2px,color:#fff;
@@ -63,7 +63,7 @@ graph TD
     classDef external fill:#555,stroke:#fff,stroke-width:1px,color:#fff;
     
     class Web,Orch,Media exposed;
-    class Engine,Debate,Eval,MCP,Wazuh,D_AASIST,D_RPPG,D_SYNCNET,D_DIRE,D_BINOCULARS internal;
+    class Engine,Debate,Eval,MCP,Wazuh,D_AASIST,D_RPPG,D_SYNCNET,D_DIRE,D_TEXT internal;
     class User,ExternalAPI,Camera external;
 ```
 

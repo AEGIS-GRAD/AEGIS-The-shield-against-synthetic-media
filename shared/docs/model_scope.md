@@ -8,7 +8,7 @@ This document details the 6 detector models finalized for the AEGIS project. It 
 | Video (physiological) | rPPG (PhysNet/DeepPhys) | ubicomplab/rPPG-Toolbox | | |
 | Audio-visual sync | SyncNet | joonson/syncnet_python | | |
 | Audio (voice spoofing) | AASIST | clovaai/aasist | | ASVspoof 2019 LA (Logical Access, CM task only) |
-| Text | Binoculars | ahans30/Binoculars | | |
+| Text | Desklib v1.01 + Perplexity (replaces Binoculars) | desklib/ai-text-detector-v1.01 | As-is AUROC 0.931 (service long 500+ AUROC 0.9765, TPR@1%FPR 0.8636, 1.91 GB VRAM; see `detectors/text-detector/eval/text_detector_baseline.md`) | liamdugan/raid (train) / yaful/MAGE (interim eval) |
 | Image (GAN/diffusion) | Wang et al. CNN-Detection | peterwang512/CNNDetection | | |
 
 ### Scope Note

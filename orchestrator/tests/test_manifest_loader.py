@@ -48,7 +48,7 @@ from manifest_loader import (  # noqa: E402
 # Fixtures
 # ---------------------------------------------------------------------------
 
-KNOWN_DETECTORS = {"aasist", "rppg", "syncnet", "video-classifier", "fusion"}
+KNOWN_DETECTORS = {"aasist", "rppg", "syncnet", "text", "video-classifier", "fusion"}
 
 
 @pytest.fixture()
