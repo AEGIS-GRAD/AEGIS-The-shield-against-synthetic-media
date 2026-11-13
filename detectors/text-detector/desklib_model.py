@@ -41,14 +41,33 @@ class DesklibAIDetectionModel(PreTrainedModel):
             output["loss"] = loss
         return output
 
-def load_desklib(model_dir=None, device=None):
+def load_desklib(model_dir=None, device=None, use_finetuned=True):
     if model_dir is None:
         model_dir = os.path.join(os.path.dirname(__file__), "models", "desklib-base")
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
+    # Auto-download base weights if not present
+    config_file = os.path.join(model_dir, "config.json")
+    if not os.path.exists(config_file):
+        print(f"[*] Base model not found in {model_dir}. Auto-downloading from Hugging Face...")
+        from download_desklib import download_desklib
+        download_desklib(model_dir)
+
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = DesklibAIDetectionModel.from_pretrained(model_dir)
+
+    # Automatically load fine-tuned LoRA adapter if present
+    adapter_dir = os.path.join(os.path.dirname(__file__), "models", "desklib-finetuned", "lora_adapter")
+    if use_finetuned and os.path.exists(os.path.join(adapter_dir, "adapter_config.json")):
+        try:
+            from peft import PeftModel
+            print(f"[*] Loading fine-tuned LoRA adapter from {adapter_dir}...")
+            model.model = PeftModel.from_pretrained(model.model, adapter_dir)
+            print("[+] Fine-tuned LoRA adapter successfully attached.")
+        except Exception as e:
+            print(f"[!] Warning: Could not attach LoRA adapter ({e}). Using base model.")
+
     model.to(device)
     model.eval()
     return model, tokenizer, device

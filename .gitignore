@@ -54,8 +54,9 @@ web/.jobs/
 *_ckpt_ep*.pth
 
 # Large model weights (Hugging Face models & safetensors)
-*.safetensors
 *.bin
 *.pth
-detectors/text-detector/models/
+detectors/text-detector/models/desklib-base/
+!detectors/text-detector/models/desklib-finetuned/
+
 
