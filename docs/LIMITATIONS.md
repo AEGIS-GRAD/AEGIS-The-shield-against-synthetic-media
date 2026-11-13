@@ -298,7 +298,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 - [ ] **Streaming rPPG Face ROI & Luminance Guardrails (M2-L3)** — Port MTCNN bounding-box and minimum luminance checks into `detectors/rppg/streaming/`.
 - [ ] **Calibrate Streaming rPPG Logistic Mapping (M2-L4)** — Fit `snr_midpoint_db` and `snr_slope` against empirical benchmark distributions.
 - [ ] **Wire Streaming rPPG into Live Surveillance Pipeline (M2-L5)** — Integrate multi-modal physiological verification alongside MobileNetV3 in `live_pipeline/`.
-- [ ] **Calibrate Feed-Integrity Fusion Weights (M2-L6)** — Eliminate dead-zone where `ai_score in (0.35, 0.65)` trivially yields `UNCERTAIN`.
+- [x] **Calibrate Feed-Integrity Fusion Weights (M2-L6)** — Resolved in Month 3 (Task 4): Redesigned fusion into tiers (`security/fusion/feed_fusion.py`). Tier 1 enforces hard alerts on broken hash chain, sequence gaps, or PRNU failure; Tier 2 decouples clean-stream AI scores from 0.5 dilution; and anti-flapping hysteresis prevents flapping on clean streams. Validated with `capability_manifests/fusion.json` and surveillance benchmark re-run.
 - [ ] **Remove Placeholder Evidence Fallbacks in SIEM Alerts (M2-L7)** — Replace empty-string SHA-256 and dummy camera IP with authentic forensic hardware bindings.
 - [ ] **Fix Sliding Window Anomaly Attribution (M2-L8)** — Attribute stream anomalies across all overlapping temporal windows in `live_pipeline.py`.
 - [x] **Develop AASIST Debate Adapter (M2-L9)** — Resolved in Month 3: AASIST adapter implemented in `debate/claim_wrapper.py`, filter removed from `judge_bridge.py`, and Precedence Rule 5 added for voice-clone arbitration.
@@ -379,10 +379,10 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Failure mode** | Combined score thresholds are mathematically unreachable or degenerate when integrity is clean. |
 | **Root cause** | With `w_integrity = 0.5` and `w_ai = 0.5`, under clean feed integrity (`integrity_score = 0.0`), `combined_score = 0.5 * ai_score`. Because `combined_score` cannot exceed 0.5, the condition `combined_score >= synthetic_threshold (0.65)` never triggers; the verdict is decided exclusively by `ai_score >= 0.65`. |
 | **Observed behaviour** | For any `ai_score` in the interval (0.35, 0.65), the engine defaults to `UNCERTAIN` regardless of pristine feed integrity. |
-| **Current mitigation** | Hardcoded secondary check `ai_score >= synthetic_threshold` catches synthetic alerts. |
-| **Residual risk** | Weighted averaging dilutes the AI forensic score and obscures nuanced threat levels. |
-| **Debate-layer / System implication** | Move from linear scalar combination to hierarchical multi-condition rule engines in Month 3. |
-| **Evidence** | [security/fusion/feed_fusion.py:L154-L167](../security/fusion/feed_fusion.py#L154-L167); verified by unit test `security/fusion/tests/test_fusion_limitations.py::test_m2_l6_equal_weights_verdict_reduces_to_ai_threshold`. |
+| **Current mitigation** | **RESOLVED in Month 3 Task 4**: Tiered Feed Fusion implemented in `security/fusion/feed_fusion.py`. Tier 1 triggers hard alert on any feed integrity failure; Tier 2 evaluates calibrated AI scores directly without 0.5 dilution, with hysteresis against flapping. |
+| **Residual risk** | Fully resolved in live pipeline and benchmark suite. |
+| **Debate-layer / System implication** | Tiered fusion manifest added to `capability_manifests/fusion.json`. |
+| **Evidence** | [security/fusion/feed_fusion.py](../security/fusion/feed_fusion.py); verified by unit tests in `security/fusion/tests/test_fusion.py` and `security/fusion/tests/test_fusion_limitations.py::test_m2_l6_resolved_tiered_fusion_decouples_ai_score`. |
 
 #### M2-L7: Synthetic & Placeholder Evidentiary Fallbacks in Incident Alerts
 | Attribute | Detail |

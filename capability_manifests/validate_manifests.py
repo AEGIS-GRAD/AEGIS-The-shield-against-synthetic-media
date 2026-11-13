@@ -4,7 +4,7 @@ import jsonschema
 from Schema import DETECTOR_MANIFEST_SCHEMA
 
 MANIFEST_DIR = os.path.dirname(__file__)
-FILES = ["video-classifier.json", "aasist.json", "rppg.json", "syncnet.json"]
+FILES = ["video-classifier.json", "aasist.json", "rppg.json", "syncnet.json", "fusion.json"]
 
 def main():
     all_valid = True

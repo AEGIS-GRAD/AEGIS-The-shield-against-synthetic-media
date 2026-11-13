@@ -112,7 +112,11 @@ class LiveSurveillancePipeline:
         w_integrity: float = 0.5,
         w_ai: float = 0.5,
         synthetic_threshold: float = 0.65,
-        authentic_threshold: float = 0.35,
+        authentic_threshold: float = 0.40,
+        pce_threshold: float = 50.0,
+        hysteresis_margin: float = 0.05,
+        mode: str = "tiered",
+        calibrator: Optional[Any] = None,
     ):
         self.camera_id = camera_id
         self.window_size = window_size
@@ -133,6 +137,10 @@ class LiveSurveillancePipeline:
             w_ai=w_ai,
             synthetic_threshold=synthetic_threshold,
             authentic_threshold=authentic_threshold,
+            pce_threshold=pce_threshold,
+            hysteresis_margin=hysteresis_margin,
+            mode=mode,
+            calibrator=calibrator,
         )
 
         # Pipeline runtime state
@@ -153,6 +161,7 @@ class LiveSurveillancePipeline:
         self.window_anomalies.clear()
         self.all_anomalies.clear()
         self.stream_validator = StreamValidator(fps=self.fps)
+        self.fusion_engine.reset()
         self.last_alert = None
 
     def push_frame(

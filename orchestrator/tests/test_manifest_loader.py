@@ -1,4 +1,4 @@
-﻿"""
+"""
 tests/test_manifest_loader.py -- Unit tests for orchestrator/app/manifest_loader.py
 =====================================================================================
 Tests are grouped into four suites:
@@ -48,7 +48,7 @@ from manifest_loader import (  # noqa: E402
 # Fixtures
 # ---------------------------------------------------------------------------
 
-KNOWN_DETECTORS = {"aasist", "rppg", "syncnet", "video-classifier"}
+KNOWN_DETECTORS = {"aasist", "rppg", "syncnet", "video-classifier", "fusion"}
 
 
 @pytest.fixture()

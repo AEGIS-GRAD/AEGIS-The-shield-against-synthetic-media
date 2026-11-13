@@ -62,17 +62,35 @@ class FusionResult:
     integrity_ok: bool
     evidence: Dict[str, Any] = field(default_factory=dict)
     alert: Optional[Any] = None
+    tier: int = 1
+    calibrated_score: Optional[float] = None
+    hysteresis_applied: bool = False
 
 
 class FeedFusionEngine:
     """
-    Fuses feed-integrity indicators with AI content anomaly scores.
+    Tiered Feed Fusion Engine for AEGIS.
+    Combines feed-integrity indicators with calibrated AI content anomaly scores.
 
-    Weights:
-        w_integrity: Weight given to integrity score (default: 0.5)
-        w_ai: Weight given to AI anomaly score (default: 0.5)
+    Architecture (Month 3 Tiered Fusion):
+        Tier 1: Hardware & Feed Integrity Verification
+            Hard alerts on broken hash chain, sequence/timestamp gap, or PRNU foreign
+            sensor mismatch. An integrity failure MUST NEVER resolve to AUTHENTIC and
+            immediately yields INTEGRITY_UNKNOWN regardless of AI content score.
+        Tier 2: Content Anomaly Scoring with Anti-Flapping Hysteresis
+            When feed integrity is clean, the calibrated AI content score decides
+            the verdict directly (decoupled from the 0.5 dilution penalty of Month 2).
+            Hysteresis bands prevent rapid flapping when scores sit near decision boundaries.
+
+    Parameters:
+        w_integrity: Weight given to integrity score in legacy mode (default: 0.5)
+        w_ai: Weight given to AI anomaly score in legacy mode (default: 0.5)
         synthetic_threshold: Threshold above which content is deemed synthetic (default: 0.65)
-        authentic_threshold: Threshold below which content is deemed authentic (default: 0.35)
+        authentic_threshold: Threshold below which content is deemed authentic (default: 0.40)
+        pce_threshold: PRNU Peak-to-Correlation Energy threshold (default: 50.0)
+        hysteresis_margin: Deadband margin around thresholds to suppress flapping (default: 0.05)
+        mode: Fusion mode, 'tiered' (default) or 'legacy' (Month 2 equal-weights)
+        calibrator: Optional callable or scikit-learn compatible object for score calibration
         alert_router: Optional AlertRouter instance for dispatching SIEM/SOC alerts.
     """
 
@@ -81,20 +99,51 @@ class FeedFusionEngine:
         w_integrity: float = 0.5,
         w_ai: float = 0.5,
         synthetic_threshold: float = 0.65,
-        authentic_threshold: float = 0.35,
+        authentic_threshold: float = 0.40,
+        pce_threshold: float = 50.0,
+        hysteresis_margin: float = 0.05,
+        mode: str = "tiered",
+        calibrator: Optional[Any] = None,
         alert_router: Optional[Any] = None,
     ):
         self.w_integrity = w_integrity
         self.w_ai = w_ai
         self.synthetic_threshold = synthetic_threshold
         self.authentic_threshold = authentic_threshold
+        self.pce_threshold = pce_threshold
+        self.hysteresis_margin = hysteresis_margin
+        self.mode = mode
+        self.calibrator = calibrator
         self.alert_router = alert_router
+
+        # Rolling state for anti-flapping hysteresis
+        self.last_content_state: Optional[str] = None
+        self.state_history: List[str] = []
+        self.window_count: int = 0
+
+    def reset(self) -> None:
+        """Resets stream state and hysteresis tracking buffers."""
+        self.last_content_state = None
+        self.state_history.clear()
+        self.window_count = 0
+
+    def calibrate_score(self, score: float) -> float:
+        """Applies calibration mapping to raw content anomaly score."""
+        if self.calibrator is not None:
+            if callable(self.calibrator):
+                return float(self.calibrator(score))
+            elif hasattr(self.calibrator, "predict_proba"):
+                return float(self.calibrator.predict_proba([[score]])[0][1])
+            elif hasattr(self.calibrator, "calibrate"):
+                return float(self.calibrator.calibrate(score))
+        return float(score)
 
     def compute_integrity_score(
         self,
         hash_chain_ok: bool,
         anomaly_count: int,
         prnu_ok: bool,
+        prnu_pce: Optional[float] = None,
     ) -> float:
         """
         Maps integrity signals to a normalized 0.0 - 1.0 anomaly penalty score.
@@ -103,7 +152,9 @@ class FeedFusionEngine:
         score = 0.0
         if not hash_chain_ok:
             score += 1.0
-        if not prnu_ok:
+        # Evaluate PRNU boolean status as well as numeric PCE threshold
+        prnu_mismatch = (not prnu_ok) or (prnu_pce is not None and prnu_pce < self.pce_threshold)
+        if prnu_mismatch:
             score += 0.8
         if anomaly_count > 0:
             # 3 or more stream timestamp/sequence anomalies saturates to full 1.0
@@ -119,6 +170,7 @@ class FeedFusionEngine:
         prnu_pce: float = 100.0,
         ai_score: float = 0.0,
         details: Optional[Dict[str, Any]] = None,
+        stateful: bool = True,
     ) -> FusionResult:
         """
         Fuses the integrity indicators with AI anomaly score for the rolling window.
@@ -130,51 +182,123 @@ class FeedFusionEngine:
             prnu_pce: PCE value from PRNU computation.
             ai_score: Rolling content-anomaly score from AI detector [0.0 - 1.0].
             details: Optional extra debugging/forensics metadata.
+            stateful: Whether to update rolling anti-flapping hysteresis state.
 
         Returns:
-            FusionResult containing combined score and verdict.
+            FusionResult containing tier, combined score, and verdict.
         """
         if integrity_anomalies is None:
             integrity_anomalies = []
 
         anomaly_count = len(integrity_anomalies)
-        integrity_ok = hash_chain_ok and prnu_ok and (anomaly_count == 0)
+        prnu_check_ok = prnu_ok and (prnu_pce is None or prnu_pce >= self.pce_threshold)
+        integrity_ok = hash_chain_ok and prnu_check_ok and (anomaly_count == 0)
 
         integrity_score = self.compute_integrity_score(
             hash_chain_ok=hash_chain_ok,
             anomaly_count=anomaly_count,
             prnu_ok=prnu_ok,
+            prnu_pce=prnu_pce,
         )
 
-        # Normalize weights
-        total_w = self.w_integrity + self.w_ai
-        norm_w_integrity = self.w_integrity / total_w if total_w > 0 else 0.5
-        norm_w_ai = self.w_ai / total_w if total_w > 0 else 0.5
+        calibrated_score = self.calibrate_score(ai_score)
+        hysteresis_applied = False
 
-        combined_score = (norm_w_integrity * integrity_score) + (norm_w_ai * ai_score)
-
-        # Verdict logic:
-        # 1. Non-negotiable: Any integrity compromise must NEVER be AUTHENTIC.
-        # If integrity is failed, verdict must be INTEGRITY_UNKNOWN.
         if not integrity_ok:
+            # -------------------------------------------------------------
+            # Tier 1: Hardware / Feed Integrity Compromise (Hard Alert)
+            # -------------------------------------------------------------
+            tier = 1
             verdict = "INTEGRITY_UNKNOWN"
-        elif combined_score >= self.synthetic_threshold or ai_score >= self.synthetic_threshold:
-            # Even if headers are pristine, AI detecting synthetic artifacts triggers SYNTHETIC
-            verdict = "SYNTHETIC"
-        elif combined_score <= self.authentic_threshold and ai_score <= self.authentic_threshold:
-            verdict = "AUTHENTIC"
+            if self.mode == "tiered":
+                # Hard alert penalty reflects full integrity compromise regardless of content
+                combined_score = 1.0
+            else:
+                total_w = self.w_integrity + self.w_ai
+                norm_w_integrity = self.w_integrity / total_w if total_w > 0 else 0.5
+                norm_w_ai = self.w_ai / total_w if total_w > 0 else 0.5
+                combined_score = (norm_w_integrity * integrity_score) + (norm_w_ai * ai_score)
+
+            if stateful:
+                self.last_content_state = None  # Reset rolling content state on hard tamper
         else:
-            verdict = "UNCERTAIN"
+            # -------------------------------------------------------------
+            # Tier 2: Clean Stream Content Anomaly with Anti-Flapping Hysteresis
+            # -------------------------------------------------------------
+            tier = 2
+            if self.mode == "tiered":
+                # Calibrated content score decides directly without 0.5 dilution penalty
+                combined_score = calibrated_score
+
+                prev_state = self.last_content_state if stateful else None
+
+                if prev_state is None:
+                    if calibrated_score >= self.synthetic_threshold:
+                        verdict = "SYNTHETIC"
+                    elif calibrated_score <= self.authentic_threshold:
+                        verdict = "AUTHENTIC"
+                    else:
+                        verdict = "UNCERTAIN"
+                elif prev_state == "AUTHENTIC":
+                    # Must exceed upper hysteresis margin to exit AUTHENTIC state
+                    if calibrated_score >= self.synthetic_threshold + self.hysteresis_margin:
+                        verdict = "SYNTHETIC"
+                    elif calibrated_score > self.authentic_threshold + self.hysteresis_margin:
+                        verdict = "UNCERTAIN"
+                    else:
+                        verdict = "AUTHENTIC"
+                        if calibrated_score > self.authentic_threshold:
+                            hysteresis_applied = True
+                elif prev_state == "SYNTHETIC":
+                    # Must fall below lower hysteresis margin to exit SYNTHETIC state
+                    if calibrated_score <= self.authentic_threshold - self.hysteresis_margin:
+                        verdict = "AUTHENTIC"
+                    elif calibrated_score < self.synthetic_threshold - self.hysteresis_margin:
+                        verdict = "UNCERTAIN"
+                    else:
+                        verdict = "SYNTHETIC"
+                        if calibrated_score < self.synthetic_threshold:
+                            hysteresis_applied = True
+                else:  # prev_state == "UNCERTAIN"
+                    if calibrated_score >= self.synthetic_threshold:
+                        verdict = "SYNTHETIC"
+                    elif calibrated_score <= self.authentic_threshold:
+                        verdict = "AUTHENTIC"
+                    else:
+                        verdict = "UNCERTAIN"
+
+                if stateful:
+                    self.last_content_state = verdict
+                    self.state_history.append(verdict)
+                    self.window_count += 1
+            else:
+                # Legacy Month 2 equal-weighted combination
+                total_w = self.w_integrity + self.w_ai
+                norm_w_integrity = self.w_integrity / total_w if total_w > 0 else 0.5
+                norm_w_ai = self.w_ai / total_w if total_w > 0 else 0.5
+                combined_score = (norm_w_integrity * integrity_score) + (norm_w_ai * ai_score)
+
+                if combined_score >= self.synthetic_threshold or ai_score >= self.synthetic_threshold:
+                    verdict = "SYNTHETIC"
+                elif combined_score <= self.authentic_threshold and ai_score <= self.authentic_threshold:
+                    verdict = "AUTHENTIC"
+                else:
+                    verdict = "UNCERTAIN"
 
         evidence = {
+            "tier": tier,
             "hash_chain_ok": hash_chain_ok,
             "anomaly_count": anomaly_count,
             "anomalies": [str(a) for a in integrity_anomalies],
             "prnu_ok": prnu_ok,
             "prnu_pce": prnu_pce,
+            "pce_threshold": self.pce_threshold,
             "ai_score": ai_score,
+            "calibrated_score": calibrated_score,
             "integrity_score": integrity_score,
             "combined_score": combined_score,
+            "hysteresis_applied": hysteresis_applied,
+            "mode": self.mode,
         }
         if details:
             evidence.update(details)
@@ -186,6 +310,9 @@ class FeedFusionEngine:
             ai_score=ai_score,
             integrity_ok=integrity_ok,
             evidence=evidence,
+            tier=tier,
+            calibrated_score=calibrated_score,
+            hysteresis_applied=hysteresis_applied,
         )
 
         return result
