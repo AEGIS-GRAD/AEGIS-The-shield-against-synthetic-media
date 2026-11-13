@@ -66,14 +66,15 @@ RAW_FIELDNAMES = [
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
 def verdict_to_label(verdict: str) -> str:
-    """Map orchestrator verdict strings to 'fake' or 'real'."""
+    """Map orchestrator verdict strings to 'fake', 'real', or explicit 'uncertain'."""
     v = (verdict or "").upper()
     if v == "SYNTHETIC":
         return "fake"
     if v == "AUTHENTIC":
         return "real"
-    # UNCERTAIN / NO_RESULTS treated as 'real' for recall purposes
-    return "real"
+    if v == "UNCERTAIN":
+        return "uncertain"
+    return "no_results"
 
 
 def call_orchestrate(
@@ -287,11 +288,11 @@ def generate_report(raw_rows: List[Dict]) -> None:
         )
         det_accuracy = round(det_correct / len(called_rows), 4)
 
-        # How often detector verdict agreed with final pipeline verdict
-        pipeline_map = {"SYNTHETIC": "fake", "AUTHENTIC": "real", "UNCERTAIN": "real", "NO_RESULTS": "real"}
+        # How often detector verdict agreed with final pipeline verdict (UNCERTAIN is explicit, not folded into real)
+        pipeline_map = {"SYNTHETIC": "fake", "AUTHENTIC": "real", "UNCERTAIN": "uncertain", "NO_RESULTS": "no_results"}
         agree = sum(
             1 for r in called_rows
-            if r.get(verd_col) == pipeline_map.get((r.get("final_verdict") or "").upper(), "real")
+            if r.get(verd_col) == pipeline_map.get((r.get("final_verdict") or "").upper(), "no_results")
         )
         agree_rate = round(agree / len(called_rows), 4)
 
@@ -376,7 +377,7 @@ def generate_report(raw_rows: List[Dict]) -> None:
         "- Aggregation method: **weighted average** (video-classifier ×1.5, rppg ×1.2, syncnet ×1.2, aasist ×1.0).",
         "  This is a placeholder heuristic — see `orchestrator/app/aggregate.py` for detail.",
         "- Verdict thresholds: score ≥ 0.65 → SYNTHETIC, score ≤ 0.35 → AUTHENTIC, between → UNCERTAIN.",
-        "- UNCERTAIN and NO_RESULTS verdicts are treated as 'real' (authentic) for accuracy calculation purposes.",
+        "- UNCERTAIN is treated as an explicit aggregate outcome (Task 3: never folded or counted as authentic/real).",
         "- Raw per-sample data: `eval/reports/week_benchmark_raw.csv`.",
         "- Manifest: `eval/data/eval_manifest.csv`.",
         "",

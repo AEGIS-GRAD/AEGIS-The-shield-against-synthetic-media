@@ -1,0 +1,13 @@
+{
+  "calibrator_type": "platt",
+  "name": "platt",
+  "a": 5.081532539951055,
+  "b": 0.1305217885479937,
+  "input_is_probability": true,
+  "is_fitted": true,
+  "metadata": {
+    "loss": 0.058321679909222296,
+    "converged": true,
+    "num_samples": 100
+  }
+}
