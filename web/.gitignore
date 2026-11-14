@@ -1,3 +1,6 @@
 coverage/
 test-results/
 .jobs/
+playwright-report/
+blob-report/
+playwright/.cache/
