@@ -2,10 +2,11 @@
 
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Loader2, Clock, MinusCircle, XCircle, AlertTriangle, ArrowRight } from "lucide-react";
 import { detectors, logs } from "@/lib/mock";
 import { Btn, LogRow, ModalityIcon, PageHeader, Panel } from "@/components/aegis/ui";
+import { useJobPolling } from "@/hooks/useJobPolling";
 import { cn } from "@/lib/utils";
 
 const steps = [
@@ -26,16 +27,24 @@ const plan: Record<string, { start: number; end: number; skip?: string; fail?: b
 };
 
 function ProcessingContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const file = searchParams.get("file") || "uploaded_media.mp4";
   const preset = searchParams.get("preset");
+  const initialJobId = searchParams.get("jobId");
   const [t, setT] = useState(0);
-  const [targetJobId, setTargetJobId] = useState(preset || "AEG-1042");
+  const [targetJobId, setTargetJobId] = useState(initialJobId || preset || "AEG-1042");
+  const [pollJobId, setPollJobId] = useState<string | null>(initialJobId);
   const [backendFailed, setBackendFailed] = useState<boolean>(false);
   const [backendErrorDetail, setBackendErrorDetail] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string | null>(
     preset ? `Month 2 Milestone Demo Preset: ${preset.replace(/_/g, " ").toUpperCase()}` : null
   );
+
+  const { status: pollStatus, job: polledJob, error: pollError } = useJobPolling(pollJobId, {
+    intervalMs: 750,
+    maxAttempts: 20,
+  });
 
   useEffect(() => {
     const uploadedFile = typeof window !== "undefined" ? (window as any).__currentAnalyzeFile : null;
@@ -55,8 +64,9 @@ function ProcessingContent() {
         .then((data) => {
           if (data.id) {
             setTargetJobId(data.id);
-            setStatusMessage(`Inference complete — Verdict: ${data.verdict.toUpperCase()}`);
-            setT(16); // Finished
+            setStatusMessage(`Inference complete — Verdict: ${(data.verdict || "unknown").toUpperCase()}`);
+            setPollJobId(data.id);
+            setT(14);
           }
         })
         .catch((err) => {
@@ -65,25 +75,39 @@ function ProcessingContent() {
           setBackendErrorDetail(err.message || "Failed to reach inference server at http://localhost:8765");
           setStatusMessage("Inference failed: Backend unreachable");
         });
+      return;
     }
 
-    if (!uploadedFile) {
+    if (!initialJobId) {
       // Demo preset simulation
       const id = setInterval(() => setT((x) => (x >= 16 ? x : x + 1)), 700);
       return () => clearInterval(id);
     }
-  }, []);
+  }, [initialJobId]);
 
   useEffect(() => {
-    if (t >= 16 && !backendFailed) {
+    if (!pollJobId) return;
+    if (pollStatus === "complete") {
+      if (polledJob?.verdict) {
+        setStatusMessage(`Report verified — Verdict: ${String(polledJob.verdict).toUpperCase()}`);
+      }
+      setT(16);
+    } else if (pollStatus === "failed" || pollStatus === "timeout" || pollStatus === "error" || pollStatus === "not_found") {
+      setBackendFailed(true);
+      setBackendErrorDetail(pollError || `Job verification ended with status '${pollStatus}'`);
+      setStatusMessage("Inference verification failed");
+    }
+  }, [pollJobId, pollStatus, polledJob, pollError]);
+
+  useEffect(() => {
+    const pollingConfirmed = pollJobId ? pollStatus === "complete" : true;
+    if (t >= 16 && !backendFailed && pollingConfirmed) {
       const redirectTimer = setTimeout(() => {
-        if (typeof window !== "undefined") {
-          window.location.href = `/reports/${targetJobId}`;
-        }
+        router.push(`/reports/${targetJobId}`);
       }, 1500);
       return () => clearTimeout(redirectTimer);
     }
-  }, [t, targetJobId, backendFailed]);
+  }, [t, targetJobId, backendFailed, pollJobId, pollStatus, router]);
 
   const step = t < 1 ? 0 : t < 2 ? 1 : t < 3 ? 2 : t < 12 ? 3 : t < 15 ? 4 : 5;
   const done = step === 5;
