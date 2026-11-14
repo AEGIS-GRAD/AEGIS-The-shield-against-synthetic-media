@@ -1,0 +1,1 @@
+This is a forensic sample text designed to evaluate neural synthetic artifact detection in natural language sequences.
