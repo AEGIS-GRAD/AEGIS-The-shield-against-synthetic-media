@@ -1,3 +1,13 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": ["coverage/", "test-results/"],
+  "overrides": [
+    {
+      "files": ["src/**/*.test.*", "src/**/__tests__/**", "src/test/**"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@next/next/no-img-element": "off"
+      }
+    }
+  ]
 }

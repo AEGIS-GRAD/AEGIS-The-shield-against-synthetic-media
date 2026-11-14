@@ -37,16 +37,26 @@ jobs:
           cache-dependency-path: './web/package-lock.json'
       
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint Check
         run: npm run lint
-      
+
+      - name: Run Web Tests & Coverage
+        run: npm run test:coverage -- --reporter=default --reporter=junit --outputFile=test-results/junit.xml
+
+      - name: Upload Web Test & Coverage Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-results
+          path: |
+            web/test-results/
+            web/coverage/lcov.info
+          if-no-files-found: ignore
+
       - name: Build Check
         run: npm run build
-
-      - name: Run Web Tests
-        run: npm test
 
       - name: Run Impeccable UI Linter
         run: npx impeccable@4.1.0 detect .
