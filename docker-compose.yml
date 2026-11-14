@@ -339,23 +339,23 @@ services:
           memory: 4G
 
   # ==========================================
-  # TELEMETRY (optional — start with: docker compose --profile telemetry up)
+  # TELEMETRY & OBSERVABILITY (Dashboards as Code)
   # ==========================================
   prometheus:
     image: prom/prometheus:latest
     container_name: aegis_prometheus
-    profiles: [telemetry]
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
-      - ./security/telemetry/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./security/telemetry/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - aegis_net
 
   grafana:
     image: grafana/grafana:latest
     container_name: aegis_grafana
-    profiles: [telemetry]
+    restart: unless-stopped
     ports:
       - "3001:3000"
     environment:
@@ -363,8 +363,15 @@ services:
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/aegis_observability.json
+    volumes:
+      - ./security/telemetry/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./security/telemetry/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./security/telemetry/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - aegis_net
+    depends_on:
+      - prometheus
 
 networks:
   aegis_net:

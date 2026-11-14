@@ -2,28 +2,51 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
+  # ==========================================
+  # DETECTOR MICROSERVICES (AI Tier)
+  # ==========================================
   - job_name: "aegis_detector_aasist"
     metrics_path: "/metrics"
     static_configs:
       - targets: ["aegis_detector_aasist:8000"]
-      
+
   - job_name: "aegis_detector_video_classifier"
     metrics_path: "/metrics"
     static_configs:
       - targets: ["aegis_detector_video_classifier:8000"]
 
-  # TODO: Uncomment these once AI team builds them
-  # - job_name: "aegis_detector_rppg"
-  #   metrics_path: "/metrics"
-  #   static_configs:
-  #     - targets: ["aegis_detector_rppg:8000"]
-  #     
-  # - job_name: "aegis_detector_syncnet"
-  #   metrics_path: "/metrics"
-  #   static_configs:
-  #     - targets: ["aegis_detector_syncnet:8000"]
+  - job_name: "aegis_detector_rppg"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_rppg:8000"]
+
+  - job_name: "aegis_detector_syncnet"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_syncnet:8000"]
+
+  - job_name: "aegis_detector_image"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_image:8000"]
 
   - job_name: "aegis_detector_text"
     metrics_path: "/metrics"
     static_configs:
       - targets: ["aegis_detector_text:8000"]
+
+  # ==========================================
+  # ORCHESTRATION LAYER (Planner & Judge)
+  # ==========================================
+  - job_name: "aegis_orchestrator"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_orchestrator:8000"]
+
+  # ==========================================
+  # SURVEILLANCE INGESTION & FUSION GATEWAY
+  # ==========================================
+  - job_name: "aegis_ingestion"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_ingestion:8444"]
