@@ -76,7 +76,7 @@ services:
     volumes:
       - ./orchestrator:/app
       - ./capability_manifests:/capability_manifests:ro
-      - ./debate:/repo/debate:ro  # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
+      - ./debate:/repo/debate:ro # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
     networks:
       - aegis_net
     environment:
@@ -85,14 +85,15 @@ services:
       - DETECTOR_RPPG_URL=http://detector_rppg:8000
       - DETECTOR_AASIST_URL=http://detector_aasist:8000
       - DETECTOR_SYNCNET_URL=http://detector_syncnet:8000
-      - PYTHONPATH=/app/app:/repo  # /repo/debate/__init__.py → `import debate` resolves correctly
+      - DETECTOR_IMAGE_URL=http://detector_image:8000
+      - PYTHONPATH=/app/app:/repo # /repo/debate/__init__.py → `import debate` resolves correctly
       - AEGIS_JUDGE_MODE=${AEGIS_JUDGE_MODE:-deterministic}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 15s           # extra time for debate package import on first boot
+      start_period: 15s # extra time for debate package import on first boot
     depends_on:
       - mediamtx
 
@@ -247,19 +248,30 @@ services:
         limits:
           memory: 3G
 
-  detector_dire:
-    image: python:3.11-slim
-    command: tail -f /dev/null
-    container_name: aegis_detector_dire
+  detector_image:
+    build:
+      context: ./detectors/image
+      dockerfile: Dockerfile
+    container_name: aegis_detector_image
+    ports:
+      - "8005:8000"
     volumes:
-      - ./detectors/dire:/app
+      - ./detectors/image:/app
+      - ./shared:/shared:ro
     networks:
       - aegis_net
-    # TODO: Placeholder limit. AI team must profile DIRE on Jetson and adjust.
+    environment:
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G
 
   detector_binoculars:
     image: python:3.11-slim
@@ -310,7 +322,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: aegis_prometheus
-    profiles: [telemetry]
+    profiles: [ telemetry ]
     ports:
       - "9090:9090"
     volumes:
@@ -321,7 +333,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: aegis_grafana
-    profiles: [telemetry]
+    profiles: [ telemetry ]
     ports:
       - "3001:3000"
     environment:

@@ -5,6 +5,9 @@ from models import InputMetadata
 def decide_detectors_to_call(metadata: InputMetadata) -> List[str]:
     detectors: List[str] = []
 
+    if metadata.modality == "image":
+        detectors.append("image")
+
     if metadata.modality in ("video", "image"):
         detectors.append("video-classifier")
 

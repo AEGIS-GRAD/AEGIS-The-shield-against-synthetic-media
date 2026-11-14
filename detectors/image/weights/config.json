@@ -1,0 +1,7 @@
+{
+  "device": "cuda",
+  "freeze_backbone": false,
+  "input_size": 384,
+  "model_size": "small",
+  "patch_size": 16
+}
