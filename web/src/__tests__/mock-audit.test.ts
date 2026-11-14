@@ -14,15 +14,18 @@
  *  6. Static source analysis: pages do NOT hard-import mock data without a DemoBadge import
  */
 
-import { describe, it, before } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const WEB = path.join(import.meta.dirname, "..", "..");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const WEB = path.join(__dirname, "..", "..");
 const src = (...parts: string[]) => path.join(WEB, "src", ...parts);
 
 function readSrc(...parts: string[]): string {

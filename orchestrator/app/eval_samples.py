@@ -24,9 +24,24 @@ SAMPLES = [
         "baseline: audio-only file",
     ),
     (
-        {"modality": "image", "has_audio": False},
+        {"modality": "image", "has_audio": False, "duration_seconds": 0.0},
         "standard", 10.0,
-        "baseline: single image, no audio/video detectors should apply",
+        "baseline: single image — detector_image should apply",
+    ),
+    (
+        {"modality": "text", "has_audio": False, "duration_seconds": 0.0},
+        "standard", 10.0,
+        "baseline: text file — detector_text applies, audio/video detectors excluded",
+    ),
+    (
+        {"modality": "image", "has_audio": False, "duration_seconds": 0.0},
+        "high", 5.0,
+        "image edge case: high risk, tight budget — tests detector_image under budget ceiling",
+    ),
+    (
+        {"modality": "text", "has_audio": False, "duration_seconds": 0.0},
+        "high", 2.0,
+        "text edge case: high risk, tight 2s budget — tests detector_text latency fit",
     ),
 
     # --- The 4 named edge cases from orchestrator_design.md ---

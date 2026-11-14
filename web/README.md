@@ -167,3 +167,29 @@ npx impeccable install
 ```
 
 This completes **UI/UX Track — Task 1: Decide Web App Tech Stack**.
+
+---
+
+## 8. Automated Frontend Testing (Vitest + RTL + MSW)
+
+Frontend component, hook, API route, and integration tests live alongside the source under `web/src/**/__tests__/` and run cleanly without live backend containers using Mock Service Worker (`src/test/msw/`).
+
+```bash
+cd web
+
+# Run all component, hook, route, and mock-audit suites
+npm test
+
+# Run with v8 coverage enforcement (>= 80% on report components, polling hook, and report helpers)
+npm run test:coverage
+
+# Emit CI JUnit XML report
+npm run test:coverage -- --reporter=default --reporter=junit --outputFile=test-results/junit.xml
+```
+
+### Covered Areas
+- **Report Evidence Components**: `FrameHeatmap`, `PulseWave`, `DebateLog`, `AgreementMatrix`, `HashChain`
+- **Detector Result Cards & Grid**: `DetectorResultCard`, `DetectorResultsGrid`
+- **Upload & Analysis Flow**: `/analyze` (`upload.test.tsx`), `UploadPage`, `/analyze/processing` (`processing.test.tsx`), `/reports/[id]` (`report.test.tsx`)
+- **Job Polling Hook**: `useJobPolling` (status transitions, timeout, 404, exponential backoff, unmount `AbortController` cleanup)
+- **Next.js API Route Handlers**: `/api/jobs` (`GET`/`POST`, real vs demo isolation, aggregates) and `/api/health`

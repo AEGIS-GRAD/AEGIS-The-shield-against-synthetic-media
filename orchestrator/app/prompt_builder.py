@@ -42,6 +42,8 @@ BASELINE_LATENCY_MS = {
     "rppg": {"avg": 6607.7, "p95": 15850.0},
     "aasist": {"avg": 234.8, "p95": 334.0},
     "syncnet": {"avg": 9587.4, "p95": 22834.0},
+    "detector_image": {"avg": 800.0, "p95": 2000.0},
+    "detector_text": {"avg": 225.65, "p95": 643.46},
 }
 
 
@@ -269,6 +271,18 @@ Telemetry: aasist status=DEGRADED, live_p95=8.2s (baseline: 0.33s, 24.5x degrada
 Constraints: risk_profile=standard, compute_budget_s=10
 Output:
 {{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier"], "mode": "parallel"}}], "skipped": [{{"detector_name": "aasist", "reason": "live telemetry indicates severe latency degradation (8.2s p95); running concurrently with video-classifier would exceed 10s budget"}}], "coverage_warnings": ["aasist deprioritized due to real-time latency spike (8.2s), sacrificing audio deepfake coverage to preserve system latency budget."], "estimated_latency_s": 7.0, "rationale": "Under a 10s budget, aasist's measured 8.2s latency spike makes concurrent execution with video-classifier (7.0s) budget-infeasible; prioritizing video-classifier."}}
+
+Example F — single image file:
+Input: {{"modality": "image", "has_audio": false, "duration_seconds": 0}}
+Constraints: risk_profile=standard, compute_budget_s=10
+Output:
+{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_image"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["No audio or temporal video track available — running static image forensic detector."], "estimated_latency_s": 2.0, "rationale": "Only detector_image is eligible for a standalone image input."}}
+
+Example G — text document:
+Input: {{"modality": "text", "has_audio": false, "duration_seconds": 0}}
+Constraints: risk_profile=standard, compute_budget_s=10
+Output:
+{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_text"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["Text document — audio/video forensic detectors excluded."], "estimated_latency_s": 0.64, "rationale": "Only detector_text is eligible for text inputs."}}
 
 Now produce the plan for the INPUT SUMMARY, REQUEST CONSTRAINTS, and LIVE TELEMETRY given above. JSON only.
 """

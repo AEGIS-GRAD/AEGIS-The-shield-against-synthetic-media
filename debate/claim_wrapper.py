@@ -105,11 +105,13 @@ DOMAIN_BY_DETECTOR: Dict[str, EvidenceDomain] = {
     "rppg": EvidenceDomain.PHYSIOLOGICAL_BVP,
     "syncnet": EvidenceDomain.AUDIOVISUAL_SYNC,
     "aasist": EvidenceDomain.AUDIO_ACOUSTIC,
+    "detector_image": EvidenceDomain.SPATIAL_PIXEL,
+    "detector_text": EvidenceDomain.METADATA_INTEGRITY,
 }
 
 # Order used by wrap_video_detector_outputs (matches the arbitrator's precedence rules).
 VIDEO_DETECTOR_ORDER = ("video-classifier", "rppg", "syncnet", "aasist")
-DETECTOR_ORDER = VIDEO_DETECTOR_ORDER
+DETECTOR_ORDER = VIDEO_DETECTOR_ORDER + ("detector_image", "detector_text")
 
 
 # ── Internal result of a per-detector adapter ───────────────────────────────
@@ -420,11 +422,108 @@ def _adapt_aasist(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     )
 
 
+# ── detector_image ───────────────────────────────────────────────────────────
+def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    """
+    Adapts the MIRROR / mock image-detector response into a ForensicClaim.
+    Domain: SPATIAL_PIXEL — frequency-domain and EXIF integrity checks.
+    """
+    p = _clamp01(r["confidence"])  # P(synthetic) as declared by the detector
+    polarity = _polarity_from_p(p)
+    pct = f"{p:.0%}"
+
+    has_freq = "frequency_anomaly" in flags
+    has_exif = "exif_missing" in flags
+
+    if polarity == ClaimPolarity.SYNTHETIC:
+        detail_parts = []
+        if has_freq:
+            detail_parts.append("frequency-domain upsampling grid artefacts")
+        if has_exif:
+            detail_parts.append("absent or inconsistent EXIF metadata")
+        detail = " and ".join(detail_parts) if detail_parts else "spatial pixel anomalies"
+        claim = (
+            f"Image-level analysis found {_strength(p)} evidence of synthetic generation "
+            f"({detail}; estimated {pct} probability of synthetic content)."
+        )
+    elif polarity == ClaimPolarity.AUTHENTIC:
+        claim = (
+            f"Image-level analysis found no significant manipulation artefacts "
+            f"(estimated {pct} probability of synthetic content)."
+        )
+        if has_exif:
+            claim += " Note: EXIF metadata is absent, which is common in re-saved images."
+    else:
+        claim = (
+            f"Image-level analysis was borderline ({pct} probability of synthetic content): "
+            "the spatial evidence neither confirms nor rules out manipulation."
+        )
+
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            spatial=SpatialMetrics(
+                sampled_frames=1,
+                suspicious_frame_ratio=round(p, 4),
+            )
+        ),
+    )
+
+
+# ── detector_text ─────────────────────────────────────────────────────────────
+def _adapt_detector_text(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    """
+    Adapts the Desklib text-detector response into a ForensicClaim.
+    Domain: METADATA_INTEGRITY — stylometric and vocabulary-diversity signals.
+    """
+    p = _clamp01(r["confidence"])  # P(synthetic)
+    polarity = _polarity_from_p(p)
+    pct = f"{p:.0%}"
+
+    has_stylo = "stylometry_synthetic" in flags
+    has_vocab = "low_vocabulary_diversity" in flags
+    has_ngram = "high_ngram_repetition" in flags
+
+    if polarity == ClaimPolarity.SYNTHETIC:
+        detail_parts = []
+        if has_stylo:
+            detail_parts.append("synthetic stylometric patterns")
+        if has_vocab:
+            detail_parts.append("low vocabulary diversity")
+        if has_ngram:
+            detail_parts.append("high n-gram repetition")
+        detail = ", ".join(detail_parts) if detail_parts else "AI-generated stylistic markers"
+        claim = (
+            f"Text-level analysis found {_strength(p)} evidence of AI authorship "
+            f"({detail}; estimated {pct} probability of synthetic content)."
+        )
+    elif polarity == ClaimPolarity.AUTHENTIC:
+        claim = (
+            f"Text-level analysis found stylometric patterns consistent with human authorship "
+            f"(estimated {pct} probability of synthetic content)."
+        )
+    else:
+        claim = (
+            f"Text-level analysis was borderline ({pct} probability of synthetic content): "
+            "stylometric features neither confirm nor rule out AI authorship."
+        )
+
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+    )
+
+
 _ADAPTERS: Dict[str, Callable[[Dict[str, Any], List[str]], _Adapted]] = {
     "video-classifier": _adapt_video_classifier,
     "rppg": _adapt_rppg,
     "syncnet": _adapt_syncnet,
     "aasist": _adapt_aasist,
+    "detector_image": _adapt_detector_image,
+    "detector_text": _adapt_detector_text,
 }
 
 

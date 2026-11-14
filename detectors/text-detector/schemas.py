@@ -1,29 +1,51 @@
-"""
-Pydantic schemas for the Text Detector microservice.
-"""
-from typing import Optional, Dict, Any, List
+"""Pydantic schemas aligned with shared/json-api-contracts-schema/."""
+from __future__ import annotations
+
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
-class TextAnalysisRequest(BaseModel):
-    text: str = Field(..., description="The input text to analyze for AI-generated artifacts")
-    request_id: Optional[str] = Field(None, description="Optional tracking ID for tracing")
-    include_stylometry: bool = Field(True, description="Whether to compute stylometry explainability features")
 
-class StylometryMetrics(BaseModel):
-    vocabulary_diversity: Dict[str, Any]
-    ngram_repetition: Dict[str, Any]
-    sentence_variation: Dict[str, Any]
-    synthetic_indication_score: float
-    stylometry_verdict: str
-    summary: str
+class DetectionRequest(BaseModel):
+    """Canonical detector request conforming to detector_request.schema.json."""
 
-class TextAnalysisResponse(BaseModel):
-    detector: str = "desklib_ai_text_detector"
-    model_version: str = "v1.01"
-    request_id: Optional[str] = None
-    ai_score: float = Field(..., description="Probability of text being AI-generated (0.0 to 1.0)")
-    human_score: float = Field(..., description="Probability of text being Human-written (0.0 to 1.0)")
-    prediction: str = Field(..., description="'synthetic' or 'authentic'")
-    confidence: float = Field(..., description="Confidence score")
-    stylometry: Optional[StylometryMetrics] = None
-    execution_time_ms: float = Field(..., description="Inference latency in milliseconds")
+    job_id: str = Field(..., min_length=1, description="Unique orchestrator job identifier.")
+    modality: Literal["audio", "video", "image", "text"] = Field(
+        ..., description="Media modality; only 'text' is processed by this detector."
+    )
+    payload: str = Field(
+        ..., min_length=1, description="Base64-encoded UTF-8 text or path inside /shared_volume/."
+    )
+
+
+class LegacyTextRequest(BaseModel):
+    """Deprecated raw-text payload kept solely for backwards-compatible `/analyze` callers."""
+
+    text: str = Field(..., min_length=1)
+
+
+class DetectionEvidence(BaseModel):
+    """Structured claim and flag summary inside detector_response.schema.json."""
+
+    claim: str = Field(..., min_length=1, max_length=512)
+    flags: List[str] = Field(default_factory=list)
+
+
+class DetectionResponse(BaseModel):
+    """Canonical detector response conforming to detector_response.schema.json."""
+
+    job_id: str
+    status: Literal["ok", "not_applicable", "error"] = "ok"
+    modality: Literal["text"] = "text"
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="0.0 = Authentic human, 1.0 = Synthetic LLM."
+    )
+    raw_score: float = Field(
+        ..., description="Primary detector score prior to length-attenuation calibration."
+    )
+    latency_ms: int = Field(..., ge=0)
+    ram_usage_mb: Optional[float] = Field(default=None, ge=0.0)
+    vram_usage_mb: Optional[float] = Field(default=None, ge=0.0)
+    model_version: str
+    evidence: DetectionEvidence
+    signals: Dict[str, Any] = Field(default_factory=dict)
+    error: Optional[str] = None

@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'AEGIS Telemetry Dashboards'
+    orgId: 1
+    folder: 'AEGIS Core'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

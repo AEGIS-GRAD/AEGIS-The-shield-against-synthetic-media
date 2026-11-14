@@ -1,0 +1,8 @@
+{
+  "source": "text_eval_manifest.jsonl",
+  "human_samples": 137,
+  "low_perplexity_threshold": 42.11,
+  "high_perplexity_threshold": 163.65,
+  "low_burstiness_cov_threshold": 0.309,
+  "binoculars_threshold": 0.9
+}

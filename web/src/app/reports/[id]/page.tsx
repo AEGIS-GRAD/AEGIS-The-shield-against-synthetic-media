@@ -3,12 +3,24 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, Info, Hash, ShieldCheck, Copy, Check, ShieldAlert, Scale, AlertCircle } from "lucide-react";
+import { Download, FileJson, Link2, RotateCw, Flag, NotebookPen, ChevronDown, Gavel, ShieldCheck, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { analyses, detectors, type Verdict } from "@/lib/mock";
 import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge, SiemTierBadge, DemoBadge, DemoBanner } from "@/components/aegis/ui";
 import { useDemoMode } from "@/lib/demoMode";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
+import { FrameHeatmap } from "@/components/report/FrameHeatmap";
+import { PulseWave } from "@/components/report/PulseWave";
+import { DebateLog } from "@/components/report/DebateLog";
+import { AgreementMatrix } from "@/components/report/AgreementMatrix";
+import { HashChain } from "@/components/report/HashChain";
+import {
+  DEFAULT_AGREEMENT_IDS,
+  DEFAULT_AGREEMENT_MATRIX,
+  DEFAULT_AUDIO_WAVE,
+  DEFAULT_FRAME_HEAT,
+  type HashChainEvent,
+} from "@/lib/report";
 import { cn } from "@/lib/utils";
 
 type R = { id: string; p?: number; verdict?: Verdict; conf?: number; lat?: string; claim?: string; flags?: string[]; skip?: string; detail?: React.ReactNode };
@@ -20,18 +32,7 @@ const results: R[] = [
   { id: "text", skip: "Model not built yet (under calibration)" },
   { id: "image", skip: "Model not built yet (Phase 3 training)" },
 ];
-const heat = Array.from({ length: 64 }, (_, i) => Math.min(1, 0.25 + Math.abs(Math.sin(i / 5)) * 0.6 + (i > 38 && i < 46 ? 0.3 : 0)));
-const wave = Array.from({ length: 96 }, (_, i) => 20 + Math.abs(Math.sin(i * 0.9) * Math.cos(i / 7)) * 80);
 const susp = (i: number) => (i >= 24 && i < 30) || (i >= 60 && i < 67);
-const ids = ["video", "rppg", "syncnet", "aasist"];
-const agree = [[1, 0.2, 0.9, 0.85], [0.2, 1, 0.25, 0.3], [0.9, 0.25, 1, 0.8], [0.85, 0.3, 0.8, 1]];
-const debate = [
-  { who: "Video Classifier", text: "Synthetic, p=0.93. Consistent jawline blending across 83% of frames.", tone: "bad" },
-  { who: "SyncNet", text: "I agree. A 4-frame lip-sync lag is typical of face reenactment.", tone: "bad" },
-  { who: "AASIST", text: "Voice is likely cloned — vocoder artifacts at 12–15s and 31–34s.", tone: "bad" },
-  { who: "rPPG Heartbeat", text: "I see a pulse near 61 BPM, which leans authentic (p=0.44).", tone: "warn", conflict: true },
-  { who: "Video Classifier", text: "Your signal quality is 0.38 in low light. Reenactment can also preserve source skin tone changes.", tone: "bad" },
-];
 
 export default function ReportDetailPage() {
   const params = useParams();
@@ -41,7 +42,6 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [notFound, setNotFound] = useState<boolean>(false);
   const [open, setOpen] = useState<string | null>("video");
-  const [copiedHash, setCopiedHash] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -152,11 +152,24 @@ export default function ReportDetailPage() {
   const handleCopyHash = (text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text);
-      setCopiedHash(true);
       toast.success("Tamper-evident transcript hash copied to clipboard");
-      setTimeout(() => setCopiedHash(false), 2000);
     }
   };
+
+  const fileHash = customJob?.id
+    ? `sha256-${customJob.id.toLowerCase()}-7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9`
+    : "9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7";
+
+  const chainEvents: HashChainEvent[] = [
+    ["09:42:03", "File received & cryptographic hash computed", "bg-emerald-500"],
+    ["09:42:04", "Capability manifest validated & plan dispatched", "bg-cyan-500"],
+    ["09:42:09", `Video Frame Classifier: evaluated (${verdict})`, "bg-cyan-500"],
+    ["09:42:13", "AASIST Spectro-temporal: evaluated", "bg-cyan-500"],
+    ["09:42:15", "SyncNet Audio-Visual offset: evaluated", "bg-cyan-500"],
+    ["09:42:16", "rPPG Pulse extraction: evaluated", "bg-cyan-500"],
+    ["09:42:17", "Cross-Modal Debate & Cross-Examination executed", "bg-accent"],
+    ["09:42:18", `Judge Adjudication certified: ${judgeVerdict} [${siemTier}]`, "bg-accent"],
+  ];
 
   return (
     <div className="space-y-6">
@@ -259,48 +272,19 @@ export default function ReportDetailPage() {
               </span>
             </div>
           </div>
-          <p className="caption mb-1 mt-4">Frame suspicion (sampled temporal frames)</p>
-          <div className="flex h-6 gap-px overflow-hidden rounded">
-            {(a.frame_scores && a.frame_scores.length > 0 ? a.frame_scores : heat).map((h: number, i: number) => (
-              <span key={i} className="flex-1 bg-synthetic" style={{ opacity: Math.max(0.08, h) }} />
-            ))}
-          </div>
+          <FrameHeatmap
+            scores={a.frame_scores && a.frame_scores.length > 0 ? a.frame_scores : DEFAULT_FRAME_HEAT}
+            isDemo={isDemo && !(a.frame_scores && a.frame_scores.length > 0)}
+          />
           <p className="caption mb-1 mt-4">Audio waveform · suspicious segments highlighted</p>
           <div className="flex h-14 items-center gap-px">
-            {wave.map((h, i) => (
+            {DEFAULT_AUDIO_WAVE.map((h, i) => (
               <span key={i} className={cn("flex-1 rounded-sm", susp(i) ? "bg-synthetic" : "bg-chart-1/40")} style={{ height: `${h}%` }} />
             ))}
           </div>
         </Panel>
 
-        <Panel title="Detector agreement" subtitle="1.0 = fully agree · amber = conflict">
-          <div className="grid grid-cols-[90px_repeat(4,1fr)] gap-1 text-xs">
-            <span />
-            {ids.map((d) => (
-              <span key={d} className="caption text-center capitalize">{d}</span>
-            ))}
-            {agree.map((row, r) => (
-              <div key={"row-" + r} className="contents">
-                <span className="caption flex items-center capitalize">{ids[r]}</span>
-                {row.map((v, c) => (
-                  <span
-                    key={r + "-" + c}
-                    className={cn(
-                      "mono grid aspect-square place-items-center rounded-md text-xs",
-                      v < 0.4 ? "bg-inconclusive-soft text-inconclusive-ink" : "bg-primary text-primary-foreground"
-                    )}
-                  >
-                    {v.toFixed(2)}
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 rounded-lg border border-inconclusive/40 bg-inconclusive-soft p-3 text-sm text-inconclusive-ink flex items-start gap-2">
-            <Info className="mt-0.5 size-4 shrink-0" />
-            <div>Known limitation: rPPG is much less reliable in low light and compressed video. Its weight was reduced.</div>
-          </div>
-        </Panel>
+        <AgreementMatrix ids={DEFAULT_AGREEMENT_IDS} matrix={DEFAULT_AGREEMENT_MATRIX} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -383,17 +367,10 @@ export default function ReportDetailPage() {
                   </button>
                   {isOpen && (
                     r.detail === "pulse" ? (
-                      <div className="mt-2">
-                        <svg viewBox="0 0 200 40" className="h-12 w-full">
-                          <path
-                            d={"M0 20 " + Array.from({ length: 40 }, (_, i) => `L${i * 5} ${20 + Math.sin(i * 1.1) * 8 + Math.cos(i * 3.3) * 5}`).join(" ")}
-                            fill="none"
-                            stroke="var(--color-chart-2)"
-                            strokeWidth="1.5"
-                          />
-                        </svg>
-                        <p className="caption">Estimated {customJob?.results?.rppg?.hr_bpm || 74} BPM · forehead chrominance pulse buffer.</p>
-                      </div>
+                      <PulseWave
+                        bpm={customJob?.results?.rppg?.hr_bpm || 74}
+                        signal={customJob?.results?.rppg?.signal}
+                      />
                     ) : (
                       <p className="caption mt-2">{r.detail}</p>
                     )
@@ -406,178 +383,22 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel
-          title={
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Gavel className="size-4 text-accent" />
-                <span>Multi-Agent Debate & Judge Reasoning</span>
-              </span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-soft text-accent border border-accent/30">
-                MONTH 2 ADJUDICATION
-              </span>
-            </div>
-          }
-          subtitle="3-Round Cross-Modal Examination & Determinist Adjudication"
-        >
-          {debateTranscript && debateTranscript.length > 0 ? (
-            <div className="space-y-3">
-              {debateTranscript.map((entry, idx) => {
-                const isJudge = entry.speaker === "judge_agent";
-                const isSynthetic = entry.polarity === "SYNTHETIC";
-                const isAuthentic = entry.polarity === "AUTHENTIC";
-                const isNA = entry.polarity === "NOT_APPLICABLE";
+        <DebateLog
+          transcript={debateTranscript}
+          judgeVerdict={judgeVerdict}
+          judgeScore={judgeScore}
+          siemTier={siemTier}
+          justification={forensicJustification}
+          crossExam={crossExamFindings}
+          guards={guardsApplied}
+        />
 
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "rounded-xl border p-3.5 transition-all",
-                      isJudge
-                        ? "border-accent/40 bg-accent-soft/40 shadow-xs"
-                        : isSynthetic
-                        ? "border-synthetic/30 bg-synthetic-soft/30"
-                        : isNA
-                        ? "border-muted bg-muted/40 opacity-70"
-                        : "border-border bg-card/60"
-                    )}
-                  >
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono uppercase font-bold px-1.5 py-0.2 rounded bg-muted text-muted-foreground border">
-                          R{entry.round}
-                        </span>
-                        <span className="text-xs font-semibold capitalize text-foreground">
-                          {entry.speaker.replace(/_/g, " ")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {entry.confidence > 0 && (
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            conf: {(entry.confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
-                        <span
-                          className={cn(
-                            "text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider",
-                            isSynthetic
-                              ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
-                              : isAuthentic
-                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                              : "bg-muted text-muted-foreground border"
-                          )}
-                        >
-                          {entry.polarity}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">{entry.claim}</p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {debate.map((m, i) => (
-                <div key={i} className={cn("rounded-xl border p-3", m.conflict ? "border-inconclusive/50 bg-inconclusive-soft" : "bg-background/60")}>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-primary">{m.who}</span>
-                    {m.conflict && <Chip tone="warn">Modal Conflict</Chip>}
-                  </div>
-                  <p className="text-sm">{m.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Judge Final Adjudication Box */}
-          <div className="mt-4 rounded-xl border-2 border-primary bg-primary-soft p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-border/40">
-              <div className="flex items-center gap-2 font-bold text-primary text-sm sm:text-base">
-                <Gavel className="size-4.5 text-accent" />
-                <span>Judge Agent Adjudication: <b className="uppercase">{judgeVerdict}</b></span>
-                <span className="text-xs font-mono font-normal opacity-70">({(Number(judgeScore) * 100).toFixed(0)}% score)</span>
-              </div>
-              <SiemTierBadge tier={siemTier} size="sm" />
-            </div>
-
-            <p className="text-sm text-foreground leading-relaxed">
-              {forensicJustification}
-            </p>
-
-            {crossExamFindings && (
-              <div className="mt-3 rounded-lg bg-background/80 border border-border p-2.5 text-xs text-muted-foreground">
-                <span className="font-bold text-foreground block mb-0.5">Cross-Examination Synthesis:</span>
-                {crossExamFindings}
-              </div>
-            )}
-
-            {guardsApplied && guardsApplied.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground">Applied Guards:</span>
-                {guardsApplied.map((g, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 rounded bg-background px-2 py-0.5 text-[11px] font-mono font-medium border border-border">
-                    <ShieldCheck className="size-3 text-emerald-500" />
-                    {g}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </Panel>
-
-        <Panel title="Chain of evidence" subtitle="Tamper-evident audit trail & cryptographic integrity">
-          {/* File SHA-256 */}
-          <div className="mb-3 rounded-lg border bg-muted/60 p-3">
-            <div className="caption mb-1 flex items-center justify-between gap-1">
-              <span className="flex items-center gap-1">
-                <Hash className="size-3 text-muted-foreground" />Original File SHA-256
-              </span>
-              <span className="text-[10px] font-mono font-bold text-emerald-500 flex items-center gap-0.5">
-                <Check className="size-3" />VERIFIED
-              </span>
-            </div>
-            <p className="mono break-all text-xs text-primary">{customJob?.id ? `sha256-${customJob.id.toLowerCase()}-7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9` : "9f2c4e81b7a0d3f6e5c2a19b8d4f7e60c3a1b2d9e8f7a6c5b4d3e2f1a0b9c8d7"}</p>
-          </div>
-
-          {/* Tamper-Evident Transcript Hash */}
-          <div className="mb-4 rounded-lg border border-accent/30 bg-accent-soft/30 p-3">
-            <div className="caption mb-1 flex items-center justify-between gap-1">
-              <span className="flex items-center gap-1 font-bold text-accent">
-                <ShieldCheck className="size-3.5" />Judge Transcript SHA-256
-              </span>
-              <button
-                onClick={() => handleCopyHash(transcriptHash)}
-                className="flex items-center gap-1 text-[10px] font-mono text-accent hover:underline cursor-pointer"
-                title="Copy hash"
-              >
-                {copiedHash ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
-                {copiedHash ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <p className="mono break-all text-xs text-foreground select-all font-semibold">{transcriptHash}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Cryptographically binds all 3 debate rounds and operator actions.</p>
-          </div>
-
-          <ol className="relative space-y-3.5 border-l pl-5 text-xs sm:text-sm">
-            {[
-              ["09:42:03", "File received & cryptographic hash computed", "bg-emerald-500"],
-              ["09:42:04", "Capability manifest validated & plan dispatched", "bg-cyan-500"],
-              ["09:42:09", `Video Frame Classifier: evaluated (${verdict})`, "bg-cyan-500"],
-              ["09:42:13", "AASIST Spectro-temporal: evaluated", "bg-cyan-500"],
-              ["09:42:15", "SyncNet Audio-Visual offset: evaluated", "bg-cyan-500"],
-              ["09:42:16", "rPPG Pulse extraction: evaluated", "bg-cyan-500"],
-              ["09:42:17", "Cross-Modal Debate & Cross-Examination executed", "bg-accent"],
-              ["09:42:18", `Judge Adjudication certified: ${judgeVerdict} [${siemTier}]`, "bg-accent"],
-            ].map(([t, e, color]) => (
-              <li key={t} className="relative">
-                <span className={cn("absolute -left-[25px] top-1.5 size-2.5 rounded-full ring-4 ring-card", color || "bg-accent")} />
-                <span className="mono mr-2 text-muted-foreground">{t}</span>
-                <span className="text-foreground">{e}</span>
-              </li>
-            ))}
-          </ol>
-        </Panel>
+        <HashChain
+          fileHash={fileHash}
+          transcriptHash={transcriptHash}
+          events={chainEvents}
+          onCopy={handleCopyHash}
+        />
       </div>
     </div>
   );

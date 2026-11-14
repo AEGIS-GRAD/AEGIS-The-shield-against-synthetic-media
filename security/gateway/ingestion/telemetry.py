@@ -29,10 +29,73 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+try:
+    from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
+    HAS_PROMETHEUS = True
+except ImportError:
+    HAS_PROMETHEUS = False
+
 logger = logging.getLogger("aegis.ingestion.telemetry")
 
 TELEMETRY_PORT = int(os.environ.get("AEGIS_TELEMETRY_PORT", "8444"))
 TELEMETRY_HOST = os.environ.get("AEGIS_TELEMETRY_HOST", "0.0.0.0")
+
+if HAS_PROMETHEUS:
+    INGESTION_FRAMES_TOTAL = Counter(
+        "aegis_ingestion_frames_total",
+        "Total video frames ingested from surveillance cameras",
+        ["camera_id"],
+    )
+    INGESTION_BREACHES_TOTAL = Counter(
+        "aegis_ingestion_breaches_total",
+        "Total security breaches and tampering events detected during ingestion",
+        ["camera_id", "threat_type"],
+    )
+    INGESTION_ACTIVE_STREAMS = Gauge(
+        "aegis_ingestion_active_streams",
+        "Number of active camera feeds currently connected via mTLS",
+    )
+    INGESTION_PRNU_PCE = Gauge(
+        "aegis_ingestion_prnu_pce",
+        "Latest PRNU Peak-to-Correlation Energy value observed per camera",
+        ["camera_id"],
+    )
+    FUSION_VERDICTS_TOTAL = Counter(
+        "aegis_fusion_verdicts_total",
+        "Total feed fusion verdicts issued",
+        ["camera_id", "verdict"],
+    )
+    FUSION_COMBINED_SCORE = Gauge(
+        "aegis_fusion_combined_score",
+        "Latest combined fusion score per camera feed",
+        ["camera_id"],
+    )
+    ALERTS_ROUTED_TOTAL = Counter(
+        "aegis_alerts_routed_total",
+        "Total SIEM/SOC alerts dispatched by the incident response router",
+        ["severity", "threat_classification"],
+    )
+    ALERTS_DELIVERY_TOTAL = Counter(
+        "aegis_alerts_delivery_total",
+        "Status of alert deliveries across configured destinations",
+        ["destination", "status"],
+    )
+    ALERTS_DLQ_SIZE = Gauge(
+        "aegis_alerts_dlq_size",
+        "Current number of alerts waiting in Dead-Letter Queue",
+    )
+    metrics_app = make_asgi_app()
+else:
+    INGESTION_FRAMES_TOTAL = None
+    INGESTION_BREACHES_TOTAL = None
+    INGESTION_ACTIVE_STREAMS = None
+    INGESTION_PRNU_PCE = None
+    FUSION_VERDICTS_TOTAL = None
+    FUSION_COMBINED_SCORE = None
+    ALERTS_ROUTED_TOTAL = None
+    ALERTS_DELIVERY_TOTAL = None
+    ALERTS_DLQ_SIZE = None
+    metrics_app = None
 
 
 class AttackInjectRequest(BaseModel):
@@ -61,8 +124,30 @@ class IngestionTelemetryHub:
         """Publish an event to all connected SSE clients and the history buffer."""
         async with self._lock:
             self.total_frames_processed += 1
+            cam_id = str(event.get("camera_id", "camera-001"))
+            if HAS_PROMETHEUS and INGESTION_FRAMES_TOTAL:
+                INGESTION_FRAMES_TOTAL.labels(camera_id=cam_id).inc()
+
             if event.get("status") in ("COMPROMISED", "AUDIT_WARNING"):
                 self.total_breaches_detected += 1
+                threat = str(event.get("threat_type", "UNKNOWN_BREACH"))
+                if HAS_PROMETHEUS and INGESTION_BREACHES_TOTAL:
+                    INGESTION_BREACHES_TOTAL.labels(camera_id=cam_id, threat_type=threat).inc()
+
+            if HAS_PROMETHEUS:
+                if "pce" in event and INGESTION_PRNU_PCE:
+                    try:
+                        INGESTION_PRNU_PCE.labels(camera_id=cam_id).set(float(event["pce"]))
+                    except (ValueError, TypeError):
+                        pass
+                if "fusion_verdict" in event and FUSION_VERDICTS_TOTAL:
+                    FUSION_VERDICTS_TOTAL.labels(camera_id=cam_id, verdict=str(event["fusion_verdict"])).inc()
+                if "combined_score" in event and FUSION_COMBINED_SCORE:
+                    try:
+                        FUSION_COMBINED_SCORE.labels(camera_id=cam_id).set(float(event["combined_score"]))
+                    except (ValueError, TypeError):
+                        pass
+
             self.history.append(event)
             dead_queues = []
             for queue in self.subscribers:
@@ -121,6 +206,9 @@ telemetry_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if HAS_PROMETHEUS and metrics_app is not None:
+    telemetry_app.mount("/metrics", metrics_app)
 
 
 @telemetry_app.get("/telemetry/health")

@@ -97,6 +97,28 @@ def test_rule_based_mode_control_condition():
     res_silent = plan_detectors(meta_silent, mode="rule_based")
     assert set(res_silent.detectors_to_call) == {"video-classifier", "rppg"}
 
+    # Image only (routes to detector_image)
+    meta_image = InputMetadata(
+        filename="photo.jpg",
+        modality="image",
+        has_audio=False,
+        duration_seconds=0.0,
+    )
+    res_image = plan_detectors(meta_image, mode="rule_based")
+    assert res_image.detectors_to_call == ["detector_image"]
+    assert res_image.fallback is False
+
+    # Text only (routes to detector_text)
+    meta_text = InputMetadata(
+        filename="article.txt",
+        modality="text",
+        has_audio=False,
+        duration_seconds=0.0,
+    )
+    res_text = plan_detectors(meta_text, mode="rule_based")
+    assert res_text.detectors_to_call == ["detector_text"]
+    assert res_text.fallback is False
+
 
 # ---------------------------------------------------------------------------
 # Suite 3: Plan Validation
@@ -169,7 +191,31 @@ def test_llm_mode_with_mock_reference_planner():
     assert len(res.detectors_to_call) > 0
     # Must only contain known eligible detectors
     for det in res.detectors_to_call:
-        assert det in ("video-classifier", "rppg", "aasist", "syncnet")
+        assert det in ("video-classifier", "rppg", "aasist", "syncnet", "fusion")
+
+
+def test_llm_mode_image_and_text_planning():
+    meta_img = InputMetadata(
+        filename="portrait.png",
+        modality="image",
+        has_audio=False,
+        duration_seconds=0.0,
+    )
+    res_img = plan_detectors(meta_img, mode="llm", budget_s=10.0, mock_llm=True)
+    assert res_img.planner_mode == "llm"
+    assert res_img.fallback is False
+    assert res_img.detectors_to_call == ["detector_image"]
+
+    meta_txt = InputMetadata(
+        filename="document.txt",
+        modality="text",
+        has_audio=False,
+        duration_seconds=0.0,
+    )
+    res_txt = plan_detectors(meta_txt, mode="llm", budget_s=10.0, mock_llm=True)
+    assert res_txt.planner_mode == "llm"
+    assert res_txt.fallback is False
+    assert res_txt.detectors_to_call == ["detector_text"]
 
 
 def test_llm_mode_fallback_when_api_key_missing():

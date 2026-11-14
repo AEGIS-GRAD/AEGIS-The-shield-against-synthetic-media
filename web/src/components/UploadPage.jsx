@@ -2,7 +2,7 @@
 // impeccable-disable gray-on-color
 
 import React, { useState, useRef } from "react";
-import { submitMediaWithProgress, DEMO_PRESETS, createPresetFile } from "../api/submitMedia";
+import { submitMediaWithProgress, DEMO_PRESETS, createPresetFile, formatFileSize } from "../api/submitMedia";
 import WorkstationHeader from "./WorkstationHeader";
 import PipelineStepper from "./PipelineStepper";
 import DetectorResultsGrid from "./DetectorResultsGrid";
@@ -42,14 +42,6 @@ const ALLOWED_TYPES = [
   "audio/wav",
 ];
 const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB limit
-
-function formatFileSize(bytes) {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return (bytes / Math.pow(k, i)).toFixed(1) + " " + sizes[i];
-}
 
 function truncateMiddle(str, maxLength = 36) {
   if (!str || str.length <= maxLength) return str || "";

@@ -4,7 +4,16 @@ import jsonschema
 from Schema import DETECTOR_MANIFEST_SCHEMA
 
 MANIFEST_DIR = os.path.dirname(__file__)
-FILES = ["video-classifier.json", "aasist.json", "rppg.json", "syncnet.json", "fusion.json", "image.json"]
+FILES = [
+    "video-classifier.json",
+    "aasist.json",
+    "rppg.json",
+    "syncnet.json",
+    "fusion.json",
+    "detector_image.json",
+    "detector_text.json",
+    "image.json",
+]
 def main():
     all_valid = True
     for filename in FILES:

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 AEGIS is a monorepo for a deepfake/synthetic-media detection system, built as a set of independently containerized microservices coordinated by a central orchestrator:
 
 1. **`orchestrator/`** — rule-based planning agent (FastAPI). Decides which detectors to invoke for a given input (modality, has_audio), dispatches to them concurrently, aggregates their scores into a verdict, and logs everything to SQLite. Will eventually be replaced by an LLM-driven agent (see `debate/`), but the rule-based version is the current baseline all future work is measured against.
-2. **`detectors/`** — one FastAPI microservice per model: `video-classifier` (EfficientNet-B0 on FF++), `rppg` (CHROM heartbeat-consistency), `aasist` (audio voice-spoofing), `syncnet` (audio-visual lip sync). `dire/` and `binoculars/` exist as unimplemented stub containers (image/text modalities) in `docker-compose.yml`.
+2. **`detectors/`** — one FastAPI microservice per model: `video-classifier` (EfficientNet-B0 on FF++), `rppg` (CHROM heartbeat-consistency), `aasist` (audio voice-spoofing), `syncnet` (audio-visual lip sync), `detector_image` (MIRROR image forgery detector, replacing `detector_dire`), `text-detector` (`desklib/ai-text-detector-v1.01` + perplexity/stylometry, replacing `detector_binoculars`).
 3. **`debate/`**, **`engine/`** — planned Month 2 layers. `debate/` houses the multi-agent arbitration protocol, claim/evidence schemas, disagreement detection engine, and court-admissible forensic reporting; `engine/` is the hardware-aware quantization/export container.
 4. **`security/`** — the ingestion gateway (`nginx` + `gateway_validator` FastAPI sidecar) that sits in front of the orchestrator, plus the Wazuh SIEM agent and Prometheus/Grafana telemetry config.
 5. **`web/`** — Next.js frontend for uploading media and viewing detector results.
@@ -115,7 +115,9 @@ python security/tests/test_orchestrator_e2e.py
 cd web && npm install
 npm run lint
 npm run build
-npm run dev   # local dev server
+npm test           # Vitest component & unit tests
+npm run test:e2e   # Playwright end-to-end tests
+npm run dev        # local dev server
 ```
 
 CI (`.github/workflows/`) runs these per path-filtered PR: `ci-docker-check.yml` (docker compose config validation + full stack spin-up + `security/tests/test_orchestrator_e2e.py`), `ci-gateway.yml` (validator pytest suite, triggered on `security/gateway/**` changes), `ci-web.yml` (lint + build + docker build, only when `web/**` changes).
