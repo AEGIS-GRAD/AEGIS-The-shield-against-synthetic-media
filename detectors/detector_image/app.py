@@ -11,11 +11,15 @@ from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from telemetry import metrics_app, track_inference
+
 app = FastAPI(
     title="AEGIS detector_image (MIRROR)",
     description="Schema-conformant /detect service with frequency and EXIF evidence flags",
     version="1.0.0",
 )
+
+app.mount("/metrics", metrics_app)
 
 
 class DetectRequest(BaseModel):
@@ -52,6 +56,7 @@ def health():
 
 
 @app.post("/detect", response_model=DetectResponse)
+@track_inference("detector_image")
 def detect(req: DetectRequest):
     t0 = time.time()
     file_path = req.payload

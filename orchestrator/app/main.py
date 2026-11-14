@@ -20,10 +20,22 @@ except ImportError:
 from media_metadata import get_input_metadata
 from rules import decide_detectors_to_call
 from planner import plan_detectors, resolve_planner_mode, get_configured_planner_mode
-from dispatch import call_all_detectors
+from dispatch import call_all_detectors, get_all_breakers
 from aggregate import aggregate_results
 from db import init_db, log_decision, log_judge_report
 from models import OrchestrationResponse
+from telemetry import (
+    metrics_app,
+    PLANNER_LATENCY,
+    PLANNER_FALLBACKS,
+    CIRCUIT_BREAKER_STATE,
+    CIRCUIT_BREAKER_FAILURES,
+    DETECTOR_CALLS_TOTAL,
+    DETECTOR_CALL_LATENCY,
+    JUDGE_ADJUDICATION_LATENCY,
+    ORCHESTRATOR_REQUESTS_TOTAL,
+    update_circuit_breaker_metrics,
+)
 
 # Configure vibrant terminal logging
 logging.basicConfig(
@@ -67,11 +79,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AEGIS Orchestrator service... Database initializing.")
     init_db()
     configured_mode = get_configured_planner_mode()
+    # Initialize circuit breaker gauges in Prometheus
+    update_circuit_breaker_metrics(get_all_breakers())
     logger.info(f"AEGIS Orchestrator ready on port 8000 (default planning mode: {configured_mode}).")
     yield
     logger.info("Shutting down AEGIS Orchestrator.")
 
 app = FastAPI(title="AEGIS Multi-Modal Orchestrator", lifespan=lifespan)
+
+# Mount Prometheus metrics endpoint
+app.mount("/metrics", metrics_app)
 
 # Enable CORS for browser frontend access
 app.add_middleware(
@@ -135,19 +152,28 @@ async def orchestrate(
         effective_mode = resolve_planner_mode(planner_mode or x_planner_mode)
         logger.info(f"Orchestrator Planning Mode: '{effective_mode}'")
 
+        # Measure planner latency
+        t_plan_start = time.perf_counter()
         planning_result = plan_detectors(
             metadata=metadata,
             mode=effective_mode,
             risk_profile=risk_profile or "standard",
             budget_s=compute_budget_s,
         )
+        plan_duration_sec = time.perf_counter() - t_plan_start
         detectors_to_call = planning_result.detectors_to_call
         plan_data = planning_result.plan
         is_fallback = planning_result.fallback
         fallback_reason = planning_result.fallback_reason
         rationale = plan_data.get("rationale") if plan_data else None
 
+        PLANNER_LATENCY.labels(
+            planner_mode=planning_result.planner_mode,
+            fallback=str(is_fallback).lower()
+        ).observe(plan_duration_sec)
+
         if is_fallback:
+            PLANNER_FALLBACKS.labels(reason=fallback_reason or "unknown").inc()
             logger.warning(f"LLM Planner fallback triggered ({fallback_reason}). Dispatched baseline detectors: {detectors_to_call}")
         else:
             logger.info(f"Planner Selected Detectors [{planning_result.planner_mode}]: {detectors_to_call}")
@@ -157,10 +183,16 @@ async def orchestrate(
         results = await call_all_detectors(detectors_to_call, job_id, metadata.modality, tmp_path)
 
         for res in results:
+            DETECTOR_CALLS_TOTAL.labels(detector=res.detector, status=res.status).inc()
+            if res.latency_ms is not None:
+                DETECTOR_CALL_LATENCY.labels(detector=res.detector).observe(res.latency_ms / 1000.0)
             if res.status != "ok":
                 logger.error(f"Detector [{res.detector}] FAILED: {res.error}")
             else:
                 logger.info(f"Detector [{res.detector}] SUCCESS: score={res.raw_score}, latency={res.latency_ms}ms")
+
+        # Update circuit breaker states in Prometheus gauge
+        update_circuit_breaker_metrics(get_all_breakers())
 
         # ── Month 2: Judge-Agent Debate Layer ────────────────────────────────
         # Replaces Month 1's simple weighted average (aggregate.py).
@@ -168,6 +200,18 @@ async def orchestrate(
         judge_report = run_judge(results=results, metadata=metadata, job_id=job_id)
         aggregated_score = judge_report.verdict.calibrated_score
         aggregated_verdict = judge_report.verdict.final_verdict.value
+        
+        JUDGE_ADJUDICATION_LATENCY.labels(
+            judge_mode=judge_report.judge_mode,
+            verdict=aggregated_verdict
+        ).observe((judge_report.adjudication_latency_ms or 0) / 1000.0)
+
+        ORCHESTRATOR_REQUESTS_TOTAL.labels(
+            modality=metadata.modality,
+            status="success",
+            verdict=aggregated_verdict
+        ).inc()
+
         logger.info(
             f"Final Decision: Verdict={aggregated_verdict}, "
             f"Score={aggregated_score:.4f}, "
@@ -216,6 +260,8 @@ async def orchestrate(
         )
     except Exception as exc:
         err_name = metadata.filename if metadata is not None else safe_filename
+        m_type = metadata.modality if metadata is not None else "unknown"
+        ORCHESTRATOR_REQUESTS_TOTAL.labels(modality=m_type, status="error", verdict="error").inc()
         logger.error(f"EXCEPTIONAL FAILURE during orchestration processing for file '{err_name}': {exc}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Orchestration Error: {str(exc)}. Check terminal logs.")

@@ -1,0 +1,7 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+pillow>=10.0.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+prometheus-client>=0.20.0

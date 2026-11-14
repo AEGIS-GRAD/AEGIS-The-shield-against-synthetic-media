@@ -24,6 +24,13 @@ def _resolve_internal_token() -> str:
 
 _breakers = {}
 
+
+def get_all_breakers() -> dict[str, CircuitBreaker]:
+    """Returns all circuit breakers, initializing default detectors if not yet created."""
+    for name in DETECTOR_CIRCUIT_BREAKER_CONFIGS:
+        _get_breaker(name)
+    return dict(_breakers)
+
 # Per-detector circuit breaker thresholds
 DETECTOR_CIRCUIT_BREAKER_CONFIGS: dict[str, dict] = {
     "video-classifier": {

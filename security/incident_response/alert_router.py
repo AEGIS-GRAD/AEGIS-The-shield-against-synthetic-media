@@ -775,6 +775,25 @@ class AlertRouter:
         with self._lock:
             self.total_routed += 1
             self.stats_by_severity[alert.severity] = self.stats_by_severity.get(alert.severity, 0) + 1
+            try:
+                from security.gateway.ingestion.telemetry import (
+                    ALERTS_ROUTED_TOTAL,
+                    ALERTS_DELIVERY_TOTAL,
+                    ALERTS_DLQ_SIZE,
+                )
+                if ALERTS_ROUTED_TOTAL:
+                    ALERTS_ROUTED_TOTAL.labels(
+                        severity=alert.severity,
+                        threat_classification=alert.threat_classification,
+                    ).inc()
+                if ALERTS_DELIVERY_TOTAL:
+                    for dest_name, ok in delivery_results.items():
+                        st = "delivered" if ok else "failed"
+                        ALERTS_DELIVERY_TOTAL.labels(destination=dest_name, status=st).inc()
+                if ALERTS_DLQ_SIZE and hasattr(self, "dlq_destination") and self.dlq_destination:
+                    ALERTS_DLQ_SIZE.set(len(getattr(self.dlq_destination, "entries", [])))
+            except Exception:
+                pass
 
         return delivery_results
 
