@@ -34,12 +34,14 @@ class DesklibRunner:
         model_dir: Path,
         model_name: str = "desklib/ai-text-detector-v1.01",
         lora_dir: str = "",
+        use_finetuned: bool = True,
         use_fp16: bool = True,
         batch_size: int = 4,
     ) -> None:
         self.model_dir = Path(model_dir)
         self.model_name = model_name
         self.lora_dir = lora_dir.strip()
+        self.use_finetuned = use_finetuned
         self.use_fp16 = use_fp16
         self.batch_size = max(1, batch_size)
         self.model: Any = None
@@ -60,15 +62,31 @@ class DesklibRunner:
         source = self._resolve_model_source()
         logger.info("Loading Desklib checkpoint from '%s' onto %s", source, target)
 
-        model, tokenizer, resolved_dev = load_desklib(model_dir=source, device=target)
+        model, tokenizer, resolved_dev = load_desklib(
+            model_dir=source,
+            device=target,
+            use_finetuned=self.use_finetuned and not bool(self.lora_dir),
+        )
         if self.lora_dir:
             lora_path = Path(self.lora_dir)
             if not lora_path.exists():
                 raise FileNotFoundError(f"AEGIS_TEXT_LORA_DIR does not exist: {lora_path}")
+            import json as _json
             from peft import PeftModel
 
+            adapter_cfg = lora_path / "adapter_config.json"
+            base_cls = ""
+            if adapter_cfg.exists():
+                base_cls = (
+                    _json.loads(adapter_cfg.read_text(encoding="utf-8"))
+                    .get("auto_mapping", {})
+                    .get("base_model_class", "")
+                )
             logger.info("Attaching PEFT LoRA adapter from '%s'", lora_path)
-            model = PeftModel.from_pretrained(model, str(lora_path))
+            if base_cls == "DebertaV2Model" and hasattr(model, "model"):
+                model.model = PeftModel.from_pretrained(model.model, str(lora_path))
+            else:
+                model = PeftModel.from_pretrained(model, str(lora_path))
             model.to(resolved_dev)
 
         if resolved_dev.type == "cuda" and self.use_fp16:

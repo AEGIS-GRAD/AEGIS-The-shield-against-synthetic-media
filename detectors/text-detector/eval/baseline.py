@@ -110,7 +110,7 @@ def _run_as_is_baseline(records: List[Dict[str, Any]], fp16: bool = True) -> Dic
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
 
-    model, tokenizer, device = load_desklib(model_dir=source, device=device)
+    model, tokenizer, device = load_desklib(model_dir=source, device=device, use_finetuned=False)
     if device.type == "cuda" and fp16:
         model = model.half()
     model.eval()

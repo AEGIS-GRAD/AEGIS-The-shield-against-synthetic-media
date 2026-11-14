@@ -24,18 +24,67 @@ def _resolve_internal_token() -> str:
 
 _breakers = {}
 
+# Per-detector circuit breaker thresholds
+DETECTOR_CIRCUIT_BREAKER_CONFIGS: dict[str, dict] = {
+    "video-classifier": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 15.0,
+    },
+    "rppg": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 15.0,
+    },
+    "aasist": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 2.0,
+    },
+    "syncnet": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 20.0,
+    },
+    "fusion": {
+        "failure_threshold": 5,
+        "recovery_timeout_sec": 3.0,
+        "latency_threshold_sec": 1.0,
+    },
+    "detector_image": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 10.0,
+        "latency_threshold_sec": 5.0,
+    },
+    "detector_text": {
+        "failure_threshold": 3,
+        "recovery_timeout_sec": 5.0,
+        "latency_threshold_sec": 2.0,
+    },
+}
+
 
 def _get_breaker(detector: str) -> CircuitBreaker:
     if detector not in _breakers:
-        _breakers[detector] = CircuitBreaker(name=detector, failure_threshold=3, recovery_timeout_sec=5.0)
+        cfg = DETECTOR_CIRCUIT_BREAKER_CONFIGS.get(
+            detector,
+            {"failure_threshold": 3, "recovery_timeout_sec": 5.0, "latency_threshold_sec": 5.0},
+        )
+        _breakers[detector] = CircuitBreaker(name=detector, **cfg)
     return _breakers[detector]
 
 
 def _service_url(detector_name: str) -> str:
-    env_key = f"DETECTOR_{detector_name.upper().replace('-', '_')}_URL"
-    default_service = f"detector_{detector_name.replace('-', '_')}"
+    normalized = detector_name.replace("-", "_")
+    env_key = f"DETECTOR_{normalized.upper()}_URL"
+    alias_key = f"DETECTOR_{normalized.removeprefix('detector_').upper()}_URL"
+    default_service = normalized if normalized.startswith("detector_") else f"detector_{normalized}"
     scheme = "https" if (mesh_enabled() or mesh_strict()) else "http"
-    return os.environ.get(env_key, f"{scheme}://{default_service}:8000")
+    return (
+        os.environ.get(env_key)
+        or (os.environ.get(alias_key) if alias_key != env_key else None)
+        or f"{scheme}://{default_service}:8000"
+    )
 
 
 async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modality: str, file_path: str) -> DetectorResult:

@@ -72,9 +72,9 @@ def test_detect_validates_strictly_against_json_contracts_and_populates_metrics(
         metrics_resp = client.get("/metrics")
         assert metrics_resp.status_code == 200
         metrics_txt = metrics_resp.text
-        assert 'detector_inference_calls_total{model_name="text"}' in metrics_txt
+        assert 'detector_inference_calls_total{model_name="detector_text"}' in metrics_txt
         assert 'detector_inference_latency_seconds_bucket' in metrics_txt
-        assert 'model_name="text"' in metrics_txt
+        assert 'model_name="detector_text"' in metrics_txt
 
 
 def test_detect_short_text_returns_not_applicable_without_calling_model(

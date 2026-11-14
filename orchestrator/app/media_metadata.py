@@ -164,13 +164,19 @@ def get_input_metadata(
             modality = "audio"
         else:
             ext = os.path.splitext(file_path)[1].lower()
-            modality = "image" if ext in (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif") else "unknown"
+            if ext in (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"):
+                modality = "image"
+            elif ext in (".txt", ".md", ".json", ".csv", ".doc", ".docx"):
+                modality = "text"
+            else:
+                modality = "unknown"
 
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, ValueError):
         ext = os.path.splitext(file_path)[1].lower()
         video_exts = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
         audio_exts = {".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a"}
         image_exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"}
+        text_exts = {".txt", ".md", ".json", ".csv", ".doc", ".docx"}
         if ext in video_exts:
             modality = "video"
             has_audio = True
@@ -179,6 +185,8 @@ def get_input_metadata(
             has_audio = True
         elif ext in image_exts:
             modality = "image"
+        elif ext in text_exts:
+            modality = "text"
         else:
             modality = "unknown"
 

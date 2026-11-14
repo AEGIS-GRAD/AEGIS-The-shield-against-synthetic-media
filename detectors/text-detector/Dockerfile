@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     AEGIS_TEXT_PRELOAD=1 \
     AEGIS_TEXT_FP16=1 \
+    AEGIS_TEXT_USE_FINETUNED=1 \
     AEGIS_TEXT_ENABLE_PPL=1 \
     AEGIS_TEXT_ENABLE_BINOCULARS=0 \
     HF_HOME=/app/.cache/huggingface
@@ -36,4 +37,3 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=45s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
-

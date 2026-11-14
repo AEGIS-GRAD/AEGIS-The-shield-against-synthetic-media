@@ -1,8 +1,7 @@
 {
     "detector_name": "video-classifier",
     "modality": [
-        "video",
-        "image"
+        "video"
     ],
     "version": "xception-ff++-v1",
     "description": "Frame-level classifier detecting face-swap and reenactment deepfakes using Xception.",

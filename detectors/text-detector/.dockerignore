@@ -4,11 +4,11 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
-models/
+models/*
+!models/desklib-finetuned/
+!models/signal_calibration.json
 eval/data/
-*.safetensors
 *.bin
 *.pth
 *.pt
 .cache/
-

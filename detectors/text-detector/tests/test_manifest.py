@@ -1,4 +1,4 @@
-"""Tests validating capability_manifests/text.json against AEGIS schema and orchestrator loader."""
+"""Tests validating capability_manifests/detector_text.json against AEGIS schema and orchestrator loader."""
 from __future__ import annotations
 
 import json
@@ -16,11 +16,11 @@ from Schema import DETECTOR_MANIFEST_SCHEMA  # noqa: E402
 
 
 def test_text_manifest_conforms_to_schema_and_documents_limitations():
-    path = MANIFEST_DIR / "text.json"
+    path = MANIFEST_DIR / "detector_text.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     jsonschema.validate(instance=data, schema=DETECTOR_MANIFEST_SCHEMA)
 
-    assert data["detector_name"] == "text"
+    assert data["detector_name"] == "detector_text"
     assert data["modality"] == ["text"]
     assert data["model_metadata"]["license"] == "MIT"
     assert data["model_metadata"]["backbone"] == "microsoft/deberta-v3-large"

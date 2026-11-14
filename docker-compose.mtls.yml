@@ -215,6 +215,8 @@ services:
       - DETECTOR_SYNCNET_URL=https://detector_syncnet:8000
       - DETECTOR_IMAGE_URL=https://detector_image:8000
       - DETECTOR_TEXT_URL=https://detector_text:8000
+      - DETECTOR_DETECTOR_IMAGE_URL=https://detector_image:8000
+      - DETECTOR_DETECTOR_TEXT_URL=https://detector_text:8000
       - PROMETHEUS_URL=https://prometheus:9090
 
   prometheus:

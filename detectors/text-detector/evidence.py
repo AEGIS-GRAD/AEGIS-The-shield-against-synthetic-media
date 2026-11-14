@@ -137,6 +137,8 @@ def build_forensic_evidence(
         flags.append("uniform_sentence_structure")
 
     style_verdict = stylometry.get("stylometry_verdict")
+    if style_verdict == "synthetic":
+        flags.append("stylometry_synthetic")
     if (conf >= 0.65 and style_verdict == "human") or (conf <= 0.35 and style_verdict == "synthetic"):
         flags.append("stylometry_classifier_divergence")
 

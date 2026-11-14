@@ -51,6 +51,9 @@ class TextDetectorConfig:
         )
     )
     lora_dir: str = field(default_factory=lambda: os.getenv("AEGIS_TEXT_LORA_DIR", "").strip())
+    use_finetuned: bool = field(
+        default_factory=lambda: _env_bool("AEGIS_TEXT_USE_FINETUNED", True)
+    )
     ppl_model_dir: Path = field(
         default_factory=lambda: Path(
             os.getenv("AEGIS_TEXT_PPL_MODEL_DIR", str(_SERVICE_DIR / "models" / "gpt2"))
@@ -118,6 +121,9 @@ class TextDetectorConfig:
         """Report whether weights are as-is baseline or a fine-tuned LoRA checkpoint."""
         if self.lora_dir:
             return f"desklib-v1.01-lora-{Path(self.lora_dir).name}"
+        default_adapter = _SERVICE_DIR / "models" / "desklib-finetuned" / "lora_adapter" / "adapter_config.json"
+        if self.use_finetuned and default_adapter.exists():
+            return "desklib-v1.01-lora-finetuned-fp16" if self.use_fp16 else "desklib-v1.01-lora-finetuned-fp32"
         return self.model_version if self.use_fp16 else "desklib-v1.01-fp32"
 
 

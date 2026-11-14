@@ -50,6 +50,7 @@ def create_default_runtime(config: Optional[TextDetectorConfig] = None) -> Servi
         model_dir=cfg.model_dir,
         model_name=cfg.model_name,
         lora_dir=cfg.lora_dir,
+        use_finetuned=cfg.use_finetuned,
         use_fp16=cfg.use_fp16,
         batch_size=cfg.chunk_batch_size,
     )
@@ -309,7 +310,7 @@ def create_app(runtime: Optional[ServiceRuntime] = None) -> FastAPI:
         response_model=DetectionResponse,
         response_model_exclude_none=True,
     )
-    @track_inference("text")
+    @track_inference("detector_text")
     async def detect(
         payload_req: DetectionRequest,
         request: Request,
@@ -347,7 +348,7 @@ def create_app(runtime: Optional[ServiceRuntime] = None) -> FastAPI:
         response_model_exclude_none=True,
         deprecated=True,
     )
-    @track_inference("text")
+    @track_inference("detector_text")
     async def analyze_legacy(
         payload_req: LegacyTextRequest,
         request: Request,
@@ -375,3 +376,8 @@ def create_app(runtime: Optional[ServiceRuntime] = None) -> FastAPI:
 
 
 app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8005)

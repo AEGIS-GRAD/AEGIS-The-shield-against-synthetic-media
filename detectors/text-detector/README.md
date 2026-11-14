@@ -16,14 +16,15 @@ Synthetic text detection service replacing the stub `detector_binoculars` contai
 ## Endpoints
 - `GET /health` — liveness/readiness, active device, VRAM/RAM telemetry, loaded signal status.
 - `POST /detect` — contract-conformant endpoint (`shared/json-api-contracts-schema/`).
-- `GET /metrics` — Prometheus exposition (`detector_inference_latency_seconds`, `detector_inference_calls_total`, `detector_gpu_memory_allocated_bytes` for `model_name="text"`).
+- `GET /metrics` — Prometheus exposition (`detector_inference_latency_seconds`, `detector_inference_calls_total`, `detector_gpu_memory_allocated_bytes` for `model_name="detector_text"`).
 - `POST /analyze` — deprecated raw-text endpoint kept for Task 3 evaluation scripts.
 
 ## Environment Variables
 | Variable | Default | Purpose |
 |---|---|---|
 | `AEGIS_TEXT_MODEL_DIR` | `./models/desklib-base` | Local directory for Desklib weights/tokenizer |
-| `AEGIS_TEXT_LORA_DIR` | `""` | Optional LoRA adapter path (Task 3 fine-tune) |
+| `AEGIS_TEXT_USE_FINETUNED` | `1` | Auto-attach committed Task 3 LoRA adapter when present |
+| `AEGIS_TEXT_LORA_DIR` | `""` | Optional custom LoRA adapter override path |
 | `AEGIS_TEXT_PPL_MODEL_DIR` | `./models/gpt2` | Local directory for GPT-2 perplexity scorer |
 | `AEGIS_TEXT_FP16` | `1` | Use `float16` on CUDA GPUs |
 | `AEGIS_TEXT_BATCH_SIZE` | `4` | Chunk batch size with automatic OOM halve-and-retry |
