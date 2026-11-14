@@ -84,6 +84,40 @@ class IncidentRecord:
 
 
 @dataclass
+class VerificationRecord:
+    """Immutable record for a file-based or multimodal forensic verification."""
+    verification_id: str
+    job_id: str
+    created_at_utc: str
+    modality: str  # video | audio | image | text | multimodal
+    input_filename: str
+    input_hash: str
+    input_blob: FrameBlobMeta
+    verdict: str
+    calibrated_score: float
+    siem_alert_tier: str
+    detector_outputs: List[Dict[str, Any]] = field(default_factory=list)
+    model_versions: Dict[str, str] = field(default_factory=dict)
+    calibration_version: str = "aegis-calibrator-v1.0"
+    judge_transcript: Dict[str, Any] = field(default_factory=dict)
+    record_index: int = 0
+    prev_record_hash: str = ""
+    record_hash: str = ""
+    signature: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> VerificationRecord:
+        ib = data["input_blob"]
+        blob_meta = FrameBlobMeta(**ib) if isinstance(ib, dict) else ib
+        data_copy = dict(data)
+        data_copy["input_blob"] = blob_meta
+        return cls(**data_copy)
+
+
+@dataclass
 class VaultAuditResult:
     """Audit report for the entire forensic vault."""
     is_valid: bool
@@ -122,12 +156,14 @@ class SurveillanceEvidenceVault:
         self.signing_key = signing_key or DEFAULT_SIGNING_KEY
         self.blobs_dir = self.vault_dir / "blobs"
         self.incidents_dir = self.vault_dir / "incidents"
+        self.verifications_dir = self.vault_dir / "verifications"
         self.ledger_path = self.vault_dir / "ledger.jsonl"
         self._lock = threading.Lock()
 
         # Initialize vault directory tree
         self.blobs_dir.mkdir(parents=True, exist_ok=True)
         self.incidents_dir.mkdir(parents=True, exist_ok=True)
+        self.verifications_dir.mkdir(parents=True, exist_ok=True)
 
         self._ensure_ledger_initialized()
 
@@ -296,6 +332,115 @@ class SurveillanceEvidenceVault:
         logger.info(f"Sealed incident {incident_id} at ledger index {new_index} (hash={record_hash[:8]}...)")
         return incident
 
+    def store_verification(
+        self,
+        job_id: str,
+        modality: str,
+        input_filename: str,
+        input_bytes: bytes,
+        verdict: str,
+        calibrated_score: float,
+        detector_outputs: List[Dict[str, Any]],
+        model_versions: Dict[str, str],
+        calibration_version: str = "aegis-calibrator-v1.0",
+        judge_transcript: Optional[Dict[str, Any]] = None,
+        siem_alert_tier: str = "P4_INFORMATIONAL",
+    ) -> VerificationRecord:
+        """
+        Stores a complete, tamper-evident verification record for any modality
+        (video, audio, image, text, multimodal) including input hash, detector outputs,
+        model versions, calibration version, and full judge debate transcript.
+        """
+        ext = os.path.splitext(input_filename)[1].lstrip(".").lower() or "bin"
+        input_blob = self.store_blob(input_bytes, format_ext=ext)
+        input_hash = input_blob.sha256
+
+        now_dt = datetime.now(timezone.utc)
+        iso_ts = now_dt.isoformat()
+        date_str = now_dt.strftime("%Y%m%d")
+        verification_id = f"VER-{date_str}-{modality.lower()}-{job_id[:8]}"
+
+        with self._lock:
+            last_index, last_hash = self._get_latest_ledger_state()
+            new_index = last_index + 1
+
+            record = VerificationRecord(
+                verification_id=verification_id,
+                job_id=job_id,
+                created_at_utc=iso_ts,
+                modality=modality.lower(),
+                input_filename=input_filename,
+                input_hash=input_hash,
+                input_blob=input_blob,
+                verdict=verdict,
+                calibrated_score=float(calibrated_score),
+                siem_alert_tier=siem_alert_tier,
+                detector_outputs=detector_outputs,
+                model_versions=model_versions,
+                calibration_version=calibration_version,
+                judge_transcript=judge_transcript or {},
+                record_index=new_index,
+                prev_record_hash=last_hash,
+            )
+
+            manifest_json = json.dumps(record.to_dict(), sort_keys=True)
+            manifest_digest = hashlib.sha256(manifest_json.encode("utf-8")).hexdigest()
+
+            chain_input = f"{last_hash}:{verification_id}:{iso_ts}:{manifest_digest}".encode("utf-8")
+            record_hash = hashlib.sha256(chain_input).hexdigest()
+            signature = hmac.new(self.signing_key, record_hash.encode("utf-8"), hashlib.sha256).hexdigest()
+
+            record.record_hash = record_hash
+            record.signature = signature
+
+            manifest_path = self.verifications_dir / f"{verification_id}.json"
+            manifest_path.write_text(json.dumps(record.to_dict(), indent=2), encoding="utf-8")
+
+            ledger_entry = {
+                "record_index": new_index,
+                "record_type": "VERIFICATION",
+                "incident_id": verification_id,
+                "job_id": job_id,
+                "modality": modality.lower(),
+                "created_at_utc": iso_ts,
+                "primary_frame_sha256": input_hash,
+                "blob_relpath": input_blob.blob_relpath,
+                "manifest_digest": manifest_digest,
+                "prev_record_hash": last_hash,
+                "record_hash": record_hash,
+                "signature": signature,
+            }
+            with open(self.ledger_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(ledger_entry) + "\n")
+
+        logger.info(f"Sealed verification {verification_id} ({modality}) at ledger index {new_index} (hash={record_hash[:8]}...)")
+        return record
+
+    def get_verification(self, verification_id: str) -> Optional[VerificationRecord]:
+        """Retrieves a verification record by verification_id."""
+        manifest_path = self.verifications_dir / f"{verification_id}.json"
+        if not manifest_path.exists():
+            return None
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            return VerificationRecord.from_dict(data)
+        except Exception as exc:
+            logger.error(f"Failed to read verification {verification_id}: {exc}")
+            return None
+
+    def get_verification_by_job_id(self, job_id: str) -> Optional[VerificationRecord]:
+        """Finds a verification record matching a given orchestrator job_id."""
+        if not self.verifications_dir.exists():
+            return None
+        for path in self.verifications_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if data.get("job_id") == job_id or data.get("verification_id") == job_id:
+                    return VerificationRecord.from_dict(data)
+            except Exception:
+                continue
+        return None
+
     def get_incident(self, incident_id: str) -> Optional[IncidentRecord]:
         """Retrieves an incident record by ID."""
         manifest_path = self.incidents_dir / f"{incident_id}.json"
@@ -384,8 +529,13 @@ class SurveillanceEvidenceVault:
                     audit.is_valid = False
                     audit.errors.append(f"Record {rec_idx} ({inc_id}): Node signature mismatch.")
 
-                # 4. Verify manifest file on disk
-                manifest_path = self.incidents_dir / f"{inc_id}.json"
+                # 4. Verify manifest file on disk (supports both INCIDENT and VERIFICATION records)
+                rec_type = entry.get("record_type", "INCIDENT")
+                if rec_type == "VERIFICATION":
+                    manifest_path = self.verifications_dir / f"{inc_id}.json"
+                else:
+                    manifest_path = self.incidents_dir / f"{inc_id}.json"
+
                 if not manifest_path.exists():
                     audit.is_valid = False
                     audit.errors.append(f"Record {rec_idx} ({inc_id}): Manifest file missing on disk.")
@@ -407,9 +557,14 @@ class SurveillanceEvidenceVault:
                         audit.is_valid = False
                         audit.errors.append(f"Record {rec_idx} ({inc_id}): Manifest read error: {m_exc}")
 
-                # 5. Verify primary frame blob on disk
-                blob_prefix = primary_sha256[:2]
-                blob_path = self.blobs_dir / blob_prefix / f"{primary_sha256}.png"
+                # 5. Verify primary payload/frame blob on disk
+                blob_rel = entry.get("blob_relpath")
+                if blob_rel:
+                    blob_path = self.vault_dir / blob_rel
+                else:
+                    blob_prefix = primary_sha256[:2]
+                    blob_path = self.blobs_dir / blob_prefix / f"{primary_sha256}.png"
+
                 if not blob_path.exists():
                     audit.is_valid = False
                     audit.missing_blobs.append(primary_sha256)
@@ -495,3 +650,157 @@ if __name__ == "__main__":
 
         logger.info(f"Exported forensic bundle to {out_path}")
         return out_path
+
+    def _build_forensic_report_md(self, record: Any) -> str:
+        """Generates a human-readable, court-admissible Markdown forensic report."""
+        if isinstance(record, VerificationRecord):
+            lines = [
+                f"# AEGIS Forensic Verification Report",
+                f"",
+                f"- **Verification ID:** `{record.verification_id}`",
+                f"- **Job ID:** `{record.job_id}`",
+                f"- **Timestamp (UTC):** {record.created_at_utc}",
+                f"- **Modality:** `{record.modality}`",
+                f"- **Input Filename:** `{record.input_filename}`",
+                f"- **Input SHA-256:** `{record.input_hash}`",
+                f"- **Final Verdict:** **{record.verdict}**",
+                f"- **Calibrated Score:** {record.calibrated_score:.4f}",
+                f"- **Calibration Version:** `{record.calibration_version}`",
+                f"- **SIEM Alert Tier:** `{record.siem_alert_tier}`",
+                f"",
+                f"## Model Versions",
+            ]
+            for det, ver in record.model_versions.items():
+                lines.append(f"- `{det}`: `{ver}`")
+            lines.extend(["", "## Detector Outputs"])
+            for out in record.detector_outputs:
+                lines.append(
+                    f"- **{out.get('detector')}** (`{out.get('status')}`): "
+                    f"score={out.get('raw_score')}, confidence={out.get('confidence')}, "
+                    f"latency={out.get('latency_ms')}ms"
+                )
+            lines.extend([
+                "",
+                "## Judge Agent Debate Transcript",
+                f"- **Judge Mode:** `{record.judge_transcript.get('judge_mode', 'unknown')}`",
+                f"- **Debate Transcript Hash:** `{record.judge_transcript.get('debate_transcript_hash', '')}`",
+                f"- **Guards Applied:** `{', '.join(record.judge_transcript.get('guards_applied', [])) or 'none'}`",
+                f"- **Forensic Justification:** {record.judge_transcript.get('forensic_justification', '')}",
+                "",
+            ])
+            for rnd in record.judge_transcript.get("rounds", []):
+                lines.append(f"### Round {rnd.get('round_number')}: {rnd.get('round_name')}")
+                lines.append(f"{rnd.get('summary')}")
+                lines.append("")
+            lines.extend([
+                "## Cryptographic Chain of Custody",
+                f"- **Ledger Index:** {record.record_index}",
+                f"- **Previous Record Hash:** `{record.prev_record_hash}`",
+                f"- **Record Hash:** `{record.record_hash}`",
+                f"- **HMAC-SHA256 Signature:** `{record.signature}`",
+            ])
+            return "\n".join(lines) + "\n"
+        else:
+            # IncidentRecord (Live Surveillance)
+            lines = [
+                f"# AEGIS Live Surveillance Incident Report",
+                f"",
+                f"- **Incident ID:** `{record.incident_id}`",
+                f"- **Timestamp (UTC):** {record.created_at_utc}",
+                f"- **Camera ID:** `{record.camera_id}`",
+                f"- **Threat Type:** `{record.threat_type}`",
+                f"- **Severity:** `{record.severity}`",
+                f"- **Sequence Number:** {record.sequence_number}",
+                f"- **Primary Frame SHA-256:** `{record.primary_frame.sha256}`",
+                f"- **Reasoning Narrative:** {record.reasoning_narrative}",
+                f"",
+                f"## Cryptographic Chain of Custody",
+                f"- **Ledger Index:** {record.record_index}",
+                f"- **Previous Record Hash:** `{record.prev_record_hash}`",
+                f"- **Record Hash:** `{record.record_hash}`",
+                f"- **HMAC-SHA256 Signature:** `{record.signature}`",
+            ]
+            return "\n".join(lines) + "\n"
+
+    def export_signed_bundle(
+        self,
+        record_id: str,
+        output_zip_path: Optional[Path | str] = None,
+    ) -> Path:
+        """
+        Exports a complete, signed, offline-verifiable forensic evidence bundle (ZIP)
+        for any verification (all 5 modalities) or live surveillance incident.
+
+        Bundle contents:
+          - report.md: Court-admissible forensic report
+          - evidence.json: Full JSON manifest (input_hash, detector_outputs, model_versions,
+                           calibration_version, full judge_transcript, ledger chain & signature)
+          - payload/<blob_filename>: Original raw content-addressed input file/frame
+          - hashes.sha256: SHA-256 checksums for report.md, evidence.json, and payload
+          - bundle_signature.sig: HMAC-SHA256 cryptographic signature over hashes.sha256 and evidence.json
+          - verify_bundle.py: Embedded standalone offline verification script
+        """
+        record: Any = self.get_verification(record_id) or self.get_verification_by_job_id(record_id)
+        if record is None:
+            record = self.get_incident(record_id)
+        if record is None:
+            raise ValueError(f"Record '{record_id}' not found in forensic vault.")
+
+        if isinstance(record, VerificationRecord):
+            canonical_id = record.verification_id
+            blob_meta = record.input_blob
+        else:
+            canonical_id = record.incident_id
+            blob_meta = record.primary_frame
+
+        out_path = Path(output_zip_path or self.vault_dir / f"{canonical_id}_signed_bundle.zip").resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        report_md = self._build_forensic_report_md(record)
+        evidence_json_str = json.dumps(record.to_dict(), indent=2, sort_keys=True)
+        payload_bytes = self.get_frame_bytes(blob_meta.blob_relpath)
+        payload_rel = f"payload/{os.path.basename(blob_meta.blob_relpath)}"
+
+        report_sha = hashlib.sha256(report_md.encode("utf-8")).hexdigest()
+        evidence_sha = hashlib.sha256(evidence_json_str.encode("utf-8")).hexdigest()
+        payload_sha = hashlib.sha256(payload_bytes).hexdigest()
+
+        hashes_txt = (
+            f"{evidence_sha}  evidence.json\n"
+            f"{report_sha}  report.md\n"
+            f"{payload_sha}  {payload_rel}\n"
+        )
+        hashes_sha = hashlib.sha256(hashes_txt.encode("utf-8")).hexdigest()
+
+        sig_payload = f"{hashes_sha}:{evidence_sha}".encode("utf-8")
+        bundle_sig = hmac.new(self.signing_key, sig_payload, hashlib.sha256).hexdigest()
+        sig_doc = json.dumps(
+            {
+                "algorithm": "HMAC-SHA256",
+                "record_id": canonical_id,
+                "hashes_sha256": hashes_sha,
+                "evidence_sha256": evidence_sha,
+                "signature": bundle_sig,
+            },
+            indent=2,
+        )
+
+        verify_script_path = Path(__file__).resolve().parent / "verify_bundle.py"
+        if verify_script_path.exists():
+            verifier_code = verify_script_path.read_text(encoding="utf-8")
+        else:
+            verifier_code = "# See security/forensics/verify_bundle.py\n"
+
+        with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("report.md", report_md)
+            zf.writestr("evidence.json", evidence_json_str)
+            zf.writestr("hashes.sha256", hashes_txt)
+            zf.writestr("bundle_signature.sig", sig_doc)
+            zf.writestr(payload_rel, payload_bytes)
+            zf.writestr("verify_bundle.py", verifier_code)
+
+        logger.info(f"Exported signed offline-verifiable bundle to {out_path}")
+        return out_path
+
+
+UnifiedEvidenceVault = SurveillanceEvidenceVault

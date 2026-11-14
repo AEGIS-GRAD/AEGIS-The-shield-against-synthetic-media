@@ -77,6 +77,7 @@ services:
       - ./orchestrator:/app
       - ./capability_manifests:/capability_manifests:ro
       - ./debate:/repo/debate:ro  # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
+      - ./security:/repo/security
     networks:
       - aegis_net
     environment:
@@ -372,6 +373,73 @@ services:
       - aegis_net
     depends_on:
       - prometheus
+
+  # ==========================================
+  # LIVE CAMERA SURVEILLANCE PIPELINE (docker compose --profile live up)
+  # ==========================================
+  ingestion:
+    build:
+      context: .
+      dockerfile: ./security/gateway/ingestion/Dockerfile
+    container_name: aegis_ingestion
+    profiles: [live]
+    restart: unless-stopped
+    ports:
+      - "8443:8443" # mTLS Live Camera Ingestion
+      - "8444:8444" # Live SSE Telemetry & Prometheus /metrics
+    volumes:
+      - ./security:/app/security
+    environment:
+      - AEGIS_INGESTION_HOST=0.0.0.0
+      - AEGIS_INGESTION_PORT=8443
+      - AEGIS_TELEMETRY_HOST=0.0.0.0
+      - AEGIS_TELEMETRY_PORT=8444
+      - AEGIS_SECURITY_PROFILE=${AEGIS_SECURITY_PROFILE:-prod}
+    networks:
+      - aegis_net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8444/telemetry/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  rtsp_camera_sim:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    container_name: aegis_rtsp_camera_sim
+    profiles: [live]
+    restart: unless-stopped
+    command: >
+      -re -stream_loop -1 -i /media/authentic_feed.mp4
+      -c copy -f rtsp -rtsp_transport tcp rtsp://mediamtx:8554/live/camera1
+    volumes:
+      - ./web/public/sample_videos:/media:ro
+    networks:
+      - aegis_net
+    depends_on:
+      - mediamtx
+
+  rtsp_bridge:
+    build:
+      context: ./security/gateway/rtsp_bridge
+      dockerfile: Dockerfile
+    container_name: aegis_rtsp_bridge
+    profiles: [live]
+    restart: unless-stopped
+    environment:
+      - RTSP_URL=rtsp://mediamtx:8554/live/camera1
+      - INGESTION_HOST=aegis_ingestion
+      - INGESTION_PORT=8443
+      - CERT_DIR=/certs
+      - TARGET_FPS=10
+    volumes:
+      - ./security/transport/certs:/certs:ro
+    networks:
+      - aegis_net
+    depends_on:
+      - mediamtx
+      - rtsp_camera_sim
+      - ingestion
 
 networks:
   aegis_net:

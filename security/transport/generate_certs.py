@@ -160,7 +160,7 @@ def generate_all_service_certs(cert_dir: Optional[str] = None):
         "aegis-gateway",
         issuer_name=ca_subject,
         issuer_key=ca_key,
-        san_dns_names=["localhost", "gateway", "aegis-gateway"],
+        san_dns_names=["localhost", "gateway", "aegis-gateway", "ingestion", "aegis_ingestion"],
         san_ips=["127.0.0.1"],
     )
     save_cert(cert_dir, "server", gw_key, gw_cert)
