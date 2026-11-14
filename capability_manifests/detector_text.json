@@ -3,8 +3,8 @@
     "modality": [
         "text"
     ],
-    "version": "desklib-deberta-v1.01",
-    "description": "Fine-tuned Desklib AI-text detection paired with stylometry explainability (vocabulary diversity, n-gram repetition, and sentence variation).",
+    "version": "desklib-ai-text-detector-v1.01-fp16",
+    "description": "Transformer-based synthetic text detector using desklib/ai-text-detector-v1.01 (DeBERTa-v3-large mean-pooling head + optional Task 3 LoRA adapter) with overlapping 510-token window aggregation, sentence-level GPT-2 perplexity/burstiness, linguistic stylometry, minimum-length gating, and opt-in Binoculars-small corroboration.",
     "input_constraints": {
         "requires_audio": false,
         "min_duration_seconds": 0.0,
@@ -12,15 +12,19 @@
         "supported_formats": [
             ".txt",
             ".md",
-            ".json"
-        ]
+            ".json",
+            "base64"
+        ],
+        "min_words": 40,
+        "reliable_words": 150,
+        "max_chars": 200000
     },
     "performance": {
-        "avg_latency_ms": 150.0,
-        "p95_latency_ms": 400.0,
-        "avg_ram_usage_mb": 800.0,
-        "avg_vram_usage_mb": null,
-        "measured_on": "Local CPU/GPU inference baseline"
+        "avg_latency_ms": 225.65,
+        "p95_latency_ms": 643.46,
+        "avg_ram_usage_mb": 1887.67,
+        "avg_vram_usage_mb": 1913.95,
+        "measured_on": "NVIDIA RTX 3050 4GB fp16 (Desklib v1.01 + GPT-2 perplexity on 440 interim MAGE texts)"
     },
     "circuit_breaker": {
         "failure_threshold": 3,
@@ -29,20 +33,54 @@
     },
     "known_failure_modes": [
         {
-            "condition": "short text under 50 words",
-            "effect": "unreliable stylometric distributions and degraded classifier confidence",
-            "source": "Desklib model limitations card"
+            "condition": "short text (< 40 words)",
+            "effect": "insufficient lexical and perplexity statistics; service returns status='not_applicable' with neutral confidence=0.50",
+            "source": "detectors/text-detector/README.md"
+        },
+        {
+            "condition": "marginal length text (40-149 words)",
+            "effect": "reduced discriminative stability; confidence is linearly attenuated toward 0.50 and flagged short_text_attenuated",
+            "source": "detectors/text-detector/README.md"
+        },
+        {
+            "condition": "post-cutoff LLMs and heavily paraphrased synthetic prose",
+            "effect": "higher false-negative rate for unadapted as-is desklib checkpoint unless Task 3 LoRA adapter is loaded",
+            "source": "detectors/text-detector/eval/text_detector_baseline.md"
         },
         {
             "condition": "code-heavy or programmatic scripts in text files",
             "effect": "elevated false positive rates due to unnatural n-gram repetition inherent to programming syntax",
             "source": "Stylometry evaluation benchmarks"
+        },
+        {
+            "condition": "mixed human/AI collaborative documents",
+            "effect": "divergent chunk scores across sections; flagged chunk_disagreement for Debate cross-examination",
+            "source": "detectors/text-detector/evidence.py"
         }
     ],
-    "reliability_notes": "Primary detector for text documents. Combines neural transformer embeddings with stylometric feature verification.",
+    "reliability_notes": "Primary text authenticity detector for >=150-word documents. Below 40 words returns not_applicable; 40-149 words is attenuated toward 0.50. Runs in fp16 within a 4-8 GB GPU budget using dynamic-padded batch_size=4 with automatic OOM backoff.",
     "evidence_flags": [
+        "low_perplexity",
+        "low_burstiness",
         "stylometry_synthetic",
-        "low_vocabulary_diversity"
+        "low_vocabulary_diversity",
+        "high_ngram_repetition",
+        "chunk_disagreement",
+        "short_text_attenuated",
+        "text_too_short",
+        "binoculars_corroborated"
     ],
-    "license": "Apache-2.0"
+    "model_metadata": {
+        "checkpoint": "desklib/ai-text-detector-v1.01",
+        "backbone": "microsoft/deberta-v3-large",
+        "license": "MIT",
+        "training_data": "liamdugan/raid + Task 3 LoRA adaptation",
+        "auxiliary_signals": [
+            "gpt2-perplexity",
+            "sentence-burstiness-cov",
+            "stylometry",
+            "binoculars-small (opt-in)"
+        ]
+    },
+    "license": "MIT"
 }

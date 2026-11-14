@@ -43,7 +43,7 @@ BASELINE_LATENCY_MS = {
     "aasist": {"avg": 234.8, "p95": 334.0},
     "syncnet": {"avg": 9587.4, "p95": 22834.0},
     "detector_image": {"avg": 800.0, "p95": 2000.0},
-    "detector_text": {"avg": 150.0, "p95": 400.0},
+    "detector_text": {"avg": 225.65, "p95": 643.46},
 }
 
 
@@ -282,7 +282,7 @@ Example G — text document:
 Input: {{"modality": "text", "has_audio": false, "duration_seconds": 0}}
 Constraints: risk_profile=standard, compute_budget_s=10
 Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_text"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["Text document — audio/video forensic detectors excluded."], "estimated_latency_s": 0.4, "rationale": "Only detector_text is eligible for text inputs."}}
+{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_text"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["Text document — audio/video forensic detectors excluded."], "estimated_latency_s": 0.64, "rationale": "Only detector_text is eligible for text inputs."}}
 
 Now produce the plan for the INPUT SUMMARY, REQUEST CONSTRAINTS, and LIVE TELEMETRY given above. JSON only.
 """

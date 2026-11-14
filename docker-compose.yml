@@ -282,20 +282,32 @@ services:
       - "8005:8000"
     volumes:
       - ./detectors/text-detector:/app
-    networks:
-      - aegis_net
+      - ./detectors/text-detector/models:/app/models
+      - ./shared:/shared:ro
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - AEGIS_TEXT_MODEL_DIR=/app/models/desklib-base
+      - AEGIS_TEXT_PPL_MODEL_DIR=/app/models/gpt2
+      - AEGIS_TEXT_USE_FINETUNED=${AEGIS_TEXT_USE_FINETUNED:-1}
+      - AEGIS_TEXT_PRELOAD=1
+      - AEGIS_TEXT_FP16=1
+      - AEGIS_TEXT_ENABLE_PPL=1
+      - AEGIS_TEXT_ENABLE_BINOCULARS=${AEGIS_TEXT_ENABLE_BINOCULARS:-0}
+      - AEGIS_TEXT_LORA_DIR=${AEGIS_TEXT_LORA_DIR:-}
+      - AEGIS_SHARED_VOLUME=/shared_volume
+    networks:
+      - aegis_net
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
-      interval: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 45s
+    # Budgeted for 8 GB target GPU / container host (runs fp16 on RTX 3050 4 GB locally)
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 8G
 
   detector_video_classifier:
     build:

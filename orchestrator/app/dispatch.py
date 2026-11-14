@@ -75,10 +75,16 @@ def _get_breaker(detector: str) -> CircuitBreaker:
 
 
 def _service_url(detector_name: str) -> str:
-    env_key = f"DETECTOR_{detector_name.upper().replace('-', '_')}_URL"
-    default_service = f"detector_{detector_name.replace('-', '_')}"
+    normalized = detector_name.replace("-", "_")
+    env_key = f"DETECTOR_{normalized.upper()}_URL"
+    alias_key = f"DETECTOR_{normalized.removeprefix('detector_').upper()}_URL"
+    default_service = normalized if normalized.startswith("detector_") else f"detector_{normalized}"
     scheme = "https" if (mesh_enabled() or mesh_strict()) else "http"
-    return os.environ.get(env_key, f"{scheme}://{default_service}:8000")
+    return (
+        os.environ.get(env_key)
+        or (os.environ.get(alias_key) if alias_key != env_key else None)
+        or f"{scheme}://{default_service}:8000"
+    )
 
 
 async def _call_one(client: httpx.AsyncClient, detector: str, job_id: str, modality: str, file_path: str) -> DetectorResult:

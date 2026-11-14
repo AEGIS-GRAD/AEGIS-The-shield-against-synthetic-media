@@ -29,6 +29,9 @@ class DesklibAIDetectionModel(PreTrainedModel):
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, dim=1)
         sum_mask = torch.clamp(input_mask_expanded.sum(dim=1), min=1e-9)
         pooled_output = sum_embeddings / sum_mask
+        classifier_param = next(self.classifier.parameters(), None)
+        if classifier_param is not None and pooled_output.dtype != classifier_param.dtype:
+            pooled_output = pooled_output.to(dtype=classifier_param.dtype)
 
         logits = self.classifier(pooled_output)
         loss = None
@@ -47,9 +50,16 @@ def load_desklib(model_dir=None, device=None, use_finetuned=True):
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-    # Auto-download base weights if not present
+    # Auto-download base weights only for local directory targets (skip for HF repo IDs)
+    is_hf_repo_id = (
+        isinstance(model_dir, str)
+        and "/" in model_dir
+        and model_dir.count("/") == 1
+        and not model_dir.startswith(("/", "./", "../", ".\\", "..\\"))
+        and not os.path.isabs(model_dir)
+    )
     config_file = os.path.join(model_dir, "config.json")
-    if not os.path.exists(config_file):
+    if not is_hf_repo_id and not os.path.exists(config_file):
         print(f"[*] Base model not found in {model_dir}. Auto-downloading from Hugging Face...")
         from download_desklib import download_desklib
         download_desklib(model_dir)

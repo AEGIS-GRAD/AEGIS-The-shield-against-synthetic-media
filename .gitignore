@@ -56,7 +56,8 @@ web/.jobs/
 # Large model weights (Hugging Face models & safetensors)
 *.bin
 *.pth
-detectors/text-detector/models/desklib-base/
+detectors/text-detector/models/*
 !detectors/text-detector/models/desklib-finetuned/
+!detectors/text-detector/models/signal_calibration.json
 
 

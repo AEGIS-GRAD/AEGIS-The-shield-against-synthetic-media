@@ -1,149 +1,382 @@
-"""
-FastAPI microservice for AEGIS Text Detector.
-Serves:
-- POST /analyze: analyzes text using Desklib DeBERTa and extracts stylometry explainability features.
-- GET /health: healthcheck endpoint.
-"""
-import time
+"""FastAPI microservice entrypoint for AEGIS detector_text."""
+from __future__ import annotations
+
+import logging
 import os
+import time
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+import psutil
 import torch
-from fastapi import FastAPI, HTTPException
-from schemas import (
-    TextAnalysisRequest,
-    TextAnalysisResponse,
-    StylometryMetrics,
-    DetectRequest,
-    DetectResponse,
-    DetectEvidence,
-)
-from desklib_model import load_desklib, predict_text
+from fastapi import FastAPI, Header, HTTPException, Request
+
+from binoculars_small import BinocularsMetrics, BinocularsSmallScorer
+from chunking import apply_length_gating
+from config import TextDetectorConfig, load_signal_thresholds
+from desklib_runner import DesklibRunner
+from evidence import build_forensic_evidence, build_not_applicable_evidence
+from ingest import IngestionError, IngestedText, ingest_payload, prepare_raw_text
+from perplexity import PerplexityMetrics, PerplexityScorer
+from schemas import DetectionEvidence, DetectionRequest, DetectionResponse, LegacyTextRequest
 from stylometry import extract_stylometry_features
+from telemetry import metrics_app, track_inference
 
-app = FastAPI(
-    title="AEGIS Text Forensic Detector",
-    description="Fine-tuned Desklib AI-text detection paired with stylometry explainability",
-    version="1.0.0"
+logger = logging.getLogger("detector_text")
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-# Global model state
-MODEL = None
-TOKENIZER = None
-DEVICE = None
+_PROCESS = psutil.Process(os.getpid())
 
-@app.on_event("startup")
-def startup_event():
-    global MODEL, TOKENIZER, DEVICE
-    model_path = os.path.join(os.path.dirname(__file__), "models", "desklib-base")
-    print(f"[*] Starting Text Detector service from {model_path}...")
-    MODEL, TOKENIZER, DEVICE = load_desklib(model_path)
-    print(f"[+] Text Detector model loaded on {DEVICE}")
 
-@app.get("/health")
-def health():
-    return {
-        "status": "healthy",
-        "detector": "text-detector",
-        "device": str(DEVICE) if DEVICE else "uninitialized"
-    }
+@dataclass
+class ServiceRuntime:
+    """Holds live detector components so tests can swap runners cleanly."""
 
-@app.post("/analyze", response_model=TextAnalysisResponse)
-def analyze_text(request: TextAnalysisRequest):
-    if not request.text or not request.text.strip():
-        raise HTTPException(status_code=400, detail="Text field cannot be empty.")
+    config: TextDetectorConfig
+    desklib: DesklibRunner
+    perplexity: Optional[PerplexityScorer]
+    binoculars: Optional[BinocularsSmallScorer]
 
-    t0 = time.time()
-    # 1. Neural classification
-    pred = predict_text(request.text, MODEL, TOKENIZER, DEVICE)
 
-    # 2. Stylometry explainability
-    stylometry_res = None
-    if request.include_stylometry:
-        feat = extract_stylometry_features(request.text)
-        stylometry_res = StylometryMetrics(
-            vocabulary_diversity=feat["vocabulary_diversity"],
-            ngram_repetition=feat["ngram_repetition"],
-            sentence_variation=feat["sentence_variation"],
-            synthetic_indication_score=feat["synthetic_indication_score"],
-            stylometry_verdict=feat["stylometry_verdict"],
-            summary=feat["summary"]
+def create_default_runtime(config: Optional[TextDetectorConfig] = None) -> ServiceRuntime:
+    """Instantiate production runners from environment configuration."""
+    cfg = config or TextDetectorConfig()
+    thresholds = load_signal_thresholds(cfg)
+    desklib = DesklibRunner(
+        model_dir=cfg.model_dir,
+        model_name=cfg.model_name,
+        lora_dir=cfg.lora_dir,
+        use_finetuned=cfg.use_finetuned,
+        use_fp16=cfg.use_fp16,
+        batch_size=cfg.chunk_batch_size,
+    )
+    ppl = (
+        PerplexityScorer(
+            model_dir=cfg.ppl_model_dir,
+            model_id=cfg.ppl_model_id,
+            use_fp16=cfg.use_fp16,
+            max_sentences=cfg.max_ppl_sentences,
+        )
+        if cfg.enable_ppl
+        else None
+    )
+    bino = (
+        BinocularsSmallScorer(
+            performer_id=cfg.binoculars_performer_id,
+            observer_id=cfg.binoculars_observer_id,
+            threshold=thresholds.binoculars_threshold,
+            use_fp16=cfg.use_fp16,
+        )
+        if cfg.enable_binoculars
+        else None
+    )
+    return ServiceRuntime(config=cfg, desklib=desklib, perplexity=ppl, binoculars=bino)
+
+
+def _memory_snapshot_mb() -> tuple[float, Optional[float]]:
+    ram_mb = round(_PROCESS.memory_info().rss / (1024.0 * 1024.0), 2)
+    if torch.cuda.is_available():
+        vram_mb = round(torch.cuda.memory_allocated() / (1024.0 * 1024.0), 2)
+        return ram_mb, vram_mb
+    return ram_mb, None
+
+
+def _verify_internal_auth(x_internal_token: Optional[str], config: TextDetectorConfig) -> None:
+    """Enforce X-Internal-Token in non-mTLS mode (identical contract to other AEGIS detectors)."""
+    expected = config.internal_api_key
+    if expected and not config.mesh_strict and x_internal_token != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Token.")
+
+
+def _run_perplexity_safe(
+    scorer: Optional[PerplexityScorer], text: str, cfg: TextDetectorConfig
+) -> PerplexityMetrics:
+    if scorer is None:
+        return PerplexityMetrics(
+            enabled=False, available=False, model_id=cfg.ppl_model_id
+        )
+    try:
+        return scorer.score(text)
+    except Exception as exc:
+        logger.warning("Perplexity scorer degraded cleanly: %s", exc)
+        return PerplexityMetrics(
+            enabled=True,
+            available=False,
+            model_id=cfg.ppl_model_id,
+            error=str(exc)[:120],
         )
 
-    latency_ms = round((time.time() - t0) * 1000, 2)
 
-    return TextAnalysisResponse(
-        detector="desklib_ai_text_detector",
-        model_version="v1.01",
-        request_id=request.request_id,
-        ai_score=pred["ai_score"],
-        human_score=pred["human_score"],
-        prediction=pred["prediction"],
-        confidence=pred["confidence"],
-        stylometry=stylometry_res,
-        execution_time_ms=latency_ms
-    )
+def _run_binoculars_safe(
+    scorer: Optional[BinocularsSmallScorer], text: str, cfg: TextDetectorConfig, threshold: float
+) -> BinocularsMetrics:
+    if scorer is None:
+        return BinocularsMetrics(
+            enabled=False,
+            available=False,
+            performer_id=cfg.binoculars_performer_id,
+            observer_id=cfg.binoculars_observer_id,
+            threshold=threshold,
+        )
+    try:
+        return scorer.score(text)
+    except Exception as exc:
+        logger.warning("Binoculars-small scorer degraded cleanly: %s", exc)
+        return BinocularsMetrics(
+            enabled=True,
+            available=False,
+            performer_id=cfg.binoculars_performer_id,
+            observer_id=cfg.binoculars_observer_id,
+            threshold=threshold,
+            error=str(exc)[:120],
+        )
 
 
-@app.post("/detect", response_model=DetectResponse)
-def detect(request: DetectRequest):
-    t0 = time.time()
-    text_content = ""
-    if os.path.isfile(request.payload):
-        try:
-            with open(request.payload, "r", encoding="utf-8", errors="replace") as f:
-                text_content = f.read(50_000)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to read payload file: {e}")
-    else:
-        text_content = request.payload
+def _score_ingested_text(
+    job_id: str,
+    ingested: IngestedText,
+    runtime: ServiceRuntime,
+    started_at: float,
+) -> DetectionResponse:
+    cfg = runtime.config
+    thresholds = load_signal_thresholds(cfg)
+    ram_mb, vram_mb = _memory_snapshot_mb()
 
-    if not text_content.strip():
-        return DetectResponse(
-            status="ok",
-            job_id=request.job_id,
+    if ingested.word_count < cfg.min_words:
+        evidence = build_not_applicable_evidence(ingested, min_words=cfg.min_words)
+        latency_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+        return DetectionResponse(
+            job_id=job_id,
+            status="not_applicable",
+            modality="text",
             confidence=0.5,
-            raw_score=0.5,
-            latency_ms=0,
-            model_version="desklib-deberta-v1.01",
-            evidence=DetectEvidence(
-                claim="Empty text provided",
-                flags=["empty_text"]
-            )
+            raw_score=0.0,
+            latency_ms=latency_ms,
+            ram_usage_mb=ram_mb,
+            vram_usage_mb=vram_mb,
+            model_version=cfg.effective_model_version,
+            evidence=DetectionEvidence(**evidence.to_dict()),
+            signals={
+                "input_stats": {
+                    "word_count": ingested.word_count,
+                    "char_count": ingested.char_count,
+                    "source_kind": ingested.source_kind,
+                    "stripped_control_chars": ingested.stripped_control_chars,
+                }
+            },
         )
 
-    ai_score = 0.5
-    confidence = 0.5
-    prediction = "uncertain"
-    if MODEL is not None and TOKENIZER is not None:
-        pred = predict_text(text_content, MODEL, TOKENIZER, DEVICE)
-        ai_score = pred["ai_score"]
-        confidence = pred["confidence"]
-        prediction = pred["prediction"]
-
-    feat = extract_stylometry_features(text_content)
-    flags = []
-    if feat.get("stylometry_verdict") == "synthetic":
-        flags.append("stylometry_synthetic")
-    vocab = feat.get("vocabulary_diversity", {})
-    if vocab.get("type_token_ratio", 1.0) < 0.4:
-        flags.append("low_vocabulary_diversity")
-    repetition = feat.get("ngram_repetition", {})
-    if repetition.get("repetition_ratio_2gram", 0.0) > 0.25:
-        flags.append("high_ngram_repetition")
-
-    latency_ms = int(round((time.time() - t0) * 1000))
-
-    return DetectResponse(
-        status="ok",
-        job_id=request.job_id,
-        confidence=confidence,
-        raw_score=ai_score,
-        latency_ms=latency_ms,
-        model_version="desklib-deberta-v1.01",
-        evidence=DetectEvidence(
-            claim=f"Text classified as {prediction} with synthetic score {ai_score:.3f}. {feat.get('summary', '')}",
-            flags=flags
-        )
+    chunk_result = runtime.desklib.score_text(
+        ingested.text,
+        chunk_tokens=cfg.chunk_tokens,
+        overlap=cfg.chunk_overlap,
+        max_chunks=cfg.max_chunks,
+        spread_threshold=cfg.chunk_disagreement_spread,
     )
+    gating = apply_length_gating(
+        raw_probability=chunk_result.raw_probability,
+        word_count=ingested.word_count,
+        min_words=cfg.min_words,
+        reliable_words=cfg.reliable_words,
+    )
+    stylo = extract_stylometry_features(ingested.text)
+    ppl_metrics = _run_perplexity_safe(runtime.perplexity, ingested.text, cfg)
+    bino_metrics = _run_binoculars_safe(
+        runtime.binoculars, ingested.text, cfg, thresholds.binoculars_threshold
+    )
+    evidence = build_forensic_evidence(
+        ingested=ingested,
+        chunk_result=chunk_result,
+        gating=gating,
+        perplexity=ppl_metrics,
+        stylometry=stylo,
+        thresholds=thresholds,
+        binoculars=bino_metrics,
+    )
+
+    ram_mb, vram_mb = _memory_snapshot_mb()
+    latency_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+    return DetectionResponse(
+        job_id=job_id,
+        status=gating.status,
+        modality="text",
+        confidence=gating.confidence,
+        raw_score=chunk_result.raw_probability,
+        latency_ms=latency_ms,
+        ram_usage_mb=ram_mb,
+        vram_usage_mb=vram_mb,
+        model_version=cfg.effective_model_version,
+        evidence=DetectionEvidence(**evidence.to_dict()),
+        signals={
+            "chunk_aggregation": {
+                "chunk_count": chunk_result.chunk_count,
+                "sampled_from_chunks": chunk_result.sampled_from_chunks,
+                "total_tokens": chunk_result.total_tokens,
+                "chunk_scores": list(chunk_result.chunk_scores),
+                "chunk_spread": chunk_result.chunk_spread,
+                "disagreement": chunk_result.disagreement,
+                "mean_logit": chunk_result.mean_logit,
+            },
+            "length_gating": {
+                "attenuated": gating.attenuated,
+                "attenuation_factor": gating.attenuation_factor,
+                "min_words": cfg.min_words,
+                "reliable_words": cfg.reliable_words,
+            },
+            "perplexity": ppl_metrics.to_dict(),
+            "binoculars_small": bino_metrics.to_dict(),
+            "stylometry": stylo,
+            "input_stats": {
+                "word_count": ingested.word_count,
+                "char_count": ingested.char_count,
+                "line_count": ingested.line_count,
+                "paragraph_count": ingested.paragraph_count,
+                "source_kind": ingested.source_kind,
+                "stripped_control_chars": ingested.stripped_control_chars,
+            },
+        },
+    )
+
+
+def _get_runtime(request: Request) -> ServiceRuntime:
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is None:
+        runtime = create_default_runtime()
+        request.app.state.runtime = runtime
+    return runtime
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cfg = TextDetectorConfig()
+    runtime = getattr(app.state, "runtime", None)
+    if runtime is None:
+        runtime = create_default_runtime(cfg)
+        app.state.runtime = runtime
+
+    if cfg.preload_models:
+        if not runtime.desklib.is_loaded():
+            runtime.desklib.load()
+        if runtime.perplexity is not None and not runtime.perplexity.is_loaded():
+            try:
+                runtime.perplexity.load()
+            except Exception as exc:
+                logger.warning("Preloading GPT-2 perplexity scorer failed (will retry lazily): %s", exc)
+        if runtime.binoculars is not None and not runtime.binoculars.is_loaded():
+            try:
+                runtime.binoculars.load()
+            except Exception as exc:
+                logger.warning("Preloading Binoculars-small failed (will retry lazily): %s", exc)
+    yield
+
+
+def create_app(runtime: Optional[ServiceRuntime] = None) -> FastAPI:
+    """Application factory enabling isolated test wiring as well as Uvicorn ASGI launch."""
+    application = FastAPI(
+        title="AEGIS Text Authenticity Detector",
+        version="2.0.0",
+        lifespan=lifespan,
+    )
+    if runtime is not None:
+        application.state.runtime = runtime
+
+    application.mount("/metrics", metrics_app)
+
+    @application.get("/health")
+    def health(request: Request) -> Dict[str, Any]:
+        rt = _get_runtime(request)
+        ram_mb, vram_mb = _memory_snapshot_mb()
+        return {
+            "status": "ok",
+            "service": rt.config.service_name,
+            "model": rt.config.model_name,
+            "model_version": rt.config.effective_model_version,
+            "model_loaded": rt.desklib.is_loaded(),
+            "device": str(rt.desklib.device),
+            "perplexity_enabled": rt.config.enable_ppl,
+            "perplexity_loaded": rt.perplexity.is_loaded() if rt.perplexity else False,
+            "binoculars_enabled": rt.config.enable_binoculars,
+            "binoculars_loaded": rt.binoculars.is_loaded() if rt.binoculars else False,
+            "ram_usage_mb": ram_mb,
+            "vram_usage_mb": vram_mb,
+        }
+
+    @application.post(
+        "/detect",
+        response_model=DetectionResponse,
+        response_model_exclude_none=True,
+    )
+    @track_inference("detector_text")
+    async def detect(
+        payload_req: DetectionRequest,
+        request: Request,
+        x_internal_token: Optional[str] = Header(default=None),
+    ) -> DetectionResponse:
+        started_at = time.perf_counter()
+        rt = _get_runtime(request)
+        _verify_internal_auth(x_internal_token, rt.config)
+
+        if payload_req.modality != "text":
+            raise HTTPException(
+                status_code=400,
+                detail=f"detector_text only accepts modality='text', got '{payload_req.modality}'.",
+            )
+
+        try:
+            ingested = ingest_payload(
+                payload_req.payload,
+                shared_root=rt.config.shared_volume_root,
+                max_chars=rt.config.max_chars,
+            )
+        except IngestionError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+        return _score_ingested_text(
+            job_id=payload_req.job_id,
+            ingested=ingested,
+            runtime=rt,
+            started_at=started_at,
+        )
+
+    @application.post(
+        "/analyze",
+        response_model=DetectionResponse,
+        response_model_exclude_none=True,
+        deprecated=True,
+    )
+    @track_inference("detector_text")
+    async def analyze_legacy(
+        payload_req: LegacyTextRequest,
+        request: Request,
+        x_internal_token: Optional[str] = Header(default=None),
+    ) -> DetectionResponse:
+        """Deprecated raw-text endpoint kept solely for Task 3 script compatibility."""
+        started_at = time.perf_counter()
+        rt = _get_runtime(request)
+        _verify_internal_auth(x_internal_token, rt.config)
+        try:
+            ingested = prepare_raw_text(
+                payload_req.text, source_kind="legacy_raw", max_chars=rt.config.max_chars
+            )
+        except IngestionError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+        return _score_ingested_text(
+            job_id="legacy-analyze",
+            ingested=ingested,
+            runtime=rt,
+            started_at=started_at,
+        )
+
+    return application
+
+
+app = create_app()
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -22,3 +22,8 @@ scrape_configs:
   #   metrics_path: "/metrics"
   #   static_configs:
   #     - targets: ["aegis_detector_syncnet:8000"]
+
+  - job_name: "aegis_detector_text"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["aegis_detector_text:8000"]

@@ -48,7 +48,7 @@ BASELINE_LATENCIES_MS: Dict[str, Dict[str, float]] = {
     "aasist": {"avg": 234.8, "p95": 334.0},
     "syncnet": {"avg": 9587.4, "p95": 22834.0},
     "detector_image": {"avg": 800.0, "p95": 2000.0},
-    "detector_text": {"avg": 150.0, "p95": 400.0},
+    "detector_text": {"avg": 225.65, "p95": 643.46},
 }
 
 # Mapping Prometheus jobs/targets to canonical detector names
@@ -57,7 +57,9 @@ JOB_TO_DETECTOR = {
     "aegis_detector_video_classifier": "video-classifier",
     "aegis_detector_rppg": "rppg",
     "aegis_detector_syncnet": "syncnet",
+    "aegis_detector_image": "detector_image",
     "aegis_detector_detector_image": "detector_image",
+    "aegis_detector_text": "detector_text",
     "aegis_detector_detector_text": "detector_text",
 }
 
@@ -237,8 +239,13 @@ class PrometheusTelemetryClient:
                 )
                 continue
 
-            # Check Prometheus job liveness
-            det_job = f"aegis_detector_{det.replace('-', '_')}"
+            # Check Prometheus job liveness across canonical and alias job names
+            candidate_jobs = [j for j, d in JOB_TO_DETECTOR.items() if d == det]
+            default_job = f"aegis_detector_{det.replace('-', '_')}"
+            if default_job not in candidate_jobs:
+                candidate_jobs.append(default_job)
+            matched_jobs = [j for j in candidate_jobs if j in up_by_job]
+            det_job = matched_jobs[0] if matched_jobs else candidate_jobs[0]
             is_up = bool(up_by_job.get(det_job, 1.0) == 1.0) if det_job in up_by_job else True
 
             if det_job in up_by_job and up_by_job[det_job] == 0.0:
@@ -262,7 +269,10 @@ class PrometheusTelemetryClient:
             live_avg_s = avg_by_model.get(det)
             calls = int(calls_by_model.get(det, 0))
 
-            ram_bytes = ram_by_job.get(det_job)
+            ram_bytes = next(
+                (ram_by_job[j] for j in candidate_jobs if j in ram_by_job),
+                None,
+            )
             ram_mb = round(ram_bytes / (1024 * 1024), 1) if ram_bytes else None
 
             if live_p95_s is not None and live_p95_s > 0:
