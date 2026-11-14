@@ -12,8 +12,8 @@ FILES = [
     "fusion.json",
     "detector_image.json",
     "detector_text.json",
+    "image.json",
 ]
-
 def main():
     all_valid = True
     for filename in FILES:

@@ -1,0 +1,43 @@
+{
+    "detector_name": "image",
+    "modality": [
+        "image"
+    ],
+    "version": "commfor-model-384-fp16",
+    "description": "Community Forensics (OwensLab/commfor-model-384). Backbone: ViT-Small (vit_small_patch16_384). Training data: 2.7M synthetic images from thousands of community generators + OpenFake subset. License: MIT. Evidence signals: FFT upsampling grid anomaly + EXIF consistency.",
+    "input_constraints": {
+        "requires_audio": false,
+        "min_duration_seconds": 0,
+        "max_duration_seconds": null,
+        "supported_formats": [
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ]
+    },
+    "performance": {
+        "avg_latency_ms": null,
+        "p95_latency_ms": null,
+        "avg_ram_usage_mb": null,
+        "avg_vram_usage_mb": null,
+        "measured_on": "PENDING — awaiting Task 4 benchmark report"
+    },
+    "known_failure_modes": [
+        {
+            "condition": "heavily compressed JPEG (quality < 50)",
+            "effect": "FFT grid artifact signal is destroyed by compression blocks",
+            "source": "capability_manifests/image.json"
+        },
+        {
+            "condition": "images smaller than 384x384",
+            "effect": "upsampling interpolation introduces model-independent frequency spikes",
+            "source": "capability_manifests/image.json"
+        },
+        {
+            "condition": "screenshots and cropped photos",
+            "effect": "EXIF tags are stripped; exif_missing flag fires on authentic images",
+            "source": "capability_manifests/image.json"
+        }
+    ],
+    "reliability_notes": "Trained across thousands of community generators. Strong on unseen GAN and diffusion models. Complemented by frequency grid checks for high-resolution images."
+}
