@@ -1,0 +1,17 @@
+=====================================================================
+   AEGIS ROLE 5 — DUAL-MODEL SURVEILLANCE BENCHMARK RESULTS          
+=====================================================================
+
+Mode: (SMOKE-TEST — synthetic simulated streams)
+Videos evaluated: 10  |  Total frames: 2400
+
+| Pipeline                    | Accuracy   | EER   | Avg Latency   | Throughput   | rPPG Active   |
+|-----------------------------|------------|-------|---------------|--------------|---------------|
+| Spatial Only (MobileNetV3)  | 50.0%      | 0.0%  | 12.08 ms      | 82.8 FPS     | 0%            |
+| Dual-Model (Spatial + rPPG) | 50.0%      | 0.0%  | 12.08 ms      | 82.8 FPS     | 25.4%         |
+
+Fusion formula: fused_score = 0.6 × spatial_score + 0.4 × rppg_score
+Fallback: when rPPG is warming_up or not_applicable → fused = spatial only
+
+rPPG Active = % of frames where rPPG buffer was full and face was detected.
+Expect ~0% for first 6 seconds (warm-up), then rising toward 100%.
