@@ -39,7 +39,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://localhost:9090").rstrip("/")
 DEFAULT_WINDOW = os.environ.get("TELEMETRY_WINDOW", "2m")
 DEFAULT_DEGRADATION_FACTOR = float(os.environ.get("DEGRADATION_FACTOR", "2.0"))
-TELEMETRY_TIMEOUT_S = float(os.environ.get("TELEMETRY_TIMEOUT_S", "2.0"))
+TELEMETRY_TIMEOUT_S = float(os.environ.get("TELEMETRY_TIMEOUT_S", "0.2"))
+
+# Cached snapshot to avoid blocking fast-path planners on offline Prometheus
+_CACHED_TELEMETRY: Optional[Tuple[float, Dict[str, DetectorTelemetry]]] = None
+_TELEMETRY_CACHE_TTL_S = float(os.environ.get("TELEMETRY_CACHE_TTL_S", "5.0"))
 
 # Month 1 benchmark baseline latencies (ms) from eval/reports/week_benchmark_report.md
 BASELINE_LATENCIES_MS: Dict[str, Dict[str, float]] = {
@@ -168,6 +172,11 @@ class PrometheusTelemetryClient:
             client = client_ctx if is_injected else client_ctx.__enter__()
 
             try:
+                # Fast connection probe: if Prometheus base URL is unreachable, don't execute 5 queries
+                probe_res = client.get(f"{self.prometheus_url}/-/healthy")
+                if probe_res.status_code != 200:
+                    raise RuntimeError("Prometheus unhealthy")
+
                 # 1. p95 Latency Query
                 p95_q = (
                     f"histogram_quantile(0.95, sum by (le, model_name) "
@@ -322,5 +331,14 @@ def get_telemetry_snapshot(
     detector_names: Optional[List[str]] = None,
     circuit_breakers: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, DetectorTelemetry]:
-    """Convenience wrapper to get a telemetry snapshot using default client settings."""
-    return _default_client.get_telemetry_snapshot(detector_names, circuit_breakers)
+    """Convenience wrapper to get a telemetry snapshot using default client settings, with short 5s caching."""
+    global _CACHED_TELEMETRY
+    now = time.time()
+    if _CACHED_TELEMETRY is not None:
+        cache_ts, cached_snap = _CACHED_TELEMETRY
+        if now - cache_ts < _TELEMETRY_CACHE_TTL_S:
+            return cached_snap
+
+    snap = _default_client.get_telemetry_snapshot(detector_names, circuit_breakers)
+    _CACHED_TELEMETRY = (now, snap)
+    return snap

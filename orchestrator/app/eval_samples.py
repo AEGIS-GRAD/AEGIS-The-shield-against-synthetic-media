@@ -154,6 +154,74 @@ SAMPLES = [
         "standard", 20.0,
         "borderline face visibility — exactly at a plausible threshold, tests boundary behaviour",
     ),
+
+    # --- Extended Test Suite for Latency & Generalization Benchmark (>= 30 samples) ---
+    (
+        {"modality": "video", "has_audio": True, "duration_seconds": 15.0,
+         "face_visibility": 0.95, "luminance": 0.6, "resolution": [1920, 1080]},
+        "standard", 25.0,
+        "1080p broadcast video with audio — tests high-res multi-modal escalation",
+    ),
+    (
+        {"modality": "video", "has_audio": False, "duration_seconds": 12.0,
+         "face_visibility": 0.88, "luminance": 0.45, "resolution": [1280, 720]},
+        "high", 15.0,
+        "high risk silent video — tests visual detector selection with acoustic exclusion",
+    ),
+    (
+        {"modality": "audio", "has_audio": True, "duration_seconds": 18.0},
+        "standard", 10.0,
+        "extended duration speech audio — tests voice spoofing allocation",
+    ),
+    (
+        {"modality": "image", "has_audio": False, "duration_seconds": 0.0},
+        "low", 5.0,
+        "social media image upload — cost sensitive fast static scan",
+    ),
+    (
+        {"modality": "text", "has_audio": False, "duration_seconds": 0.0},
+        "high", 5.0,
+        "adversarial text statement — tests NLP detector under strict latency",
+    ),
+    (
+        {"modality": "video", "has_audio": True, "duration_seconds": 5.0,
+         "face_visibility": 0.85, "luminance": 0.5, "resolution": [1280, 720]},
+        "low", 8.0,
+        "short social clip — budget sensitive fast-path staging",
+    ),
+    (
+        {"modality": "video", "has_audio": True, "duration_seconds": 3.0,
+         "face_visibility": 0.7, "luminance": 0.35, "resolution": [640, 480]},
+        "standard", 10.0,
+        "mobile front-camera clip — tests lower resolution boundary with audio",
+    ),
+    (
+        {"modality": "audio", "has_audio": True, "duration_seconds": 2.5},
+        "low", 5.0,
+        "voicemail audio sample — lightweight acoustic validation",
+    ),
+    (
+        {"modality": "image", "has_audio": False, "duration_seconds": 0.0},
+        "standard", 8.0,
+        "profile avatar image — tests single image forensic detector",
+    ),
+    (
+        {"modality": "video", "has_audio": False, "duration_seconds": 22.0,
+         "face_visibility": 0.92, "luminance": 0.55, "resolution": [1920, 1080]},
+        "standard", 15.0,
+        "CCTV surveillance clip — silent extended duration video",
+    ),
+    (
+        {"modality": "text", "has_audio": False, "duration_seconds": 0.0},
+        "standard", 10.0,
+        "press release article — tests text detector under standard constraints",
+    ),
+    (
+        {"modality": "video", "has_audio": True, "duration_seconds": 7.5,
+         "face_visibility": 0.9, "luminance": 0.5, "resolution": [1280, 720]},
+        "high", 12.0,
+        "executive interview video — high security cross-modal inspection",
+    ),
 ]
 
 if __name__ == "__main__":

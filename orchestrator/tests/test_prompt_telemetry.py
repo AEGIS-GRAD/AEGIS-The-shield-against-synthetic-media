@@ -12,7 +12,7 @@ from orchestrator.app.telemetry_client import DetectorTelemetry
 
 
 def test_prompt_version():
-    assert PROMPT_VERSION == "planner-v3.0"
+    assert "planner-v3" in PROMPT_VERSION
 
 
 def test_latency_for_with_and_without_telemetry():

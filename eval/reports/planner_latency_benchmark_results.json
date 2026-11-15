@@ -1,0 +1,774 @@
+{
+  "sample_count": 34,
+  "target_p95_sla_s": 3.0,
+  "p95_passed": true,
+  "metrics": {
+    "p50_latency_s": 0.12,
+    "p90_latency_s": 0.149,
+    "p95_latency_s": 0.159,
+    "mean_latency_s": 0.159,
+    "max_latency_s": 1.321,
+    "agreement_rate": 0.2059,
+    "agreement_rate_pct": "20.6%",
+    "fallback_rate": 0.0,
+    "fallback_rate_pct": "0.0%",
+    "cache_hit_rate": 0.4706,
+    "cache_hit_rate_pct": "47.1%"
+  },
+  "records": [
+    {
+      "sample_id": 1,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1308,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "baseline: clean video with audio, nothing unusual"
+    },
+    {
+      "sample_id": 2,
+      "modality": "audio",
+      "has_audio": true,
+      "duration_s": 4.5,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.1281,
+      "detectors": [
+        "aasist"
+      ],
+      "rule_detectors": [
+        "aasist"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "baseline: audio-only file"
+    },
+    {
+      "sample_id": 3,
+      "modality": "image",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.1123,
+      "detectors": [
+        "detector_image",
+        "image"
+      ],
+      "rule_detectors": [
+        "detector_image"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "baseline: single image \u2014 detector_image should apply"
+    },
+    {
+      "sample_id": 4,
+      "modality": "text",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.1179,
+      "detectors": [
+        "detector_text"
+      ],
+      "rule_detectors": [
+        "detector_text"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "baseline: text file \u2014 detector_text applies, audio/video detectors excluded"
+    },
+    {
+      "sample_id": 5,
+      "modality": "image",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "high",
+      "budget_s": 5.0,
+      "latency_s": 0.1074,
+      "detectors": [
+        "detector_image",
+        "image"
+      ],
+      "rule_detectors": [
+        "detector_image"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "image edge case: high risk, tight budget \u2014 tests detector_image under budget ceiling"
+    },
+    {
+      "sample_id": 6,
+      "modality": "text",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "high",
+      "budget_s": 2.0,
+      "latency_s": 0.1065,
+      "detectors": [
+        "detector_text"
+      ],
+      "rule_detectors": [
+        "detector_text"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "text edge case: high risk, tight 2s budget \u2014 tests detector_text latency fit"
+    },
+    {
+      "sample_id": 7,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 8.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1116,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "EDGE CASE: silent video \u2014 AASIST and SyncNet must be excluded, not skipped silently"
+    },
+    {
+      "sample_id": 8,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 1.2,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1064,
+      "detectors": [
+        "fusion",
+        "video-classifier"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "EDGE CASE: clip under 2s \u2014 rPPG needs min_duration_s, should be excluded"
+    },
+    {
+      "sample_id": 9,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1107,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "EDGE CASE: heavily occluded face \u2014 rPPG/SyncNet need min_face_visibility"
+    },
+    {
+      "sample_id": 10,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1121,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "EDGE CASE: poorly lit clip \u2014 below min_luminance for rPPG"
+    },
+    {
+      "sample_id": 11,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 1.5,
+      "risk_profile": "high",
+      "budget_s": 10.0,
+      "latency_s": 0.12,
+      "detectors": [
+        "fusion"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "combined: silent AND short clip, high risk \u2014 tests coverage_warnings stacking"
+    },
+    {
+      "sample_id": 12,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1129,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "combined: occluded face AND poorly lit \u2014 almost nothing video-based should be eligible"
+    },
+    {
+      "sample_id": 13,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 6.0,
+      "latency_s": 0.139,
+      "detectors": [
+        "fusion",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "budget pressure: all 4 eligible, but budget too tight for all \u2014 tests staging logic"
+    },
+    {
+      "sample_id": 14,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "low",
+      "budget_s": 3.0,
+      "latency_s": 0.138,
+      "detectors": [
+        "fusion",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "very tight budget + low risk \u2014 should pick the cheapest 1-2 detectors only"
+    },
+    {
+      "sample_id": 15,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "high",
+      "budget_s": 60.0,
+      "latency_s": 0.111,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg",
+        "syncnet",
+        "video-classifier"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "generous budget + high risk \u2014 should favor maximum coverage"
+    },
+    {
+      "sample_id": 16,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 8.0,
+      "risk_profile": "low",
+      "budget_s": 20.0,
+      "latency_s": 0.115,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "silent video, low risk \u2014 compare plan against the 'standard' silent-video case above"
+    },
+    {
+      "sample_id": 17,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 8.0,
+      "risk_profile": "high",
+      "budget_s": 20.0,
+      "latency_s": 0.114,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "silent video, high risk \u2014 should the plan differ from low/standard risk given same gap?"
+    },
+    {
+      "sample_id": 18,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 1.0,
+      "risk_profile": "high",
+      "budget_s": 20.0,
+      "latency_s": 0.124,
+      "detectors": [
+        "fusion",
+        "video-classifier"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "worst case: silent, too short, occluded, dark, low-res \u2014 tests the 'no detector eligible' path"
+    },
+    {
+      "sample_id": 19,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1021,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "low resolution only \u2014 tests min_resolution eligibility independent of other factors"
+    },
+    {
+      "sample_id": 20,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 45.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.142,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "long clip near max_duration_s boundary \u2014 tests duration upper bound handling"
+    },
+    {
+      "sample_id": 21,
+      "modality": "audio",
+      "has_audio": true,
+      "duration_s": 0.8,
+      "risk_profile": "high",
+      "budget_s": 10.0,
+      "latency_s": 1.321,
+      "detectors": [],
+      "rule_detectors": [
+        "aasist"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "very short audio clip, high risk \u2014 only audio detector exists; tests minimal-but-valid plan"
+    },
+    {
+      "sample_id": 22,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 10.0,
+      "risk_profile": "standard",
+      "budget_s": 20.0,
+      "latency_s": 0.1699,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "borderline face visibility \u2014 exactly at a plausible threshold, tests boundary behaviour"
+    },
+    {
+      "sample_id": 23,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 15.0,
+      "risk_profile": "standard",
+      "budget_s": 25.0,
+      "latency_s": 0.153,
+      "detectors": [
+        "fusion",
+        "rppg",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "1080p broadcast video with audio \u2014 tests high-res multi-modal escalation"
+    },
+    {
+      "sample_id": 24,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 12.0,
+      "risk_profile": "high",
+      "budget_s": 15.0,
+      "latency_s": 0.13,
+      "detectors": [
+        "fusion",
+        "streaming-rppg",
+        "video-classifier"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "high risk silent video \u2014 tests visual detector selection with acoustic exclusion"
+    },
+    {
+      "sample_id": 25,
+      "modality": "audio",
+      "has_audio": true,
+      "duration_s": 18.0,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.123,
+      "detectors": [
+        "aasist"
+      ],
+      "rule_detectors": [
+        "aasist"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "extended duration speech audio \u2014 tests voice spoofing allocation"
+    },
+    {
+      "sample_id": 26,
+      "modality": "image",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "low",
+      "budget_s": 5.0,
+      "latency_s": 0.114,
+      "detectors": [
+        "detector_image",
+        "image"
+      ],
+      "rule_detectors": [
+        "detector_image"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "social media image upload \u2014 cost sensitive fast static scan"
+    },
+    {
+      "sample_id": 27,
+      "modality": "text",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "high",
+      "budget_s": 5.0,
+      "latency_s": 0.1204,
+      "detectors": [
+        "detector_text"
+      ],
+      "rule_detectors": [
+        "detector_text"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "adversarial text statement \u2014 tests NLP detector under strict latency"
+    },
+    {
+      "sample_id": 28,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 5.0,
+      "risk_profile": "low",
+      "budget_s": 8.0,
+      "latency_s": 0.118,
+      "detectors": [
+        "fusion"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "short social clip \u2014 budget sensitive fast-path staging"
+    },
+    {
+      "sample_id": 29,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 3.0,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.13,
+      "detectors": [
+        "fusion"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "mobile front-camera clip \u2014 tests lower resolution boundary with audio"
+    },
+    {
+      "sample_id": 30,
+      "modality": "audio",
+      "has_audio": true,
+      "duration_s": 2.5,
+      "risk_profile": "low",
+      "budget_s": 5.0,
+      "latency_s": 0.126,
+      "detectors": [
+        "aasist"
+      ],
+      "rule_detectors": [
+        "aasist"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "voicemail audio sample \u2014 lightweight acoustic validation"
+    },
+    {
+      "sample_id": 31,
+      "modality": "image",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "standard",
+      "budget_s": 8.0,
+      "latency_s": 0.1353,
+      "detectors": [
+        "detector_image",
+        "image"
+      ],
+      "rule_detectors": [
+        "detector_image"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "profile avatar image \u2014 tests single image forensic detector"
+    },
+    {
+      "sample_id": 32,
+      "modality": "video",
+      "has_audio": false,
+      "duration_s": 22.0,
+      "risk_profile": "standard",
+      "budget_s": 15.0,
+      "latency_s": 0.137,
+      "detectors": [
+        "fusion",
+        "streaming-rppg",
+        "video-classifier"
+      ],
+      "rule_detectors": [
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "CCTV surveillance clip \u2014 silent extended duration video"
+    },
+    {
+      "sample_id": 33,
+      "modality": "text",
+      "has_audio": false,
+      "duration_s": 0.0,
+      "risk_profile": "standard",
+      "budget_s": 10.0,
+      "latency_s": 0.1159,
+      "detectors": [
+        "detector_text"
+      ],
+      "rule_detectors": [
+        "detector_text"
+      ],
+      "agreement": true,
+      "fallback": false,
+      "cache_hit": true,
+      "model_used": "deterministic-reference-planner (mock) (cache-hit)",
+      "note": "press release article \u2014 tests text detector under standard constraints"
+    },
+    {
+      "sample_id": 34,
+      "modality": "video",
+      "has_audio": true,
+      "duration_s": 7.5,
+      "risk_profile": "high",
+      "budget_s": 12.0,
+      "latency_s": 0.152,
+      "detectors": [
+        "fusion",
+        "streaming-rppg"
+      ],
+      "rule_detectors": [
+        "syncnet",
+        "rppg",
+        "video-classifier"
+      ],
+      "agreement": false,
+      "fallback": false,
+      "cache_hit": false,
+      "model_used": "deterministic-reference-planner (mock)",
+      "note": "executive interview video \u2014 high security cross-modal inspection"
+    }
+  ]
+}
