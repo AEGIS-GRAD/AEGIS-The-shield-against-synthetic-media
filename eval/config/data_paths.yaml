@@ -71,3 +71,24 @@ task4:
     manifest: eval/data/edge_cases/dubbed/manifest.csv
     min_clips: 30
   report: eval/reports/task4_split_note.md
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Video Cross-Dataset Generalization Study Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+video_generalization:
+  models:
+    baseline: "detectors/video-classifier/models/efficientnet_b0_ffpp_ckpt_ep10.pth"
+    finetuned: "detectors/video-classifier/models/efficientnet_b0_ffpp_finetuned.pth"
+  raw_roots:
+    ffpp_c23: "D:/archive/FaceForensics++_C23"
+    celeb_df_v2: "D:/datasets/Celeb-DF-v2"
+    wild_deepfake: "D:/datasets/wild-deepfake"
+    df40: "D:/datasets/DF40"
+    deepfake_eval_2024: "D:/datasets/deepfake-eval-2024"
+    deepspeak_v2: "D:/datasets/DeepSpeak_v2"
+  staged_dir: "eval/data/cross_dataset_eval"
+  manifests_dir: "eval/manifests"
+  reports_dir: "eval/reports"
+  metrics:
+    far_target: 0.01  # Fixed 1% False-Alarm Rate
+

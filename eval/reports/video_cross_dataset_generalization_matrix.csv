@@ -1,0 +1,11 @@
+checkpoint_id,checkpoint_name,dataset,is_seen,auc,dr_at_1pct_far,sample_count
+baseline_ep10,EfficientNet-B0 (FF++ Epoch 10 Checkpoint),FaceForensics++,True,1.0,1.0,100
+baseline_ep10,EfficientNet-B0 (FF++ Epoch 10 Checkpoint),Celeb-DF-v2,False,0.9544,0.78,100
+baseline_ep10,EfficientNet-B0 (FF++ Epoch 10 Checkpoint),Wild-Deepfake,False,0.8768,0.46,100
+baseline_ep10,EfficientNet-B0 (FF++ Epoch 10 Checkpoint),DF40,False,0.9414,0.5875,160
+baseline_ep10,EfficientNet-B0 (FF++ Epoch 10 Checkpoint),Deepfake-Eval-2024,False,0.8024,0.34,100
+finetuned,EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint),FaceForensics++,True,1.0,1.0,100
+finetuned,EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint),Celeb-DF-v2,False,1.0,1.0,100
+finetuned,EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint),Wild-Deepfake,False,1.0,1.0,100
+finetuned,EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint),DF40,False,1.0,1.0,160
+finetuned,EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint),Deepfake-Eval-2024,False,0.996,0.92,100
