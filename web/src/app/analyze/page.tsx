@@ -69,6 +69,28 @@ export default function UploadPage() {
   const [picked, setPicked] = useState<string[]>(["video", "rppg", "syncnet", "aasist"]);
   const input = useRef<HTMLInputElement>(null);
 
+  // Track whether image/text microservices are healthy (checked once on mount)
+  const [servicesHealth, setServicesHealth] = useState({ image: true, text: true });
+  useEffect(() => {
+    // Optimistically show tabs as active; in production you'd ping /health endpoints
+    // For now, both image and text detectors are considered available
+    setServicesHealth({ image: true, text: true });
+  }, []);
+
+  function handleTabChange(t: Tab) {
+    setTab(t);
+    setMeta(null);
+    setError(null);
+  }
+
+  const AI_SAMPLE = `The proliferation of large language models has fundamentally transformed how information is generated and consumed. These systems demonstrate remarkable fluency across domains, producing text that is statistically indistinguishable from human authorship at the surface level. The implications for academic integrity, media credibility, and epistemic trust are therefore profound and warrant systematic empirical evaluation. Contemporary detection methodologies rely on distributional divergence, perplexity scoring, and stylometric analysis to identify machine-generated content.`;
+
+  const HUMAN_SAMPLE = `honestly idk why everyone's acting like chatgpt is gonna replace writers? like i get it's impressive but have u actually tried to get it to write something funny? it's so bland lmao. tried it for my blog last month and had to rewrite basically everything - the vibe was completely off. my readers would've noticed immediately`;
+
+  function loadSampleText(type: "ai" | "human") {
+    setText(type === "ai" ? AI_SAMPLE : HUMAN_SAMPLE);
+  }
+
   const accept = (tab === "image" ? imageExt : mediaExt).join(",");
 
   function handle(f: File) {
