@@ -17,8 +17,9 @@ from fastapi.responses import JSONResponse
 
 from models.AASIST import Model
 from preprocessing import preprocess_audio
-from schemas import DetectorRequest, DetectorResponse, Evidence, HealthResponse
+from schemas import DetectorRequest, DetectorResponse, Evidence, HealthResponse, VADMetadata
 from telemetry import track_inference
+from vad_filter import classify_speech_activity, SpeechActivity
 from prometheus_client import make_asgi_app
 
 # Logging configuration
@@ -160,6 +161,71 @@ async def detect(
         logger.error(f"Preprocessing error for job {req.job_id}: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Audio preprocessing failed: {str(e)}")
 
+    # ── Speech Pre-filter (VAD guardrail) ──────────────────────────────────
+    # Load the raw waveform again (cheaply) for VAD — reuse the already-loaded
+    # numpy array from preprocessing rather than re-reading from disk.
+    try:
+        from preprocessing import load_audio, convert_to_mono, resample_waveform, TARGET_SAMPLE_RATE
+        raw_waveform, raw_sr = load_audio(audio_source)
+        raw_waveform_mono = convert_to_mono(raw_waveform)
+        if raw_sr != TARGET_SAMPLE_RATE:
+            raw_waveform_mono = resample_waveform(raw_waveform_mono, raw_sr, TARGET_SAMPLE_RATE)
+        vad_result = classify_speech_activity(raw_waveform_mono, sample_rate=TARGET_SAMPLE_RATE)
+    except Exception as vad_exc:
+        logger.warning(f"VAD pre-filter failed for job {req.job_id}: {vad_exc}; assuming speech present.")
+        from vad_filter import VADResult, SpeechActivity as _SA
+        import os as _os
+        vad_result = VADResult(
+            activity=_SA.UNCERTAIN,
+            speech_ratio=0.5,
+            confidence=0.5,
+            backend_used="failed",
+            vad_flags=["vad_error"],
+            speech_threshold=0.35,
+            num_windows=0,
+            speech_windows=0,
+        )
+
+    vad_meta = VADMetadata(
+        speech_activity=vad_result.activity.value,
+        speech_ratio=vad_result.speech_ratio,
+        vad_confidence=vad_result.confidence,
+        backend_used=vad_result.backend_used,
+        speech_threshold=vad_result.speech_threshold,
+    )
+
+    # If non-speech, skip AASIST inference and return not_applicable
+    if vad_result.activity == SpeechActivity.NON_SPEECH:
+        logger.info(
+            f"VAD pre-filter: non-speech input detected for job {req.job_id} "
+            f"(speech_ratio={vad_result.speech_ratio:.3f}, backend={vad_result.backend_used}). "
+            "Returning not_applicable."
+        )
+        return DetectorResponse(
+            job_id=req.job_id,
+            confidence=0.5,
+            raw_score=0.0,
+            latency_ms=0,
+            ram_usage_mb=None,
+            vram_usage_mb=None,
+            model_version=MODEL_VERSION,
+            evidence=Evidence(
+                claim=(
+                    "Audio VAD pre-filter classified input as non-speech "
+                    f"(speech ratio {vad_result.speech_ratio:.2%}, backend: {vad_result.backend_used}). "
+                    "AASIST spoofing analysis is not applicable to music, ambient noise, or silence."
+                ),
+                flags=["not_applicable", "non_speech_audio"] + list(vad_result.vad_flags),
+                vad_metadata=vad_meta,
+            ),
+        )
+
+    if DEBUG_MODE:
+        logger.info(
+            f"[AASIST_DEBUG] VAD: activity={vad_result.activity}, "
+            f"speech_ratio={vad_result.speech_ratio:.3f}, backend={vad_result.backend_used}"
+        )
+
     # [AASIST_DEBUG] Confirm tensor shape is exactly (1, 64600) before inference
     if DEBUG_MODE:
         logger.info(f"[AASIST_DEBUG] audio_tensor.shape = {audio_tensor.shape} (expected: torch.Size([1, 64600]))")
@@ -220,7 +286,8 @@ async def detect(
         model_version=MODEL_VERSION,
         evidence=Evidence(
             claim=claim,
-            flags=flags
+            flags=flags,
+            vad_metadata=vad_meta,
         )
     )
     return response

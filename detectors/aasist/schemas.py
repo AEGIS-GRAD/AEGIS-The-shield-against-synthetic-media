@@ -3,7 +3,7 @@ Pydantic schemas for AASIST microservice API contracts.
 Strictly conforms to shared/json-api-contracts-schema/ schemas.
 """
 
-from typing import List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -30,6 +30,38 @@ class DetectorRequest(BaseModel):
         return v
 
 
+class VADMetadata(BaseModel):
+    """
+    Voice-Activity Detection pre-filter results.
+    Written into the Evidence object so the debate Judge and Arbitrator can
+    see and reason about the VAD decision.
+    """
+    speech_activity: str = Field(
+        ...,
+        description="VAD classification: 'speech' | 'non_speech' | 'uncertain'."
+    )
+    speech_ratio: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Fraction [0, 1] of analysis windows classified as containing speech.",
+    )
+    vad_confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Confidence in the VAD classification.",
+    )
+    backend_used: str = Field(
+        default="heuristic",
+        description="VAD backend: 'silero' | 'heuristic'.",
+    )
+    speech_threshold: float = Field(
+        default=0.35,
+        description="Speech-fraction threshold applied during VAD.",
+    )
+
+
 class Evidence(BaseModel):
     claim: str = Field(
         ...,
@@ -38,6 +70,14 @@ class Evidence(BaseModel):
     flags: Optional[List[str]] = Field(
         default=None,
         description="Specific heuristic flags triggered (e.g. ['voice_cloning_detected', 'high_spoof_confidence'])."
+    )
+    vad_metadata: Optional[VADMetadata] = Field(
+        default=None,
+        description=(
+            "Voice-activity detection pre-filter result. "
+            "If speech_activity == 'non_speech', the AASIST verdict is not_applicable. "
+            "Downstream judge/arbitrator MUST treat the claim as a coverage gap."
+        ),
     )
 
 

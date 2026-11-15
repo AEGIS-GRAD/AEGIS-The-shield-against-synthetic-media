@@ -4,7 +4,7 @@ Strictly conforms to shared/json-api-contracts-schema/ schemas.
 """
 from __future__ import annotations
 
-from typing import List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -31,6 +31,53 @@ class DetectorRequest(BaseModel):
         return v
 
 
+class DubbingMetadata(BaseModel):
+    """
+    Dubbing-awareness step results written into the SyncNet Evidence.
+    The downstream judge and arbitrator can read these fields to understand
+    whether SyncNet's confidence was adjusted due to suspected dubbing.
+    """
+    is_dubbed: bool = Field(
+        ...,
+        description="Whether the content is likely dubbed (audio in different language).",
+    )
+    dubbing_confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Confidence in the is_dubbed conclusion.",
+    )
+    language_mismatch_prob: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Estimated probability that audio and visual lip movements are in different languages.",
+    )
+    discount_factor: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Multiplier applied to SyncNet raw confidence. "
+            "1.0 = no adjustment; <1.0 = confidence reduced due to dubbing."
+        ),
+    )
+    raw_syncnet_confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="SyncNet confidence BEFORE the dubbing discount was applied.",
+    )
+    backend_used: str = Field(
+        default="heuristic",
+        description="Dubbing-awareness backend: 'heuristic' | 'manifest_lookup'.",
+    )
+    extra: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional extra metadata (dub_language, source, etc.).",
+    )
+
+
 class Evidence(BaseModel):
     claim: str = Field(
         ...,
@@ -39,6 +86,14 @@ class Evidence(BaseModel):
     flags: Optional[List[str]] = Field(
         default=None,
         description="Specific heuristic flags triggered (e.g. ['sync_offset_detected', 'not_applicable'])."
+    )
+    dubbing_metadata: Optional[DubbingMetadata] = Field(
+        default=None,
+        description=(
+            "Dubbing-awareness assessment. "
+            "If is_dubbed is True, the confidence was down-weighted by discount_factor. "
+            "Downstream judge/arbitrator should weight the SyncNet claim accordingly."
+        ),
     )
 
 
