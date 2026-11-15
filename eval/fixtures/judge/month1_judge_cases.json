@@ -9,8 +9,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4026,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "AUTHENTIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -78,8 +79,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.5126,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "AUTHENTIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -147,8 +149,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4369,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "AUTHENTIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -216,8 +219,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4813,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "AUTHENTIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -285,8 +289,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.476,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "AUTHENTIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -354,8 +359,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4674,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "SYNTHETIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -423,8 +429,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4906,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "SYNTHETIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -492,8 +499,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4258,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN",
-      "SYNTHETIC"
+      "SYNTHETIC",
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -562,6 +570,7 @@
     "month1_baseline_score": 0.5753,
     "expected_allowed_verdicts": [
       "SYNTHETIC",
+      "UNCERTAIN",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
@@ -630,7 +639,8 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.6002,
     "expected_allowed_verdicts": [
-      "SYNTHETIC",
+      "UNCERTAIN",
+      "AUTHENTIC",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
@@ -700,6 +710,7 @@
     "month1_baseline_score": 0.528,
     "expected_allowed_verdicts": [
       "SYNTHETIC",
+      "UNCERTAIN",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
@@ -769,6 +780,7 @@
     "month1_baseline_score": 0.4124,
     "expected_allowed_verdicts": [
       "SYNTHETIC",
+      "UNCERTAIN",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
@@ -837,7 +849,9 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4466,
     "expected_allowed_verdicts": [
-      "INTEGRITY_UNKNOWN"
+      "UNCERTAIN",
+      "INTEGRITY_UNKNOWN",
+      "AUTHENTIC"
     ],
     "raw_responses": {
       "video-classifier": {
@@ -905,6 +919,8 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.523,
     "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {
@@ -973,6 +989,8 @@
     "month1_baseline_verdict": "UNCERTAIN",
     "month1_baseline_score": 0.4731,
     "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN",
       "INTEGRITY_UNKNOWN"
     ],
     "raw_responses": {

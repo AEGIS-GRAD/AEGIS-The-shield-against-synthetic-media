@@ -19,9 +19,15 @@ from eval.calibration.metrics import (
     compute_ece,
     compute_calibration_comparison,
 )
-from eval.calibration.visualization import (
-    plot_reliability_diagram,
-)
+try:
+    from eval.calibration.visualization import (
+        plot_reliability_diagram,
+    )
+except ImportError:
+    def plot_reliability_diagram(*args, **kwargs):  # type: ignore[misc]
+        raise ImportError(
+            "matplotlib is required for plot_reliability_diagram; install matplotlib to generate figures."
+        )
 from eval.calibration.datasets import (
     get_calibration_dataset,
     load_audio_calibration_data,

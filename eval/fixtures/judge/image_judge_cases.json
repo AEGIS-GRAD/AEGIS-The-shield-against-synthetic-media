@@ -1,0 +1,752 @@
+[
+  {
+    "case_id": "img-case-001",
+    "modality": "image",
+    "filename": "flickr_real_001.jpg",
+    "category": "clean_real_photo",
+    "true_label": "real",
+    "baseline_single_score": 0.045,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-001",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.045,
+        "raw_score": 0.045,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.0450.",
+          "flags": []
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Clean real camera photo with valid EXIF."
+  },
+  {
+    "case_id": "img-case-002",
+    "modality": "image",
+    "filename": "flickr_real_002.jpg",
+    "category": "clean_real_photo",
+    "true_label": "real",
+    "baseline_single_score": 0.082,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-002",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.082,
+        "raw_score": 0.082,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.0820.",
+          "flags": []
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Clean real baseline mean confidence photo."
+  },
+  {
+    "case_id": "img-case-003",
+    "modality": "image",
+    "filename": "portrait_real_003.png",
+    "category": "clean_real_photo",
+    "true_label": "real",
+    "baseline_single_score": 0.115,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-003",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.115,
+        "raw_score": 0.115,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.1150.",
+          "flags": []
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Clean studio portrait with camera EXIF."
+  },
+  {
+    "case_id": "img-case-004",
+    "modality": "image",
+    "filename": "street_real_004.jpg",
+    "category": "clean_real_photo",
+    "true_label": "real",
+    "baseline_single_score": 0.142,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-004",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.142,
+        "raw_score": 0.142,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.1420.",
+          "flags": []
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Outdoor authentic photo with valid EXIF."
+  },
+  {
+    "case_id": "img-case-005",
+    "modality": "image",
+    "filename": "raw_camera_005.dng.jpg",
+    "category": "clean_real_photo",
+    "true_label": "real",
+    "baseline_single_score": 0.064,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-005",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.064,
+        "raw_score": 0.064,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.0640.",
+          "flags": []
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "High-detail authentic scene."
+  },
+  {
+    "case_id": "img-case-006",
+    "modality": "image",
+    "filename": "whatsapp_reupload_006.jpg",
+    "category": "social_reencoded_exif_missing",
+    "true_label": "real",
+    "baseline_single_score": 0.19,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-006",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.19,
+        "raw_score": 0.19,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.1900.",
+          "flags": [
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "WhatsApp re-encoded real photo: exif_missing alone must not inflate synthetic risk."
+  },
+  {
+    "case_id": "img-case-007",
+    "modality": "image",
+    "filename": "instagram_crop_007.jpg",
+    "category": "social_reencoded_exif_missing",
+    "true_label": "real",
+    "baseline_single_score": 0.27,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-007",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.27,
+        "raw_score": 0.27,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.2700.",
+          "flags": [
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Social upload stripped EXIF with authentic spatial features."
+  },
+  {
+    "case_id": "img-case-008",
+    "modality": "image",
+    "filename": "x_compressed_008.jpg",
+    "category": "social_reencoded_borderline",
+    "true_label": "real",
+    "baseline_single_score": 0.43,
+    "expected_allowed_verdicts": [
+      "UNCERTAIN",
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-008",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.43,
+        "raw_score": 0.43,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.4300.",
+          "flags": [
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Heavily cropped social upload without EXIF in borderline zone -> safely UNCERTAIN (never SYNTHETIC)."
+  },
+  {
+    "case_id": "img-case-009",
+    "modality": "image",
+    "filename": "stylegan2_face_009.png",
+    "category": "gan_synthetic",
+    "true_label": "fake",
+    "baseline_single_score": 0.962,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-009",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.962,
+        "raw_score": 0.962,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.9620.",
+          "flags": [
+            "frequency_anomaly",
+            "exif_missing",
+            "high_confidence_synthetic"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "StyleGAN2 synthesis with strong ViT and FFT checkerboard periodicity."
+  },
+  {
+    "case_id": "img-case-010",
+    "modality": "image",
+    "filename": "progan_lsun_010.png",
+    "category": "gan_synthetic",
+    "true_label": "fake",
+    "baseline_single_score": 0.941,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-010",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.941,
+        "raw_score": 0.941,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.9410.",
+          "flags": [
+            "frequency_anomaly",
+            "high_confidence_synthetic"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "ProGAN empirical mean confidence synthetic sample."
+  },
+  {
+    "case_id": "img-case-011",
+    "modality": "image",
+    "filename": "stargan_edit_011.jpg",
+    "category": "gan_synthetic",
+    "true_label": "fake",
+    "baseline_single_score": 0.884,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-011",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.884,
+        "raw_score": 0.884,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.8840.",
+          "flags": [
+            "frequency_anomaly",
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "StarGAN facial attribute synthesis."
+  },
+  {
+    "case_id": "img-case-012",
+    "modality": "image",
+    "filename": "biggan_scene_012.png",
+    "category": "gan_synthetic",
+    "true_label": "fake",
+    "baseline_single_score": 0.795,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-012",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.795,
+        "raw_score": 0.795,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.7950.",
+          "flags": [
+            "frequency_anomaly"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "BigGAN scene synthesis with upsampling artifacts."
+  },
+  {
+    "case_id": "img-case-013",
+    "modality": "image",
+    "filename": "sdxl_portrait_013.png",
+    "category": "diffusion_synthetic",
+    "true_label": "fake",
+    "baseline_single_score": 0.887,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-013",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.887,
+        "raw_score": 0.887,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.8870.",
+          "flags": [
+            "software_tag_present",
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "SDXL generation with generator metadata signature."
+  },
+  {
+    "case_id": "img-case-014",
+    "modality": "image",
+    "filename": "midjourney_v6_014.png",
+    "category": "diffusion_borderline_rule8",
+    "true_label": "fake",
+    "baseline_single_score": 0.59,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-014",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.59,
+        "raw_score": 0.59,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.5900.",
+          "flags": [
+            "frequency_anomaly",
+            "borderline"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Rule 8: Borderline Midjourney ViT (0.59) corroborated by FFT anomaly -> resolved to SYNTHETIC."
+  },
+  {
+    "case_id": "img-case-015",
+    "modality": "image",
+    "filename": "flux_recompressed_015.png",
+    "category": "diffusion_borderline_rule8",
+    "true_label": "fake",
+    "baseline_single_score": 0.57,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-015",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.57,
+        "raw_score": 0.57,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.5700.",
+          "flags": [
+            "frequency_anomaly",
+            "software_tag_present",
+            "borderline"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Rule 8: Borderline Flux diffusion (0.57) corroborated by FFT + software tag -> SYNTHETIC."
+  },
+  {
+    "case_id": "img-case-016",
+    "modality": "image",
+    "filename": "thumbnail_tiny_016.jpg",
+    "category": "low_resolution_degraded",
+    "true_label": "real",
+    "baseline_single_score": 0.44,
+    "expected_allowed_verdicts": [
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-016",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.44,
+        "raw_score": 0.44,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.4400.",
+          "flags": [
+            "low_resolution",
+            "heavy_compression",
+            "exif_missing"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Severely downsampled thumbnail lacks reliable spatial frequencies -> UNCERTAIN."
+  },
+  {
+    "case_id": "img-case-017",
+    "modality": "image",
+    "filename": "corrupt_payload_017.bin",
+    "category": "unparseable_not_applicable",
+    "true_label": "real",
+    "baseline_single_score": 0.5,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-017",
+        "status": "not_applicable",
+        "modality": "image",
+        "confidence": 0.5,
+        "raw_score": 0.5,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "Cannot decode image bytes; detector returned not_applicable.",
+          "flags": [
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Corrupt/unparseable image payload -> INTEGRITY_UNKNOWN."
+  },
+  {
+    "case_id": "img-case-018",
+    "modality": "multimodal_image_text",
+    "filename": "news_real_pair_018.json",
+    "category": "multimodal_image_text_real",
+    "true_label": "real",
+    "baseline_single_score": 0.09,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-018",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.09,
+        "raw_score": 0.09,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.0900.",
+          "flags": []
+        }
+      },
+      "detector_text": {
+        "job_id": "img-case-018",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.07,
+        "raw_score": 0.07,
+        "latency_ms": 55,
+        "model_version": "desklib-v1.01-fp16",
+        "evidence": {
+          "claim": "Desklib caption authenticity confidence=0.0700.",
+          "flags": [
+            "high_perplexity",
+            "natural_burstiness"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Genuine news post: authentic photo + human-written article -> AUTHENTIC."
+  },
+  {
+    "case_id": "img-case-019",
+    "modality": "multimodal_image_text",
+    "filename": "disinfo_pair_rule8_019.json",
+    "category": "multimodal_image_text_fake",
+    "true_label": "fake",
+    "baseline_single_score": 0.62,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-019",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.62,
+        "raw_score": 0.62,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.6200.",
+          "flags": [
+            "frequency_anomaly",
+            "exif_missing"
+          ]
+        }
+      },
+      "detector_text": {
+        "job_id": "img-case-019",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.63,
+        "raw_score": 0.63,
+        "latency_ms": 55,
+        "model_version": "desklib-v1.01-fp16",
+        "evidence": {
+          "claim": "Desklib caption authenticity confidence=0.6300.",
+          "flags": [
+            "low_perplexity",
+            "low_burstiness",
+            "binoculars_corroborated"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Coordinated AI disinfo: both image (Rule 8 FFT) and text (Rule 8 Binoculars+PPL) corroborate SYNTHETIC."
+  },
+  {
+    "case_id": "img-case-020",
+    "modality": "multimodal_image_text",
+    "filename": "synth_meme_human_caption_020.json",
+    "category": "multimodal_image_text_fake",
+    "true_label": "fake",
+    "baseline_single_score": 0.93,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_image": {
+        "job_id": "img-case-020",
+        "status": "ok",
+        "modality": "image",
+        "confidence": 0.93,
+        "raw_score": 0.93,
+        "latency_ms": 40,
+        "model_version": "commfor-model-384-fp16",
+        "evidence": {
+          "claim": "CommFor image detector confidence=0.9300.",
+          "flags": [
+            "frequency_anomaly",
+            "high_confidence_synthetic"
+          ]
+        }
+      },
+      "detector_text": {
+        "job_id": "img-case-020",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.28,
+        "raw_score": 0.28,
+        "latency_ms": 55,
+        "model_version": "desklib-v1.01-fp16",
+        "evidence": {
+          "claim": "Desklib caption authenticity confidence=0.2800.",
+          "flags": [
+            "short_text_attenuated"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Synthetic generated image paired with short authentic human caption: manifest weights full primary image (1.5x) over short text (0.65x)."
+  }
+]

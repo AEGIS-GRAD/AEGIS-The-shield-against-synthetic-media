@@ -1,50 +1,82 @@
 {
-    "detector_name": "detector_image",
-    "modality": [
-        "image"
-    ],
-    "version": "mirror-dinov3-v1",
-    "description": "MIRROR image deepfake detector with DINOv3 backbone, featuring frequency domain FFT/DCT grid artifact detection and EXIF metadata verification.",
-    "input_constraints": {
-        "requires_audio": false,
-        "min_duration_seconds": 0.0,
-        "max_duration_seconds": null,
-        "supported_formats": [
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp",
-            ".bmp"
-        ]
+  "detector_name": "detector_image",
+  "modality": [
+    "image"
+  ],
+  "version": "mirror-dinov3-v1",
+  "description": "MIRROR image deepfake detector with DINOv3 backbone, featuring frequency domain FFT/DCT grid artifact detection and EXIF metadata verification.",
+  "input_constraints": {
+    "requires_audio": false,
+    "min_duration_seconds": 0.0,
+    "max_duration_seconds": null,
+    "supported_formats": [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+      ".bmp"
+    ]
+  },
+  "performance": {
+    "avg_latency_ms": 800.0,
+    "p95_latency_ms": 2000.0,
+    "avg_ram_usage_mb": 2048.0,
+    "avg_vram_usage_mb": 6144.0,
+    "measured_on": "Estimated baseline fp16 for 8GB GPU (DINOv3-L)"
+  },
+  "circuit_breaker": {
+    "failure_threshold": 3,
+    "recovery_timeout_sec": 10.0,
+    "latency_threshold_sec": 5.0
+  },
+  "known_failure_modes": [
+    {
+      "condition": "heavy JPEG recompression with quality < 50",
+      "effect": "washing out of high-frequency DCT grid artifacts causing potential false negatives",
+      "source": "MIRROR technical specification"
     },
-    "performance": {
-        "avg_latency_ms": 800.0,
-        "p95_latency_ms": 2000.0,
-        "avg_ram_usage_mb": 2048.0,
-        "avg_vram_usage_mb": 6144.0,
-        "measured_on": "Estimated baseline fp16 for 8GB GPU (DINOv3-L)"
+    {
+      "condition": "social media platform upload stripping EXIF",
+      "effect": "exif_missing flag triggers universally, requiring reliance on neural and frequency evidence",
+      "source": "Forensic validation note"
+    }
+  ],
+  "reliability_notes": "Primary image forensic detector. Analyzes global semantic representations via DINOv3 alongside upsampling artifacts via FFT/DCT.",
+  "evidence_flags": [
+    "frequency_anomaly",
+    "exif_missing"
+  ],
+  "license": "Research and non-commercial license (MIRROR github.com/349793927/MIRROR)",
+  "authority_tier": "primary",
+  "base_reliability_weight": 1.5,
+  "aliases": [
+    "detector_image",
+    "image"
+  ],
+  "calibration": {
+    "modality": "image",
+    "preferred_method": "temperature",
+    "checkpoint": "eval/calibration/checkpoints/image_temperature_calibrator.json"
+  },
+  "condition_reliability": {
+    "nominal": {
+      "weight_multiplier": 1.0,
+      "confidence_damping": 1.0
     },
-    "circuit_breaker": {
-        "failure_threshold": 3,
-        "recovery_timeout_sec": 10.0,
-        "latency_threshold_sec": 5.0
+    "corroborated_fft_or_software_tag": {
+      "weight_multiplier": 1.15,
+      "confidence_lift": 0.08
     },
-    "known_failure_modes": [
-        {
-            "condition": "heavy JPEG recompression with quality < 50",
-            "effect": "washing out of high-frequency DCT grid artifacts causing potential false negatives",
-            "source": "MIRROR technical specification"
-        },
-        {
-            "condition": "social media platform upload stripping EXIF",
-            "effect": "exif_missing flag triggers universally, requiring reliance on neural and frequency evidence",
-            "source": "Forensic validation note"
-        }
-    ],
-    "reliability_notes": "Primary image forensic detector. Analyzes global semantic representations via DINOv3 alongside upsampling artifacts via FFT/DCT.",
-    "evidence_flags": [
-        "frequency_anomaly",
-        "exif_missing"
-    ],
-    "license": "Research and non-commercial license (MIRROR github.com/349793927/MIRROR)"
+    "exif_missing_alone": {
+      "weight_multiplier": 0.9,
+      "non_dispositive_below": 0.55
+    },
+    "low_resolution_or_recompressed": {
+      "weight_multiplier": 0.75,
+      "confidence_damping": 0.85
+    },
+    "unparseable_not_applicable": {
+      "fatal_if_violated": true
+    }
+  }
 }

@@ -14,33 +14,55 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_REPO_ID = os.getenv("MODEL_CHECKPOINT_REPO", "Xicor9/efficientnet-b0-ffpp-c23")
 DEFAULT_FILENAME = "efficientnet_b0_ffpp_c23.pth"
+DEFAULT_LOCAL_CHECKPOINT = Path(__file__).resolve().parent / "models" / "efficientnet_b0_ffpp_finetuned.pth"
 
 
 def load_model(
     checkpoint_repo: Optional[str] = None,
     filename: str = DEFAULT_FILENAME,
     device: Optional[str] = None,
+    checkpoint_path: Optional[Union[str, Path]] = None,
 ) -> Any:
-    """Loads EfficientNet-B0 fine-tuned checkpoint from HuggingFace Hub.
+    """Loads EfficientNet-B0 checkpoint from local path, env var, or HuggingFace Hub.
 
     Args:
         checkpoint_repo: HuggingFace repository ID (defaults to MODEL_CHECKPOINT_REPO env var or 'Xicor9/efficientnet-b0-ffpp-c23').
         filename: Checkpoint filename in repo (default 'efficientnet_b0_ffpp_c23.pth').
         device: Device to place the model on ('cpu', 'cuda', etc.).
+        checkpoint_path: Optional explicit local checkpoint path (or via MODEL_CHECKPOINT_PATH env var).
 
     Returns:
         Loaded PyTorch model in eval mode.
     """
     repo_id = checkpoint_repo or os.getenv("MODEL_CHECKPOINT_REPO", DEFAULT_REPO_ID)
     target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    explicit_local = str(checkpoint_path or os.getenv("MODEL_CHECKPOINT_PATH", "")).strip()
+    allow_fallback = os.getenv("ALLOW_LOCAL_CHECKPOINT_FALLBACK", "0").strip().lower() in {"1", "true", "yes"}
 
-    logger.info(f"Fetching model checkpoint '{filename}' from HuggingFace repo '{repo_id}'...")
-    try:
-        checkpoint_path = hf_hub_download(repo_id=repo_id, filename=filename)
-        logger.info(f"Loaded checkpoint file path: {checkpoint_path}")
-    except Exception as exc:
-        logger.warning(f"Could not download checkpoint from HuggingFace ({exc}). Using randomly initialized model fallback for offline evaluation.")
-        checkpoint_path = None
+    resolved_ckpt_path: Optional[str] = None
+    if explicit_local:
+        if os.path.exists(explicit_local):
+            resolved_ckpt_path = explicit_local
+            logger.info(f"Loading local checkpoint from MODEL_CHECKPOINT_PATH: {resolved_ckpt_path}")
+        else:
+            logger.warning(f"Specified local checkpoint path does not exist: {explicit_local}")
+
+    if resolved_ckpt_path is None:
+        logger.info(f"Fetching model checkpoint '{filename}' from HuggingFace repo '{repo_id}'...")
+        try:
+            resolved_ckpt_path = hf_hub_download(repo_id=repo_id, filename=filename)
+            logger.info(f"Loaded checkpoint file path: {resolved_ckpt_path}")
+        except Exception as exc:
+            if allow_fallback and DEFAULT_LOCAL_CHECKPOINT.is_file():
+                resolved_ckpt_path = str(DEFAULT_LOCAL_CHECKPOINT)
+                logger.info(
+                    f"HuggingFace unavailable ({exc}); using local fine-tuned fallback checkpoint: {resolved_ckpt_path}"
+                )
+            else:
+                logger.warning(
+                    f"Could not download checkpoint from HuggingFace ({exc}). Using randomly initialized model fallback for offline evaluation."
+                )
+                resolved_ckpt_path = None
 
     # Build EfficientNet-B0 architecture
     try:
@@ -52,9 +74,12 @@ def load_model(
     in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, 2)
 
-    if checkpoint_path and os.path.exists(checkpoint_path):
-        # Load state dict
-        state_dict = torch.load(checkpoint_path, map_location=target_device)
+    if resolved_ckpt_path and os.path.exists(resolved_ckpt_path):
+        # Load state dict safely across PyTorch versions
+        try:
+            state_dict = torch.load(resolved_ckpt_path, map_location=target_device, weights_only=True)
+        except Exception:
+            state_dict = torch.load(resolved_ckpt_path, map_location=target_device, weights_only=False)
 
         # Handle state dict wrapped under keys like "state_dict" or "model"
         if isinstance(state_dict, dict):
