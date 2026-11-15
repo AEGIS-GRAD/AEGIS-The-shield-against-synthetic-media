@@ -111,6 +111,58 @@ python eval/scripts/make_subset.py --n-real 100 --n-fake 100 --seed 123 --clean
 
 ---
 
+# Cross-Dataset Video Generalization Study & In-the-Wild Tracking
+
+This section logs access status, licenses, staging policies, and evaluation guidelines for the **Video Deepfake Cross-Dataset Generalization Study** (evaluating the EfficientNet video detector trained on FaceForensics++ against unseen out-of-domain benchmarks and in-the-wild distributions).
+
+## 1. Datasets Overview, Access Status & Licensing
+
+| Dataset | Modality / Focus | Primary Access URL / Source | License / Terms of Use | Access Status | Day 1 Actions / Notes |
+|:---|:---|:---|:---|:---|:---|
+| **Celeb-DF v2** | High-quality deepfake video (590 original, 5639 fake) | [GitHub / Academic Request](https://github.com/yuezunli/celeb-deepfakeforensics) | Non-commercial research use only | **Available** (Direct download via verified academic/Kaggle mirrors) | Download direct splits; ensure identity isolation |
+| **Wild Deepfake** | In-the-wild web collected deepfakes (707 real, 6526 fake sequences) | [GitHub / Academic Mirrors](https://github.com/deepfakeinthewild/wild-deepfake) | Research only | **Available** (Publicly released sequence archive) | Direct download; evaluate challenging wild compressions |
+| **DF40** | Large-scale multi-method benchmark (40 manipulation techniques) | Formal academic request to authors / Lab portal | Academic / Non-commercial institutional agreement | **Access Request Submitted** (Day 1 submission logged) | Submitted Day 1 access application; leave-one-method-out evaluation |
+| **Deepfake-Eval-2024** | Realistic in-the-wild modern benchmark (latest diffusion & neural generators) | Public benchmark repo / Hugging Face mirror | CC-BY-NC / Research open access | **Available** (Immediate download) | Benchmark zero-shot generalization on 2024 synthetic pipelines |
+| **DeepSpeak v2** | Audio/speech deepfake & acoustic cloning benchmark | Institutional portal / Author application | Restricted research license | **Access Request Submitted** (Day 1 submission logged) | Day 1 access request submitted for multi-modal audio alignment |
+
+---
+
+## 2. Access Request Tracking (Day 1 Submissions)
+
+### DF40 Benchmark
+- **Target**: DF40 (Comprehensive 40-method Deepfake Benchmark).
+- **Application Date**: Day 1.
+- **Access Status**: `PENDING_INSTITUTIONAL_APPROVAL` (Request submitted via academic institutional email).
+- **Evaluation Strategy while Pending**: Execute study on immediately available sets (Celeb-DF v2, Wild Deepfake, Deepfake-Eval-2024, FF++ test baseline); integrate DF40 leave-one-method-out splits immediately upon credential grant.
+
+### DeepSpeak v2 Benchmark
+- **Target**: DeepSpeak v2 (Speech / Acoustic Synthesis Evaluation Corpus).
+- **Application Date**: Day 1.
+- **Access Status**: `PENDING_ACCESS_CONFIRMATION` (Request submitted to dataset custodians).
+- **Usage Context**: Co-study cross-modal audio generalization with video deepfakes.
+
+---
+
+## 3. Generalization Study Protocol & Split Isolation
+
+To ensure court-admissible rigor and scientifically valid evaluation:
+
+1. **Strict Identity & Source Video Separation**:
+   - No individual person / identity present in the training set (FaceForensics++) may appear in any test split.
+   - For datasets derived from public celebrities (e.g., Celeb-DF v2), video sources are cross-referenced against FF++ source YouTube IDs to strictly eliminate source video leakage.
+2. **Leave-One-Method-Out (LOMO) Strategy for DF40**:
+   - Systematic leave-one-method-out evaluation holds out entire generator architectures / manipulation algorithms from the training/tuning candidate sets to quantify zero-shot transfer to unseen deepfake technologies.
+3. **Target Metrics**:
+   - **ROC-AUC**: Overall classification separability across all decision thresholds.
+   - **Detection Rate at fixed 1% False-Alarm Rate ($TPR @ FPR = 0.01$)**: The operational standard for enterprise & surveillance SIEM security (ensuring 99% authentic pass-through without nuisance alerts).
+4. **Model Checkpoint Progression**:
+   - Baseline checkpoint: `efficientnet_b0_ffpp_ckpt_ep10.pth` (Epoch 10 FF++ baseline).
+   - Fine-tuned checkpoint: `efficientnet_b0_ffpp_finetuned.pth` (AEGIS fine-tuned weights).
+   - Progressively evaluated on both seen and unseen datasets to compile the **Generalization Matrix**.
+
+
+---
+
 ---
 
 # Audio Dataset — ASVspoof 2019 Logical Access (LA)
@@ -279,4 +331,107 @@ python eval/scripts/make_audio_subset.py --n-real 100 --n-fake 100 --seed 123 --
 | `--n-fake` | Number of spoof utterances to include | `150` |
 | `--seed` | Random seed for sampling reproducibility | `42` |
 | `--clean` | Remove existing output directory before building subset | `False` |
+
+
+---
+
+# Cross-Dataset Video Generalization Study & In-the-Wild Tracking
+
+This section logs access status, licenses, staging policies, and evaluation guidelines for the **Video Deepfake Cross-Dataset Generalization Study** (evaluating the EfficientNet video detector trained on FaceForensics++ against unseen out-of-domain benchmarks and in-the-wild distributions).
+
+## 1. Datasets Overview, Access Status & Licensing
+
+| Dataset | Modality / Focus | Primary Access URL / Source | License / Terms of Use | Access Status | Day 1 Actions / Notes |
+|:---|:---|:---|:---|:---|:---|
+| **Celeb-DF v2** | High-quality deepfake video (590 original, 5639 fake) | [GitHub / Academic Request](https://github.com/yuezunli/celeb-deepfakeforensics) | Non-commercial research use only | **Available** (Direct download via verified academic/Kaggle mirrors) | Download direct splits; ensure identity isolation |
+| **Wild Deepfake** | In-the-wild web collected deepfakes (707 real, 6526 fake sequences) | [GitHub / Academic Mirrors](https://github.com/deepfakeinthewild/wild-deepfake) | Research only | **Available** (Publicly released sequence archive) | Direct download; evaluate challenging wild compressions |
+| **DF40** | Large-scale multi-method benchmark (40 manipulation techniques) | Formal academic request to authors / Lab portal | Academic / Non-commercial institutional agreement | **Access Request Submitted** (Day 1 submission logged) | Submitted Day 1 access application; leave-one-method-out evaluation |
+| **Deepfake-Eval-2024** | Realistic in-the-wild modern benchmark (latest diffusion & neural generators) | Public benchmark repo / Hugging Face mirror | CC-BY-NC / Research open access | **Available** (Immediate download) | Benchmark zero-shot generalization on 2024 synthetic pipelines |
+| **DeepSpeak v2** | Audio/speech deepfake & acoustic cloning benchmark | Institutional portal / Author application | Restricted research license | **Access Request Submitted** (Day 1 submission logged) | Day 1 access request submitted for multi-modal audio alignment |
+
+---
+
+## 2. Access Request Tracking (Day 1 Submissions)
+
+### DF40 Benchmark
+- **Target**: DF40 (Comprehensive 40-method Deepfake Benchmark).
+- **Application Date**: Day 1.
+- **Access Status**: PENDING_INSTITUTIONAL_APPROVAL (Request submitted via academic institutional email).
+- **Evaluation Strategy while Pending**: Execute study on immediately available sets (Celeb-DF v2, Wild Deepfake, Deepfake-Eval-2024, FF++ test baseline); integrate DF40 leave-one-method-out splits immediately upon credential grant.
+
+### DeepSpeak v2 Benchmark
+- **Target**: DeepSpeak v2 (Speech / Acoustic Synthesis Evaluation Corpus).
+- **Application Date**: Day 1.
+- **Access Status**: PENDING_ACCESS_CONFIRMATION (Request submitted to dataset custodians).
+- **Usage Context**: Co-study cross-modal audio generalization with video deepfakes.
+
+---
+
+## 3. Generalization Study Protocol & Split Isolation
+
+To ensure court-admissible rigor and scientifically valid evaluation:
+
+1. **Strict Identity & Source Video Separation**:
+   - No individual person / identity present in the training set (FaceForensics++) may appear in any test split.
+   - For datasets derived from public celebrities (e.g., Celeb-DF v2), video sources are cross-referenced against FF++ source YouTube IDs to strictly eliminate source video leakage.
+2. **Leave-One-Method-Out (LOMO) Strategy for DF40**:
+   - Systematic leave-one-method-out evaluation holds out entire generator architectures / manipulation algorithms from the training/tuning candidate sets to quantify zero-shot transfer to unseen deepfake technologies.
+3. **Target Metrics**:
+   - **ROC-AUC**: Overall classification separability across all decision thresholds.
+   - **Detection Rate at fixed 1% False-Alarm Rate ($\text{TPR} @ \text{FAR} = 0.01$)**: The operational standard for enterprise & surveillance SIEM security (ensuring 99% authentic pass-through without nuisance alerts).
+4. **Model Checkpoint Progression**:
+   - Baseline checkpoint: efficientnet_b0_ffpp_ckpt_ep10.pth (Epoch 10 FF++ baseline).
+   - Fine-tuned checkpoint: efficientnet_b0_ffpp_finetuned.pth (AEGIS fine-tuned weights).
+   - Progressively evaluated on both seen and unseen datasets to compile the **Generalization Matrix**.
+---
+
+# Cross-Dataset Video Generalization Study & In-the-Wild Tracking
+
+This section logs access status, licenses, staging policies, and evaluation guidelines for the **Video Deepfake Cross-Dataset Generalization Study** (evaluating the EfficientNet video detector trained on FaceForensics++ against unseen out-of-domain benchmarks and in-the-wild distributions).
+
+## 1. Datasets Overview, Access Status & Licensing
+
+| Dataset | Modality / Focus | Primary Access URL / Source | License / Terms of Use | Access Status | Day 1 Actions / Notes |
+|:---|:---|:---|:---|:---|:---|
+| **Celeb-DF v2** | High-quality deepfake video (590 original, 5639 fake) | [GitHub / Academic Request](https://github.com/yuezunli/celeb-deepfakeforensics) | Non-commercial research use only | **Available** (Direct download via verified academic/Kaggle mirrors) | Download direct splits; ensure identity isolation |
+| **Wild Deepfake** | In-the-wild web collected deepfakes (707 real, 6526 fake sequences) | [GitHub / Academic Mirrors](https://github.com/deepfakeinthewild/wild-deepfake) | Research only | **Available** (Publicly released sequence archive) | Direct download; evaluate challenging wild compressions |
+| **DF40** | Large-scale multi-method benchmark (40 manipulation techniques) | Formal academic request to authors / Lab portal | Academic / Non-commercial institutional agreement | **Access Request Submitted** (Day 1 submission logged) | Submitted Day 1 access application; leave-one-method-out evaluation |
+| **Deepfake-Eval-2024** | Realistic in-the-wild modern benchmark (latest diffusion & neural generators) | Public benchmark repo / Hugging Face mirror | CC-BY-NC / Research open access | **Available** (Immediate download) | Benchmark zero-shot generalization on 2024 synthetic pipelines |
+| **DeepSpeak v2** | Audio/speech deepfake & acoustic cloning benchmark | Institutional portal / Author application | Restricted research license | **Access Request Submitted** (Day 1 submission logged) | Day 1 access request submitted for multi-modal audio alignment |
+
+---
+
+## 2. Access Request Tracking (Day 1 Submissions)
+
+### DF40 Benchmark
+- **Target**: DF40 (Comprehensive 40-method Deepfake Benchmark).
+- **Application Date**: Day 1.
+- **Access Status**: `PENDING_INSTITUTIONAL_APPROVAL` (Request submitted via academic institutional email).
+- **Evaluation Strategy while Pending**: Execute study on immediately available sets (Celeb-DF v2, Wild Deepfake, Deepfake-Eval-2024, FF++ test baseline); integrate DF40 leave-one-method-out splits immediately upon credential grant.
+
+### DeepSpeak v2 Benchmark
+- **Target**: DeepSpeak v2 (Speech / Acoustic Synthesis Evaluation Corpus).
+- **Application Date**: Day 1.
+- **Access Status**: `PENDING_ACCESS_CONFIRMATION` (Request submitted to dataset custodians).
+- **Usage Context**: Co-study cross-modal audio generalization with video deepfakes.
+
+---
+
+## 3. Generalization Study Protocol & Split Isolation
+
+To ensure court-admissible rigor and scientifically valid evaluation:
+
+1. **Strict Identity & Source Video Separation**:
+   - No individual person / identity present in the training set (FaceForensics++) may appear in any test split.
+   - For datasets derived from public celebrities (e.g., Celeb-DF v2), video sources are cross-referenced against FF++ source YouTube IDs to strictly eliminate source video leakage.
+2. **Leave-One-Method-Out (LOMO) Strategy for DF40**:
+   - Systematic leave-one-method-out evaluation holds out entire generator architectures / manipulation algorithms from the training/tuning candidate sets to quantify zero-shot transfer to unseen deepfake technologies.
+3. **Target Metrics**:
+   - **ROC-AUC**: Overall classification separability across all decision thresholds.
+   - **Detection Rate at fixed 1% False-Alarm Rate ($TPR @ FPR = 0.01$)**: The operational standard for enterprise & surveillance SIEM security (ensuring 99% authentic pass-through without nuisance alerts).
+4. **Model Checkpoint Progression**:
+   - Baseline checkpoint: `efficientnet_b0_ffpp_ckpt_ep10.pth` (Epoch 10 FF++ baseline).
+   - Fine-tuned checkpoint: `efficientnet_b0_ffpp_finetuned.pth` (AEGIS fine-tuned weights).
+   - Progressively evaluated on both seen and unseen datasets to compile the **Generalization Matrix**.
+
 

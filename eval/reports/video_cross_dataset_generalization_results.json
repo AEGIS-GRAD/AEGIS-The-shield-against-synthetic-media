@@ -1,0 +1,171 @@
+{
+  "target_far": 0.01,
+  "checkpoints": {
+    "baseline_ep10": {
+      "name": "EfficientNet-B0 (FF++ Epoch 10 Checkpoint)",
+      "path": "detectors/video-classifier/models/efficientnet_b0_ffpp_ckpt_ep10.pth",
+      "evaluations": {
+        "FaceForensics++": {
+          "dataset": "FaceForensics++",
+          "is_seen": true,
+          "sample_count": 100,
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "dr_at_1pct_far_pct": "100.0%",
+          "operating_thresh": 0.6415
+        },
+        "Celeb-DF-v2": {
+          "dataset": "Celeb-DF-v2",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 0.9544,
+          "dr_at_1pct_far": 0.78,
+          "dr_at_1pct_far_pct": "78.0%",
+          "operating_thresh": 0.5381
+        },
+        "Wild-Deepfake": {
+          "dataset": "Wild-Deepfake",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 0.8768,
+          "dr_at_1pct_far": 0.46,
+          "dr_at_1pct_far_pct": "46.0%",
+          "operating_thresh": 0.6466
+        },
+        "DF40": {
+          "dataset": "DF40",
+          "is_seen": false,
+          "sample_count": 160,
+          "auc": 0.9414,
+          "dr_at_1pct_far": 0.5875,
+          "dr_at_1pct_far_pct": "58.75%",
+          "operating_thresh": 0.5984
+        },
+        "Deepfake-Eval-2024": {
+          "dataset": "Deepfake-Eval-2024",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 0.8024,
+          "dr_at_1pct_far": 0.34,
+          "dr_at_1pct_far_pct": "34.0%",
+          "operating_thresh": 0.6728
+        }
+      }
+    },
+    "finetuned": {
+      "name": "EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint)",
+      "path": "detectors/video-classifier/models/efficientnet_b0_ffpp_finetuned.pth",
+      "evaluations": {
+        "FaceForensics++": {
+          "dataset": "FaceForensics++",
+          "is_seen": true,
+          "sample_count": 100,
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "dr_at_1pct_far_pct": "100.0%",
+          "operating_thresh": 0.781
+        },
+        "Celeb-DF-v2": {
+          "dataset": "Celeb-DF-v2",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "dr_at_1pct_far_pct": "100.0%",
+          "operating_thresh": 0.5617
+        },
+        "Wild-Deepfake": {
+          "dataset": "Wild-Deepfake",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "dr_at_1pct_far_pct": "100.0%",
+          "operating_thresh": 0.462
+        },
+        "DF40": {
+          "dataset": "DF40",
+          "is_seen": false,
+          "sample_count": 160,
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "dr_at_1pct_far_pct": "100.0%",
+          "operating_thresh": 0.5119
+        },
+        "Deepfake-Eval-2024": {
+          "dataset": "Deepfake-Eval-2024",
+          "is_seen": false,
+          "sample_count": 100,
+          "auc": 0.996,
+          "dr_at_1pct_far": 0.92,
+          "dr_at_1pct_far_pct": "92.0%",
+          "operating_thresh": 0.4866
+        }
+      }
+    }
+  },
+  "matrix": [
+    {
+      "checkpoint": "EfficientNet-B0 (FF++ Epoch 10 Checkpoint)",
+      "checkpoint_id": "baseline_ep10",
+      "scores": {
+        "FaceForensics++": {
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "is_seen": true
+        },
+        "Celeb-DF-v2": {
+          "auc": 0.9544,
+          "dr_at_1pct_far": 0.78,
+          "is_seen": false
+        },
+        "Wild-Deepfake": {
+          "auc": 0.8768,
+          "dr_at_1pct_far": 0.46,
+          "is_seen": false
+        },
+        "DF40": {
+          "auc": 0.9414,
+          "dr_at_1pct_far": 0.5875,
+          "is_seen": false
+        },
+        "Deepfake-Eval-2024": {
+          "auc": 0.8024,
+          "dr_at_1pct_far": 0.34,
+          "is_seen": false
+        }
+      }
+    },
+    {
+      "checkpoint": "EfficientNet-B0 (AEGIS Fine-Tuned Checkpoint)",
+      "checkpoint_id": "finetuned",
+      "scores": {
+        "FaceForensics++": {
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "is_seen": true
+        },
+        "Celeb-DF-v2": {
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "is_seen": false
+        },
+        "Wild-Deepfake": {
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "is_seen": false
+        },
+        "DF40": {
+          "auc": 1.0,
+          "dr_at_1pct_far": 1.0,
+          "is_seen": false
+        },
+        "Deepfake-Eval-2024": {
+          "auc": 0.996,
+          "dr_at_1pct_far": 0.92,
+          "is_seen": false
+        }
+      }
+    }
+  ]
+}
