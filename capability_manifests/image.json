@@ -1,43 +1,71 @@
 {
-    "detector_name": "image",
-    "modality": [
-        "image"
-    ],
-    "version": "commfor-model-384-fp16",
-    "description": "Community Forensics (OwensLab/commfor-model-384). Backbone: ViT-Small (vit_small_patch16_384). Training data: 2.7M synthetic images from thousands of community generators + OpenFake subset. License: MIT. Evidence signals: FFT upsampling grid anomaly + EXIF consistency.",
-    "input_constraints": {
-        "requires_audio": false,
-        "min_duration_seconds": 0,
-        "max_duration_seconds": null,
-        "supported_formats": [
-            ".jpg",
-            ".jpeg",
-            ".png"
-        ]
+  "detector_name": "image",
+  "modality": [
+    "image"
+  ],
+  "version": "commfor-model-384-fp16",
+  "description": "Community Forensics (OwensLab/commfor-model-384). Backbone: ViT-Small (vit_small_patch16_384). Training data: 2.7M synthetic images from thousands of community generators + OpenFake subset. License: MIT. Evidence signals: FFT upsampling grid anomaly + EXIF consistency.",
+  "input_constraints": {
+    "requires_audio": false,
+    "min_duration_seconds": 0,
+    "max_duration_seconds": null,
+    "supported_formats": [
+      ".jpg",
+      ".jpeg",
+      ".png"
+    ]
+  },
+  "performance": {
+    "avg_latency_ms": null,
+    "p95_latency_ms": null,
+    "avg_ram_usage_mb": null,
+    "avg_vram_usage_mb": null,
+    "measured_on": "PENDING \u2014 awaiting Task 4 benchmark report"
+  },
+  "known_failure_modes": [
+    {
+      "condition": "heavily compressed JPEG (quality < 50)",
+      "effect": "FFT grid artifact signal is destroyed by compression blocks",
+      "source": "capability_manifests/image.json"
     },
-    "performance": {
-        "avg_latency_ms": null,
-        "p95_latency_ms": null,
-        "avg_ram_usage_mb": null,
-        "avg_vram_usage_mb": null,
-        "measured_on": "PENDING — awaiting Task 4 benchmark report"
+    {
+      "condition": "images smaller than 384x384",
+      "effect": "upsampling interpolation introduces model-independent frequency spikes",
+      "source": "capability_manifests/image.json"
     },
-    "known_failure_modes": [
-        {
-            "condition": "heavily compressed JPEG (quality < 50)",
-            "effect": "FFT grid artifact signal is destroyed by compression blocks",
-            "source": "capability_manifests/image.json"
-        },
-        {
-            "condition": "images smaller than 384x384",
-            "effect": "upsampling interpolation introduces model-independent frequency spikes",
-            "source": "capability_manifests/image.json"
-        },
-        {
-            "condition": "screenshots and cropped photos",
-            "effect": "EXIF tags are stripped; exif_missing flag fires on authentic images",
-            "source": "capability_manifests/image.json"
-        }
-    ],
-    "reliability_notes": "Trained across thousands of community generators. Strong on unseen GAN and diffusion models. Complemented by frequency grid checks for high-resolution images."
+    {
+      "condition": "screenshots and cropped photos",
+      "effect": "EXIF tags are stripped; exif_missing flag fires on authentic images",
+      "source": "capability_manifests/image.json"
+    }
+  ],
+  "reliability_notes": "Trained across thousands of community generators. Strong on unseen GAN and diffusion models. Complemented by frequency grid checks for high-resolution images.",
+  "authority_tier": "primary",
+  "base_reliability_weight": 1.5,
+  "calibration": {
+    "modality": "image",
+    "preferred_method": "temperature",
+    "checkpoint": "eval/calibration/checkpoints/image_temperature_calibrator.json"
+  },
+  "condition_reliability": {
+    "nominal": {
+      "weight_multiplier": 1.0,
+      "confidence_damping": 1.0
+    },
+    "corroborated_fft_or_software_tag": {
+      "weight_multiplier": 1.15,
+      "confidence_lift": 0.08
+    },
+    "exif_missing_alone": {
+      "weight_multiplier": 0.9,
+      "non_dispositive_below": 0.55
+    },
+    "low_resolution_or_recompressed": {
+      "weight_multiplier": 0.75,
+      "confidence_damping": 0.85
+    },
+    "unparseable_not_applicable": {
+      "fatal_if_violated": true
+    }
+  }
 }

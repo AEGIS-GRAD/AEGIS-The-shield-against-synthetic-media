@@ -1,0 +1,17 @@
+{
+  "calibrator_type": "temperature",
+  "name": "temperature",
+  "temperature": 1.0439194506871443,
+  "input_is_probability": true,
+  "is_fitted": true,
+  "metadata": {
+    "loss": 0.2625130308184901,
+    "converged": true,
+    "num_samples": 72,
+    "source": "heldout_real",
+    "detector_id": "detector_text",
+    "predictions_file": "detector_text_fit_predictions.jsonl",
+    "uncalibrated_ece": 0.0823,
+    "calibrated_ece": 0.0965
+  }
+}

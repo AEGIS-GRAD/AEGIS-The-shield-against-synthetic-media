@@ -1,44 +1,75 @@
 {
-    "detector_name": "streaming-rppg",
-    "modality": [
-        "video"
-    ],
-    "version": "rppg-chrom-streaming-v1.0",
-    "description": "Real-time rolling-window rPPG detector evaluating cardiovascular skin reflectance consistency in live surveillance video feeds. Operates as a secondary physiological signal alongside the frame-level edge CNN classifier.",
-    "input_constraints": {
-        "requires_audio": false,
-        "min_duration_seconds": 6.0,
-        "max_duration_seconds": null,
-        "supported_formats": [
-            ".mp4",
-            ".mov",
-            ".mkv",
-            ".avi"
-        ]
+  "detector_name": "streaming-rppg",
+  "modality": [
+    "video"
+  ],
+  "version": "rppg-chrom-streaming-v1.0",
+  "description": "Real-time rolling-window rPPG detector evaluating cardiovascular skin reflectance consistency in live surveillance video feeds. Operates as a secondary physiological signal alongside the frame-level edge CNN classifier.",
+  "input_constraints": {
+    "requires_audio": false,
+    "min_duration_seconds": 6.0,
+    "max_duration_seconds": null,
+    "supported_formats": [
+      ".mp4",
+      ".mov",
+      ".mkv",
+      ".avi"
+    ]
+  },
+  "performance": {
+    "avg_latency_ms": 1.8,
+    "p95_latency_ms": 3.2,
+    "avg_ram_usage_mb": 45.0,
+    "avg_vram_usage_mb": 0.0,
+    "measured_on": "Intel Core i7 / RTX 3050 (CPU-only classical CHROM algorithm)"
+  },
+  "known_failure_modes": [
+    {
+      "condition": "motionless faces (static images, printed photos, freeze-frames)",
+      "effect": "resolved M2-L1: now reports status 'motionless_face' with neutral score 0.5 instead of incorrectly classifying as 100% synthetic",
+      "source": "docs/failure_notes.md, Month 2 Task 5"
     },
-    "performance": {
-        "avg_latency_ms": 1.8,
-        "p95_latency_ms": 3.2,
-        "avg_ram_usage_mb": 45.0,
-        "avg_vram_usage_mb": 0.0,
-        "measured_on": "Intel Core i7 / RTX 3050 (CPU-only classical CHROM algorithm)"
+    {
+      "condition": "initial streaming buffer accumulation period (first 6.0 seconds of stream)",
+      "effect": "resolved M2-L2: now explicitly reports 'warming_up' status with progress percentage instead of silent stall or premature verdict",
+      "source": "docs/failure_notes.md, Month 2 Task 5"
     },
-    "known_failure_modes": [
-        {
-            "condition": "motionless faces (static images, printed photos, freeze-frames)",
-            "effect": "resolved M2-L1: now reports status 'motionless_face' with neutral score 0.5 instead of incorrectly classifying as 100% synthetic",
-            "source": "docs/failure_notes.md, Month 2 Task 5"
-        },
-        {
-            "condition": "initial streaming buffer accumulation period (first 6.0 seconds of stream)",
-            "effect": "resolved M2-L2: now explicitly reports 'warming_up' status with progress percentage instead of silent stall or premature verdict",
-            "source": "docs/failure_notes.md, Month 2 Task 5"
-        },
-        {
-            "condition": "face tracking lost or face occluded during live stream",
-            "effect": "resolved M2-L3: now returns 'not_applicable' status without falling back to noisy whole-frame RGB average",
-            "source": "docs/failure_notes.md, Month 2 Task 5"
-        }
-    ],
-    "reliability_notes": "Best used as a secondary physiological content verification signal in live surveillance feeds, fused with frame-level edge CNN classifiers. Not a sole authority — requires at least 6 seconds of clear, well-lit, unoccluded face footage for a reliable reading."
+    {
+      "condition": "face tracking lost or face occluded during live stream",
+      "effect": "resolved M2-L3: now returns 'not_applicable' status without falling back to noisy whole-frame RGB average",
+      "source": "docs/failure_notes.md, Month 2 Task 5"
+    }
+  ],
+  "reliability_notes": "Best used as a secondary physiological content verification signal in live surveillance feeds, fused with frame-level edge CNN classifiers. Not a sole authority \u2014 requires at least 6 seconds of clear, well-lit, unoccluded face footage for a reliable reading.",
+  "authority_tier": "secondary_proxy",
+  "cannot_solely_certify_synthetic": true,
+  "base_reliability_weight": 0.45,
+  "calibration": {
+    "modality": "video_rppg",
+    "preferred_method": "shrinkage",
+    "checkpoint": null
+  },
+  "condition_reliability": {
+    "nominal": {
+      "min_luminance": 40.0,
+      "min_duration": 6.0,
+      "valid_bpm_range": [
+        40.0,
+        180.0
+      ],
+      "weight_multiplier": 1.0,
+      "confidence_damping": 0.9
+    },
+    "invalid_or_zero_bpm": {
+      "valid_bpm_range": [
+        40.0,
+        180.0
+      ],
+      "weight_multiplier": 0.35,
+      "confidence_damping": 0.3
+    },
+    "warmup_or_face_lost": {
+      "fatal_if_violated": true
+    }
+  }
 }

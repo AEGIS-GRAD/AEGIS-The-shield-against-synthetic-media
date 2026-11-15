@@ -220,8 +220,9 @@ def _adapt_rppg(r: Dict[str, Any], flags: List[str]) -> _Adapted:
 
     input_quality = r.get("input_quality")
     iq = 1.0 if input_quality is None else _clamp01(input_quality)
-    bpm = r.get("estimated_bpm")
-    bpm = bpm if bpm and bpm > 0 else None
+    raw_bpm = r.get("estimated_bpm")
+    estimated_bpm_val = float(raw_bpm) if raw_bpm is not None else None
+    bpm = estimated_bpm_val if (estimated_bpm_val is not None and estimated_bpm_val > 0) else None
 
     # Attenuation: rPPG exposes one composite number (min of luminance and
     # duration factors) and flags saying which one(s) applied. Because the
@@ -248,7 +249,7 @@ def _adapt_rppg(r: Dict[str, Any], flags: List[str]) -> _Adapted:
                 "so no verdict on physiological consistency can be given."
             )
             metrics = ObservationalMetrics(
-                physiological=PhysiologicalMetrics(estimated_bpm=bpm, spectral_purity=round(1.0 - p, 4))
+                physiological=PhysiologicalMetrics(estimated_bpm=estimated_bpm_val, spectral_purity=round(1.0 - p, 4))
             )
         return _Adapted(
             p_synthetic=0.5,
@@ -292,7 +293,7 @@ def _adapt_rppg(r: Dict[str, Any], flags: List[str]) -> _Adapted:
         polarity=polarity,
         claim=claim,
         metrics=ObservationalMetrics(
-            physiological=PhysiologicalMetrics(estimated_bpm=bpm, spectral_purity=round(quality, 4))
+            physiological=PhysiologicalMetrics(estimated_bpm=estimated_bpm_val, spectral_purity=round(quality, 4))
         ),
         attenuation=attenuation,
     )
@@ -425,20 +426,37 @@ def _adapt_aasist(r: Dict[str, Any], flags: List[str]) -> _Adapted:
 # ── detector_image ───────────────────────────────────────────────────────────
 def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     """
-    Adapts the MIRROR / mock image-detector response into a ForensicClaim.
-    Domain: SPATIAL_PIXEL — frequency-domain and EXIF integrity checks.
+    Adapts the MIRROR / CommFor image-detector response into a ForensicClaim.
+    Domain: SPATIAL_PIXEL — spatial neural representations, FFT grid, and EXIF checks.
     """
+    raw_detector_claim = (r.get("evidence") or {}).get("claim", "")
+    detector_claim = sanitize_claim_text(
+        raw_detector_claim, max_len=MAX_RAW_DETECTOR_CLAIM_LEN, source="image_claim"
+    ).sanitized
+
+    if NOT_APPLICABLE_FLAG in flags or r.get("status") == "not_applicable":
+        return _Adapted(
+            p_synthetic=0.5,
+            polarity=ClaimPolarity.NOT_APPLICABLE,
+            claim=detector_claim or "Image analysis was not applicable to this input.",
+            coverage_gap=True,
+        )
+
     p = _clamp01(r["confidence"])  # P(synthetic) as declared by the detector
     polarity = _polarity_from_p(p)
     pct = f"{p:.0%}"
 
     has_freq = "frequency_anomaly" in flags
     has_exif = "exif_missing" in flags
+    has_sw_tag = "software_tag_present" in flags
+    has_low_res = "low_resolution" in flags or "heavy_compression" in flags
 
     if polarity == ClaimPolarity.SYNTHETIC:
         detail_parts = []
         if has_freq:
             detail_parts.append("frequency-domain upsampling grid artefacts")
+        if has_sw_tag:
+            detail_parts.append("generative/editing software signature in metadata")
         if has_exif:
             detail_parts.append("absent or inconsistent EXIF metadata")
         detail = " and ".join(detail_parts) if detail_parts else "spatial pixel anomalies"
@@ -451,12 +469,22 @@ def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
             f"Image-level analysis found no significant manipulation artefacts "
             f"(estimated {pct} probability of synthetic content)."
         )
-        if has_exif:
-            claim += " Note: EXIF metadata is absent, which is common in re-saved images."
+        if has_exif and not has_freq and not has_sw_tag:
+            claim += " Note: EXIF metadata is absent, which is non-dispositive in re-saved images."
     else:
+        corroborators = []
+        if has_freq:
+            corroborators.append("frequency anomaly")
+        if has_sw_tag:
+            corroborators.append("software metadata tag")
+        if has_exif and not has_freq and not has_sw_tag:
+            corroborators.append("non-dispositive EXIF absence")
+        if has_low_res:
+            corroborators.append("low resolution/heavy compression")
+        extra = f" (secondary indicators: {', '.join(corroborators)})" if corroborators else ""
         claim = (
-            f"Image-level analysis was borderline ({pct} probability of synthetic content): "
-            "the spatial evidence neither confirms nor rules out manipulation."
+            f"Image-level analysis was borderline ({pct} probability of synthetic content){extra}: "
+            "the primary visual score sits near the decision boundary."
         )
 
     return _Adapted(
@@ -475,9 +503,27 @@ def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
 # ── detector_text ─────────────────────────────────────────────────────────────
 def _adapt_detector_text(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     """
-    Adapts the Desklib text-detector response into a ForensicClaim.
-    Domain: METADATA_INTEGRITY — stylometric and vocabulary-diversity signals.
+    Adapts the Desklib multi-signal text-detector response into a ForensicClaim.
+    Domain: METADATA_INTEGRITY — transformer sequence score, perplexity/burstiness,
+    stylometry, minimum-length gating, and opt-in Binoculars corroboration.
     """
+    raw_detector_claim = (r.get("evidence") or {}).get("claim", "")
+    detector_claim = sanitize_claim_text(
+        raw_detector_claim, max_len=MAX_RAW_DETECTOR_CLAIM_LEN, source="text_claim"
+    ).sanitized
+
+    if (
+        NOT_APPLICABLE_FLAG in flags
+        or "text_too_short" in flags
+        or r.get("status") == "not_applicable"
+    ):
+        return _Adapted(
+            p_synthetic=0.5,
+            polarity=ClaimPolarity.NOT_APPLICABLE,
+            claim=detector_claim or "Text analysis was not applicable (insufficient word count).",
+            coverage_gap=True,
+        )
+
     p = _clamp01(r["confidence"])  # P(synthetic)
     polarity = _polarity_from_p(p)
     pct = f"{p:.0%}"
@@ -485,9 +531,21 @@ def _adapt_detector_text(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     has_stylo = "stylometry_synthetic" in flags
     has_vocab = "low_vocabulary_diversity" in flags
     has_ngram = "high_ngram_repetition" in flags
+    has_low_ppl = "low_perplexity" in flags
+    has_low_burst = "low_burstiness" in flags
+    has_high_ppl = "high_perplexity" in flags
+    has_nat_burst = "natural_burstiness" in flags
+    has_bino_ok = "binoculars_corroborated" in flags
+    has_bino_div = "binoculars_divergence" in flags
+    has_chunk_div = "chunk_disagreement" in flags
+    is_short_attenuated = "short_text_attenuated" in flags
 
     if polarity == ClaimPolarity.SYNTHETIC:
         detail_parts = []
+        if has_bino_ok:
+            detail_parts.append("Binoculars-small cross-model corroboration")
+        if has_low_ppl or has_low_burst:
+            detail_parts.append("low language-model perplexity / uniform burstiness")
         if has_stylo:
             detail_parts.append("synthetic stylometric patterns")
         if has_vocab:
@@ -500,14 +558,30 @@ def _adapt_detector_text(r: Dict[str, Any], flags: List[str]) -> _Adapted:
             f"({detail}; estimated {pct} probability of synthetic content)."
         )
     elif polarity == ClaimPolarity.AUTHENTIC:
+        detail_parts = []
+        if has_high_ppl or has_nat_burst:
+            detail_parts.append("elevated perplexity and natural sentence burstiness")
+        detail = ", ".join(detail_parts) if detail_parts else "stylometric patterns consistent with human authorship"
         claim = (
-            f"Text-level analysis found stylometric patterns consistent with human authorship "
+            f"Text-level analysis found {detail} "
             f"(estimated {pct} probability of synthetic content)."
         )
     else:
+        cues = []
+        if has_bino_ok:
+            cues.append("Binoculars corroboration")
+        if has_low_ppl and has_low_burst:
+            cues.append("low perplexity and low burstiness")
+        elif has_high_ppl and has_nat_burst:
+            cues.append("natural perplexity and burstiness")
+        if is_short_attenuated:
+            cues.append("short-text confidence attenuation (40-149 words)")
+        if has_chunk_div or has_bino_div:
+            cues.append("internal chunk/signal divergence")
+        extra = f" [{'; '.join(cues)}]" if cues else ""
         claim = (
-            f"Text-level analysis was borderline ({pct} probability of synthetic content): "
-            "stylometric features neither confirm nor rule out AI authorship."
+            f"Text-level analysis was borderline ({pct} probability of synthetic content){extra}: "
+            "primary transformer probability sits in the uncertain band."
         )
 
     return _Adapted(

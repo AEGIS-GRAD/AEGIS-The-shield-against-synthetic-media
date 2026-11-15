@@ -1,0 +1,2056 @@
+[
+  {
+    "case_id": "txt-case-001",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-0acb49a005e6",
+    "filename": "mage-ood_gpt-0acb49a005e6.txt",
+    "category": "clean_human_text",
+    "true_label": "real",
+    "word_count": 156,
+    "length_bucket": "medium_150_499",
+    "paraphrased": false,
+    "baseline_single_score": 0.004166,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-001",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.004166,
+        "raw_score": 0.004166,
+        "latency_ms": 151,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely human-authored text (score 0.00). Elevated perplexity consistent with unconstrained phrasing (mean PPL 176.2).",
+          "flags": [
+            "likely_human_authored",
+            "high_perplexity"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 191,
+            "chunk_scores": [
+              0.004166
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": -5.476562
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 176.201,
+            "median_perplexity": 150.1,
+            "std_perplexity": 99.066,
+            "sentence_burstiness_cov": 0.5622,
+            "scored_sentence_count": 8
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.641,
+              "root_ttr": 8.0064,
+              "unique_words": 100,
+              "total_words": 156
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0325,
+              "total_3grams": 154,
+              "unique_3grams": 149,
+              "4gram_repetition_rate": 0.0065,
+              "total_4grams": 153,
+              "unique_4grams": 152
+            },
+            "sentence_variation": {
+              "sentence_count": 8,
+              "mean_sentence_length": 19.5,
+              "std_sentence_length": 6.86,
+              "sentence_length_cov": 0.3516
+            },
+            "synthetic_indication_score": 0.5,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.64 (100/156), 3-gram rep: 3.2%, Sentence length CoV: 0.35 (mean 19.5 words)."
+          },
+          "input_stats": {
+            "word_count": 155,
+            "char_count": 1009,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, medium_150_499, 156w, paraphrased=False): status=ok, conf=0.0042."
+  },
+  {
+    "case_id": "txt-case-002",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-0c41ae98297d",
+    "filename": "mage-ood_gpt-0c41ae98297d.txt",
+    "category": "clean_human_text",
+    "true_label": "real",
+    "word_count": 257,
+    "length_bucket": "medium_150_499",
+    "paraphrased": false,
+    "baseline_single_score": 0.001346,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-002",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.001346,
+        "raw_score": 0.001346,
+        "latency_ms": 239,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely human-authored text (score 0.00). Elevated perplexity consistent with unconstrained phrasing (mean PPL 172.5). Natural sentence-to-sentence burstiness (CoV 0.91).",
+          "flags": [
+            "likely_human_authored",
+            "high_perplexity",
+            "natural_burstiness"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 308,
+            "chunk_scores": [
+              0.001346
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": -6.609375
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 172.469,
+            "median_perplexity": 108.344,
+            "std_perplexity": 157.661,
+            "sentence_burstiness_cov": 0.9141,
+            "scored_sentence_count": 11
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6235,
+              "root_ttr": 9.957,
+              "unique_words": 159,
+              "total_words": 255
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.004,
+              "total_3grams": 253,
+              "unique_3grams": 252,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 252,
+              "unique_4grams": 252
+            },
+            "sentence_variation": {
+              "sentence_count": 11,
+              "mean_sentence_length": 23.18,
+              "std_sentence_length": 20.34,
+              "sentence_length_cov": 0.8773
+            },
+            "synthetic_indication_score": 0.35,
+            "stylometry_verdict": "human",
+            "summary": "Vocab TTR: 0.62 (159/255), 3-gram rep: 0.4%, Sentence length CoV: 0.88 (mean 23.2 words)."
+          },
+          "input_stats": {
+            "word_count": 254,
+            "char_count": 1469,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, medium_150_499, 257w, paraphrased=False): status=ok, conf=0.0013."
+  },
+  {
+    "case_id": "txt-case-003",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-0da268336b3a",
+    "filename": "mage-ood_gpt-0da268336b3a.txt",
+    "category": "clean_human_text",
+    "true_label": "real",
+    "word_count": 173,
+    "length_bucket": "medium_150_499",
+    "paraphrased": false,
+    "baseline_single_score": 0.007149,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-003",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.007149,
+        "raw_score": 0.007149,
+        "latency_ms": 338,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely human-authored text (score 0.01).",
+          "flags": [
+            "likely_human_authored"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 244,
+            "chunk_scores": [
+              0.007149
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": -4.933594
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 57.091,
+            "median_perplexity": 44.363,
+            "std_perplexity": 36.392,
+            "sentence_burstiness_cov": 0.6374,
+            "scored_sentence_count": 22
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6506,
+              "root_ttr": 8.3824,
+              "unique_words": 108,
+              "total_words": 166
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0,
+              "total_3grams": 164,
+              "unique_3grams": 164,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 163,
+              "unique_4grams": 163
+            },
+            "sentence_variation": {
+              "sentence_count": 27,
+              "mean_sentence_length": 6.15,
+              "std_sentence_length": 4.74,
+              "sentence_length_cov": 0.7702
+            },
+            "synthetic_indication_score": 0.35,
+            "stylometry_verdict": "human",
+            "summary": "Vocab TTR: 0.65 (108/166), 3-gram rep: 0.0%, Sentence length CoV: 0.77 (mean 6.2 words)."
+          },
+          "input_stats": {
+            "word_count": 166,
+            "char_count": 917,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, medium_150_499, 173w, paraphrased=False): status=ok, conf=0.0071."
+  },
+  {
+    "case_id": "txt-case-004",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-170ce6abed42",
+    "filename": "mage-ood_gpt-170ce6abed42.txt",
+    "category": "clean_human_text",
+    "true_label": "real",
+    "word_count": 518,
+    "length_bucket": "long_500_plus",
+    "paraphrased": false,
+    "baseline_single_score": 0.7721,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-004",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.7721,
+        "raw_score": 0.7721,
+        "latency_ms": 404,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.77). Natural sentence-to-sentence burstiness (CoV 0.85). Mixed authorship signals across 2 text chunks (score spread 0.89).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness",
+            "chunk_disagreement"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 2,
+            "sampled_from_chunks": 2,
+            "total_tokens": 641,
+            "chunk_scores": [
+              0.942929,
+              0.050988
+            ],
+            "chunk_spread": 0.891941,
+            "disagreement": true,
+            "mean_logit": 1.220204
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 79.217,
+            "median_perplexity": 55.223,
+            "std_perplexity": 67.689,
+            "sentence_burstiness_cov": 0.8545,
+            "scored_sentence_count": 17
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.5228,
+              "root_ttr": 11.7478,
+              "unique_words": 264,
+              "total_words": 505
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0417,
+              "total_3grams": 503,
+              "unique_3grams": 482,
+              "4gram_repetition_rate": 0.0279,
+              "total_4grams": 502,
+              "unique_4grams": 488
+            },
+            "sentence_variation": {
+              "sentence_count": 17,
+              "mean_sentence_length": 29.71,
+              "std_sentence_length": 11.19,
+              "sentence_length_cov": 0.3766
+            },
+            "synthetic_indication_score": 0.6,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.52 (264/505), 3-gram rep: 4.2%, Sentence length CoV: 0.38 (mean 29.7 words)."
+          },
+          "input_stats": {
+            "word_count": 496,
+            "char_count": 2661,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, long_500_plus, 518w, paraphrased=False): status=ok, conf=0.7721."
+  },
+  {
+    "case_id": "txt-case-005",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-1a3ca1d1c062",
+    "filename": "mage-ood_gpt-1a3ca1d1c062.txt",
+    "category": "clean_human_text",
+    "true_label": "real",
+    "word_count": 502,
+    "length_bucket": "long_500_plus",
+    "paraphrased": false,
+    "baseline_single_score": 0.108566,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-005",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.108566,
+        "raw_score": 0.108566,
+        "latency_ms": 456,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely human-authored text (score 0.11). Elevated 3-gram/4-gram phrase repetition.",
+          "flags": [
+            "likely_human_authored",
+            "high_ngram_repetition",
+            "stylometry_synthetic",
+            "stylometry_classifier_divergence"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 2,
+            "sampled_from_chunks": 2,
+            "total_tokens": 601,
+            "chunk_scores": [
+              0.105027,
+              0.120957
+            ],
+            "chunk_spread": 0.01593,
+            "disagreement": false,
+            "mean_logit": -2.105476
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 94.32,
+            "median_perplexity": 85.653,
+            "std_perplexity": 51.926,
+            "sentence_burstiness_cov": 0.5505,
+            "scored_sentence_count": 20
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.4939,
+              "root_ttr": 10.9096,
+              "unique_words": 241,
+              "total_words": 488
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.1235,
+              "total_3grams": 486,
+              "unique_3grams": 426,
+              "4gram_repetition_rate": 0.1052,
+              "total_4grams": 485,
+              "unique_4grams": 434
+            },
+            "sentence_variation": {
+              "sentence_count": 20,
+              "mean_sentence_length": 24.4,
+              "std_sentence_length": 8.58,
+              "sentence_length_cov": 0.3517
+            },
+            "synthetic_indication_score": 0.75,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.49 (241/488), 3-gram rep: 12.3%, Sentence length CoV: 0.35 (mean 24.4 words)."
+          },
+          "input_stats": {
+            "word_count": 477,
+            "char_count": 2812,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, long_500_plus, 502w, paraphrased=False): status=ok, conf=0.1086."
+  },
+  {
+    "case_id": "txt-case-006",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-081fb8126517",
+    "filename": "mage-ood_gpt-081fb8126517.txt",
+    "category": "marginal_human_text",
+    "true_label": "real",
+    "word_count": 149,
+    "length_bucket": "marginal_40_149",
+    "paraphrased": false,
+    "baseline_single_score": 0.892296,
+    "expected_allowed_verdicts": [
+      "AUTHENTIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-006",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.892296,
+        "raw_score": 0.905823,
+        "latency_ms": 282,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.89). Natural sentence-to-sentence burstiness (CoV 1.16). Marginal text length (145 words); confidence attenuated toward 0.50.",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness",
+            "short_text_attenuated",
+            "stylometry_classifier_divergence"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 242,
+            "chunk_scores": [
+              0.905823
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 2.263672
+          },
+          "length_gating": {
+            "attenuated": true,
+            "attenuation_factor": 0.9667,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 117.97,
+            "median_perplexity": 54.526,
+            "std_perplexity": 136.538,
+            "sentence_burstiness_cov": 1.1574,
+            "scored_sentence_count": 18
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6552,
+              "root_ttr": 7.8893,
+              "unique_words": 95,
+              "total_words": 145
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0,
+              "total_3grams": 143,
+              "unique_3grams": 143,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 142,
+              "unique_4grams": 142
+            },
+            "sentence_variation": {
+              "sentence_count": 28,
+              "mean_sentence_length": 5.18,
+              "std_sentence_length": 5.4,
+              "sentence_length_cov": 1.0425
+            },
+            "synthetic_indication_score": 0.35,
+            "stylometry_verdict": "human",
+            "summary": "Vocab TTR: 0.66 (95/145), 3-gram rep: 0.0%, Sentence length CoV: 1.04 (mean 5.2 words)."
+          },
+          "input_stats": {
+            "word_count": 145,
+            "char_count": 822,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, marginal_40_149, 149w, paraphrased=False): status=ok, conf=0.8923."
+  },
+  {
+    "case_id": "txt-case-007",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-1eb6ac7a5541",
+    "filename": "mage-ood_gpt-1eb6ac7a5541.txt",
+    "category": "short_text_not_applicable",
+    "true_label": "real",
+    "word_count": 29,
+    "length_bucket": "short_lt40",
+    "paraphrased": false,
+    "baseline_single_score": 0.5,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-007",
+        "status": "not_applicable",
+        "modality": "text",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 0,
+        "ram_usage_mb": 1926.21,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Text too short for reliable synthetic text attribution (29 words; minimum 40 words required).",
+          "flags": [
+            "text_too_short",
+            "insufficient_signal"
+          ]
+        },
+        "signals": {
+          "input_stats": {
+            "word_count": 29,
+            "char_count": 178,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (real, short_lt40, 29w, paraphrased=False): status=not_applicable, conf=0.5000."
+  },
+  {
+    "case_id": "txt-case-008",
+    "modality": "text",
+    "sample_id": "mage-ood_para-03989095ffd4",
+    "filename": "mage-ood_para-03989095ffd4.txt",
+    "category": "paraphrased_ai_text",
+    "true_label": "fake",
+    "word_count": 318,
+    "length_bucket": "medium_150_499",
+    "paraphrased": true,
+    "baseline_single_score": 0.98347,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-008",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.98347,
+        "raw_score": 0.98347,
+        "latency_ms": 244,
+        "ram_usage_mb": 1926.23,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.98). Natural sentence-to-sentence burstiness (CoV 0.80).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 386,
+            "chunk_scores": [
+              0.98347
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 4.085938
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 49.302,
+            "median_perplexity": 37.034,
+            "std_perplexity": 39.375,
+            "sentence_burstiness_cov": 0.7986,
+            "scored_sentence_count": 14
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.5955,
+              "root_ttr": 10.553,
+              "unique_words": 187,
+              "total_words": 314
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0288,
+              "total_3grams": 312,
+              "unique_3grams": 303,
+              "4gram_repetition_rate": 0.0161,
+              "total_4grams": 311,
+              "unique_4grams": 306
+            },
+            "sentence_variation": {
+              "sentence_count": 14,
+              "mean_sentence_length": 22.43,
+              "std_sentence_length": 7.89,
+              "sentence_length_cov": 0.3518
+            },
+            "synthetic_indication_score": 0.5,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.60 (187/314), 3-gram rep: 2.9%, Sentence length CoV: 0.35 (mean 22.4 words)."
+          },
+          "input_stats": {
+            "word_count": 305,
+            "char_count": 1872,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, medium_150_499, 318w, paraphrased=True): status=ok, conf=0.9835."
+  },
+  {
+    "case_id": "txt-case-009",
+    "modality": "text",
+    "sample_id": "mage-ood_para-0c3c3804bcca",
+    "filename": "mage-ood_para-0c3c3804bcca.txt",
+    "category": "paraphrased_ai_text",
+    "true_label": "fake",
+    "word_count": 166,
+    "length_bucket": "medium_150_499",
+    "paraphrased": true,
+    "baseline_single_score": 0.919787,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-009",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.919787,
+        "raw_score": 0.919787,
+        "latency_ms": 221,
+        "ram_usage_mb": 1926.23,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.92). Natural sentence-to-sentence burstiness (CoV 1.67).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 211,
+            "chunk_scores": [
+              0.919787
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 2.439453
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 76.353,
+            "median_perplexity": 39.259,
+            "std_perplexity": 127.403,
+            "sentence_burstiness_cov": 1.6686,
+            "scored_sentence_count": 14
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6835,
+              "root_ttr": 8.592,
+              "unique_words": 108,
+              "total_words": 158
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0,
+              "total_3grams": 156,
+              "unique_3grams": 156,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 155,
+              "unique_4grams": 155
+            },
+            "sentence_variation": {
+              "sentence_count": 17,
+              "mean_sentence_length": 9.29,
+              "std_sentence_length": 4.81,
+              "sentence_length_cov": 0.5177
+            },
+            "synthetic_indication_score": 0.5,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.68 (108/158), 3-gram rep: 0.0%, Sentence length CoV: 0.52 (mean 9.3 words)."
+          },
+          "input_stats": {
+            "word_count": 158,
+            "char_count": 901,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, medium_150_499, 166w, paraphrased=True): status=ok, conf=0.9198."
+  },
+  {
+    "case_id": "txt-case-010",
+    "modality": "text",
+    "sample_id": "mage-ood_para-0dbfb9bd39c7",
+    "filename": "mage-ood_para-0dbfb9bd39c7.txt",
+    "category": "paraphrased_ai_text",
+    "true_label": "fake",
+    "word_count": 404,
+    "length_bucket": "medium_150_499",
+    "paraphrased": true,
+    "baseline_single_score": 0.999939,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-010",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.999939,
+        "raw_score": 0.999939,
+        "latency_ms": 364,
+        "ram_usage_mb": 1926.23,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 1.00). Natural sentence-to-sentence burstiness (CoV 1.19).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness",
+            "stylometry_synthetic"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 447,
+            "chunk_scores": [
+              0.999939
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 9.710938
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 61.647,
+            "median_perplexity": 38.613,
+            "std_perplexity": 73.192,
+            "sentence_burstiness_cov": 1.1873,
+            "scored_sentence_count": 20
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.5761,
+              "root_ttr": 11.5356,
+              "unique_words": 231,
+              "total_words": 401
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0125,
+              "total_3grams": 399,
+              "unique_3grams": 394,
+              "4gram_repetition_rate": 0.0025,
+              "total_4grams": 398,
+              "unique_4grams": 397
+            },
+            "sentence_variation": {
+              "sentence_count": 20,
+              "mean_sentence_length": 20.05,
+              "std_sentence_length": 5.78,
+              "sentence_length_cov": 0.2884
+            },
+            "synthetic_indication_score": 0.65,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.58 (231/401), 3-gram rep: 1.2%, Sentence length CoV: 0.29 (mean 20.1 words)."
+          },
+          "input_stats": {
+            "word_count": 398,
+            "char_count": 2488,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, medium_150_499, 404w, paraphrased=True): status=ok, conf=0.9999."
+  },
+  {
+    "case_id": "txt-case-011",
+    "modality": "text",
+    "sample_id": "mage-ood_para-10f5cd11837a",
+    "filename": "mage-ood_para-10f5cd11837a.txt",
+    "category": "paraphrased_ai_text",
+    "true_label": "fake",
+    "word_count": 262,
+    "length_bucket": "medium_150_499",
+    "paraphrased": true,
+    "baseline_single_score": 0.999875,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-011",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.999875,
+        "raw_score": 0.999875,
+        "latency_ms": 253,
+        "ram_usage_mb": 1926.23,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 1.00). Natural sentence-to-sentence burstiness (CoV 0.71).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness",
+            "uniform_sentence_structure",
+            "stylometry_synthetic"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 293,
+            "chunk_scores": [
+              0.999875
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 8.984375
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 65.893,
+            "median_perplexity": 48.928,
+            "std_perplexity": 46.873,
+            "sentence_burstiness_cov": 0.7113,
+            "scored_sentence_count": 11
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6062,
+              "root_ttr": 9.7555,
+              "unique_words": 157,
+              "total_words": 259
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0078,
+              "total_3grams": 257,
+              "unique_3grams": 255,
+              "4gram_repetition_rate": 0.0039,
+              "total_4grams": 256,
+              "unique_4grams": 255
+            },
+            "sentence_variation": {
+              "sentence_count": 11,
+              "mean_sentence_length": 23.55,
+              "std_sentence_length": 5.84,
+              "sentence_length_cov": 0.2479
+            },
+            "synthetic_indication_score": 0.65,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.61 (157/259), 3-gram rep: 0.8%, Sentence length CoV: 0.25 (mean 23.6 words)."
+          },
+          "input_stats": {
+            "word_count": 256,
+            "char_count": 1633,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, medium_150_499, 262w, paraphrased=True): status=ok, conf=0.9999."
+  },
+  {
+    "case_id": "txt-case-012",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-05a3e6de6654",
+    "filename": "mage-ood_gpt-05a3e6de6654.txt",
+    "category": "clean_ai_text",
+    "true_label": "fake",
+    "word_count": 629,
+    "length_bucket": "long_500_plus",
+    "paraphrased": false,
+    "baseline_single_score": 0.999943,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-012",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.999943,
+        "raw_score": 0.999943,
+        "latency_ms": 727,
+        "ram_usage_mb": 1926.45,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 1.00). Low language-model perplexity (mean PPL 35.9). Natural sentence-to-sentence burstiness (CoV 0.89).",
+          "flags": [
+            "high_ai_probability",
+            "low_perplexity",
+            "natural_burstiness"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 2,
+            "sampled_from_chunks": 2,
+            "total_tokens": 774,
+            "chunk_scores": [
+              0.999948,
+              0.999934
+            ],
+            "chunk_spread": 1.4e-05,
+            "disagreement": false,
+            "mean_logit": 9.772393
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 35.887,
+            "median_perplexity": 25.858,
+            "std_perplexity": 31.824,
+            "sentence_burstiness_cov": 0.8868,
+            "scored_sentence_count": 38
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.4372,
+              "root_ttr": 10.8244,
+              "unique_words": 268,
+              "total_words": 613
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0524,
+              "total_3grams": 611,
+              "unique_3grams": 579,
+              "4gram_repetition_rate": 0.0131,
+              "total_4grams": 610,
+              "unique_4grams": 602
+            },
+            "sentence_variation": {
+              "sentence_count": 45,
+              "mean_sentence_length": 13.62,
+              "std_sentence_length": 8.24,
+              "sentence_length_cov": 0.6046
+            },
+            "synthetic_indication_score": 0.6,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.44 (268/613), 3-gram rep: 5.2%, Sentence length CoV: 0.60 (mean 13.6 words)."
+          },
+          "input_stats": {
+            "word_count": 605,
+            "char_count": 3653,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, long_500_plus, 629w, paraphrased=False): status=ok, conf=0.9999."
+  },
+  {
+    "case_id": "txt-case-013",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-c8f0c69dcfe8",
+    "filename": "mage-ood_gpt-c8f0c69dcfe8.txt",
+    "category": "clean_ai_text",
+    "true_label": "fake",
+    "word_count": 530,
+    "length_bucket": "long_500_plus",
+    "paraphrased": false,
+    "baseline_single_score": 0.999984,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-013",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.999984,
+        "raw_score": 0.999984,
+        "latency_ms": 419,
+        "ram_usage_mb": 1926.5,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 1.00). Natural sentence-to-sentence burstiness (CoV 1.15).",
+          "flags": [
+            "high_ai_probability",
+            "natural_burstiness",
+            "stylometry_synthetic"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 2,
+            "sampled_from_chunks": 2,
+            "total_tokens": 597,
+            "chunk_scores": [
+              0.999981,
+              0.999991
+            ],
+            "chunk_spread": 1e-05,
+            "disagreement": false,
+            "mean_logit": 11.023568
+          },
+          "length_gating": {
+            "attenuated": false,
+            "attenuation_factor": 1.0,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 51.134,
+            "median_perplexity": 33.405,
+            "std_perplexity": 58.985,
+            "sentence_burstiness_cov": 1.1535,
+            "scored_sentence_count": 16
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.5182,
+              "root_ttr": 11.85,
+              "unique_words": 271,
+              "total_words": 523
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0192,
+              "total_3grams": 521,
+              "unique_3grams": 511,
+              "4gram_repetition_rate": 0.0058,
+              "total_4grams": 520,
+              "unique_4grams": 517
+            },
+            "sentence_variation": {
+              "sentence_count": 16,
+              "mean_sentence_length": 32.69,
+              "std_sentence_length": 11.04,
+              "sentence_length_cov": 0.3377
+            },
+            "synthetic_indication_score": 0.75,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.52 (271/523), 3-gram rep: 1.9%, Sentence length CoV: 0.34 (mean 32.7 words)."
+          },
+          "input_stats": {
+            "word_count": 520,
+            "char_count": 3294,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, long_500_plus, 530w, paraphrased=False): status=ok, conf=1.0000."
+  },
+  {
+    "case_id": "txt-case-014",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-007567fd06fd",
+    "filename": "mage-ood_gpt-007567fd06fd.txt",
+    "category": "marginal_ai_text",
+    "true_label": "fake",
+    "word_count": 149,
+    "length_bucket": "marginal_40_149",
+    "paraphrased": false,
+    "baseline_single_score": 0.80972,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-014",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.80972,
+        "raw_score": 0.813905,
+        "latency_ms": 173,
+        "ram_usage_mb": 1926.54,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.81). Uniformly low perplexity across sentences (mean PPL 39.3, CoV 0.19). Marginal text length (148 words); confidence attenuated toward 0.50.",
+          "flags": [
+            "high_ai_probability",
+            "low_perplexity",
+            "low_burstiness",
+            "short_text_attenuated",
+            "stylometry_synthetic"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 165,
+            "chunk_scores": [
+              0.813905
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 1.475586
+          },
+          "length_gating": {
+            "attenuated": true,
+            "attenuation_factor": 0.9867,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 39.314,
+            "median_perplexity": 40.571,
+            "std_perplexity": 7.496,
+            "sentence_burstiness_cov": 0.1907,
+            "scored_sentence_count": 6
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.7047,
+              "root_ttr": 8.6019,
+              "unique_words": 105,
+              "total_words": 149
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0068,
+              "total_3grams": 147,
+              "unique_3grams": 146,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 146,
+              "unique_4grams": 146
+            },
+            "sentence_variation": {
+              "sentence_count": 6,
+              "mean_sentence_length": 24.83,
+              "std_sentence_length": 8.19,
+              "sentence_length_cov": 0.33
+            },
+            "synthetic_indication_score": 0.65,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.70 (105/149), 3-gram rep: 0.7%, Sentence length CoV: 0.33 (mean 24.8 words)."
+          },
+          "input_stats": {
+            "word_count": 148,
+            "char_count": 943,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, marginal_40_149, 149w, paraphrased=False): status=ok, conf=0.8097."
+  },
+  {
+    "case_id": "txt-case-015",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-1fee0e63a7fc",
+    "filename": "mage-ood_gpt-1fee0e63a7fc.txt",
+    "category": "marginal_ai_text",
+    "true_label": "fake",
+    "word_count": 91,
+    "length_bucket": "marginal_40_149",
+    "paraphrased": false,
+    "baseline_single_score": 0.802104,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-015",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.802104,
+        "raw_score": 0.997973,
+        "latency_ms": 147,
+        "ram_usage_mb": 1926.54,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.80). Marginal text length (91 words); confidence attenuated toward 0.50.",
+          "flags": [
+            "high_ai_probability",
+            "short_text_attenuated"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 121,
+            "chunk_scores": [
+              0.997973
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 6.199219
+          },
+          "length_gating": {
+            "attenuated": true,
+            "attenuation_factor": 0.6067,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 47.877,
+            "median_perplexity": 50.911,
+            "std_perplexity": 21.248,
+            "sentence_burstiness_cov": 0.4438,
+            "scored_sentence_count": 4
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.7143,
+              "root_ttr": 6.8139,
+              "unique_words": 65,
+              "total_words": 91
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0112,
+              "total_3grams": 89,
+              "unique_3grams": 88,
+              "4gram_repetition_rate": 0.0,
+              "total_4grams": 88,
+              "unique_4grams": 88
+            },
+            "sentence_variation": {
+              "sentence_count": 4,
+              "mean_sentence_length": 22.75,
+              "std_sentence_length": 9.6,
+              "sentence_length_cov": 0.422
+            },
+            "synthetic_indication_score": 0.5,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.71 (65/91), 3-gram rep: 1.1%, Sentence length CoV: 0.42 (mean 22.8 words)."
+          },
+          "input_stats": {
+            "word_count": 91,
+            "char_count": 606,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, marginal_40_149, 91w, paraphrased=False): status=ok, conf=0.8021."
+  },
+  {
+    "case_id": "txt-case-016",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-24bc58abf889",
+    "filename": "mage-ood_gpt-24bc58abf889.txt",
+    "category": "marginal_ai_text",
+    "true_label": "fake",
+    "word_count": 102,
+    "length_bucket": "marginal_40_149",
+    "paraphrased": false,
+    "baseline_single_score": 0.834623,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-016",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.834623,
+        "raw_score": 0.992093,
+        "latency_ms": 140,
+        "ram_usage_mb": 1926.55,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.83). Marginal text length (102 words); confidence attenuated toward 0.50.",
+          "flags": [
+            "high_ai_probability",
+            "short_text_attenuated",
+            "uniform_sentence_structure",
+            "stylometry_synthetic"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 116,
+            "chunk_scores": [
+              0.992093
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 4.832031
+          },
+          "length_gating": {
+            "attenuated": true,
+            "attenuation_factor": 0.68,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 64.948,
+            "median_perplexity": 55.612,
+            "std_perplexity": 33.11,
+            "sentence_burstiness_cov": 0.5098,
+            "scored_sentence_count": 5
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6471,
+              "root_ttr": 6.535,
+              "unique_words": 66,
+              "total_words": 102
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.03,
+              "total_3grams": 100,
+              "unique_3grams": 97,
+              "4gram_repetition_rate": 0.0101,
+              "total_4grams": 99,
+              "unique_4grams": 98
+            },
+            "sentence_variation": {
+              "sentence_count": 5,
+              "mean_sentence_length": 20.4,
+              "std_sentence_length": 3.61,
+              "sentence_length_cov": 0.177
+            },
+            "synthetic_indication_score": 0.65,
+            "stylometry_verdict": "synthetic",
+            "summary": "Vocab TTR: 0.65 (66/102), 3-gram rep: 3.0%, Sentence length CoV: 0.18 (mean 20.4 words)."
+          },
+          "input_stats": {
+            "word_count": 102,
+            "char_count": 703,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, marginal_40_149, 102w, paraphrased=False): status=ok, conf=0.8346."
+  },
+  {
+    "case_id": "txt-case-017",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-2854d95d2ff1",
+    "filename": "mage-ood_gpt-2854d95d2ff1.txt",
+    "category": "marginal_ai_text",
+    "true_label": "fake",
+    "word_count": 144,
+    "length_bucket": "marginal_40_149",
+    "paraphrased": false,
+    "baseline_single_score": 0.958269,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-017",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.958269,
+        "raw_score": 0.998118,
+        "latency_ms": 150,
+        "ram_usage_mb": 1926.55,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Desklib classifier indicates likely AI-generated text (score 0.96). Marginal text length (138 words); confidence attenuated toward 0.50.",
+          "flags": [
+            "high_ai_probability",
+            "short_text_attenuated"
+          ]
+        },
+        "signals": {
+          "chunk_aggregation": {
+            "chunk_count": 1,
+            "sampled_from_chunks": 1,
+            "total_tokens": 168,
+            "chunk_scores": [
+              0.998118
+            ],
+            "chunk_spread": 0.0,
+            "disagreement": false,
+            "mean_logit": 6.273438
+          },
+          "length_gating": {
+            "attenuated": true,
+            "attenuation_factor": 0.92,
+            "min_words": 40,
+            "reliable_words": 150
+          },
+          "perplexity": {
+            "enabled": true,
+            "available": true,
+            "model_id": "gpt2",
+            "mean_perplexity": 53.903,
+            "median_perplexity": 48.711,
+            "std_perplexity": 23.674,
+            "sentence_burstiness_cov": 0.4392,
+            "scored_sentence_count": 6
+          },
+          "binoculars_small": {
+            "enabled": false,
+            "available": false,
+            "performer_id": "Qwen/Qwen2.5-0.5B",
+            "observer_id": "Qwen/Qwen2.5-0.5B-Instruct",
+            "threshold": 0.9,
+            "score": null,
+            "ai_likelihood": null,
+            "verdict": null
+          },
+          "stylometry": {
+            "vocabulary_diversity": {
+              "ttr": 0.6429,
+              "root_ttr": 7.6064,
+              "unique_words": 90,
+              "total_words": 140
+            },
+            "ngram_repetition": {
+              "3gram_repetition_rate": 0.0362,
+              "total_3grams": 138,
+              "unique_3grams": 133,
+              "4gram_repetition_rate": 0.0146,
+              "total_4grams": 137,
+              "unique_4grams": 135
+            },
+            "sentence_variation": {
+              "sentence_count": 6,
+              "mean_sentence_length": 23.33,
+              "std_sentence_length": 11.48,
+              "sentence_length_cov": 0.4922
+            },
+            "synthetic_indication_score": 0.5,
+            "stylometry_verdict": "uncertain",
+            "summary": "Vocab TTR: 0.64 (90/140), 3-gram rep: 3.6%, Sentence length CoV: 0.49 (mean 23.3 words)."
+          },
+          "input_stats": {
+            "word_count": 138,
+            "char_count": 832,
+            "line_count": 1,
+            "paragraph_count": 1,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, marginal_40_149, 144w, paraphrased=False): status=ok, conf=0.9583."
+  },
+  {
+    "case_id": "txt-case-018",
+    "modality": "text",
+    "sample_id": "mage-ood_gpt-193e31f4b64b",
+    "filename": "mage-ood_gpt-193e31f4b64b.txt",
+    "category": "short_text_not_applicable",
+    "true_label": "fake",
+    "word_count": 26,
+    "length_bucket": "short_lt40",
+    "paraphrased": false,
+    "baseline_single_score": 0.5,
+    "expected_allowed_verdicts": [
+      "INTEGRITY_UNKNOWN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-018",
+        "status": "not_applicable",
+        "modality": "text",
+        "confidence": 0.5,
+        "raw_score": 0.0,
+        "latency_ms": 0,
+        "ram_usage_mb": 1926.55,
+        "vram_usage_mb": 1079.1,
+        "model_version": "desklib-v1.01-lora-finetuned-fp16",
+        "evidence": {
+          "claim": "Text too short for reliable synthetic text attribution (23 words; minimum 40 words required).",
+          "flags": [
+            "text_too_short",
+            "insufficient_signal"
+          ]
+        },
+        "signals": {
+          "input_stats": {
+            "word_count": 23,
+            "char_count": 127,
+            "source_kind": "raw",
+            "stripped_control_chars": 0
+          }
+        },
+        "error": null
+      }
+    },
+    "operating_conditions": {
+      "duration_seconds": null,
+      "mean_luminance": null,
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Real MAGE text (fake, short_lt40, 26w, paraphrased=False): status=not_applicable, conf=0.5000."
+  },
+  {
+    "case_id": "txt-case-019",
+    "modality": "text",
+    "sample_id": "edge-bino-corroborated-paraphrase",
+    "filename": "paraphrased_bino_corroborated.txt",
+    "category": "multi_signal_rule8_ai",
+    "true_label": "fake",
+    "word_count": 265,
+    "length_bucket": "medium_150_499",
+    "paraphrased": true,
+    "baseline_single_score": 0.59,
+    "expected_allowed_verdicts": [
+      "SYNTHETIC",
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-019",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.59,
+        "raw_score": 0.59,
+        "model_version": "desklib-v1.01-fp16",
+        "evidence": {
+          "claim": "Borderline Desklib sequence score corroborated by Binoculars-small and low GPT-2 perplexity.",
+          "flags": [
+            "moderate_ai_probability",
+            "low_perplexity",
+            "low_burstiness",
+            "binoculars_corroborated"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Edge case: borderline paraphrased AI text rescued to SYNTHETIC via Rule 8 Binoculars+PPL corroboration."
+  },
+  {
+    "case_id": "txt-case-020",
+    "modality": "text",
+    "sample_id": "edge-chunk-disagreement-hybrid",
+    "filename": "hybrid_human_ai_document.txt",
+    "category": "hybrid_chunk_disagreement",
+    "true_label": "fake",
+    "word_count": 610,
+    "length_bucket": "long_500_plus",
+    "paraphrased": true,
+    "baseline_single_score": 0.51,
+    "expected_allowed_verdicts": [
+      "UNCERTAIN"
+    ],
+    "raw_responses": {
+      "detector_text": {
+        "job_id": "txt-case-020",
+        "status": "ok",
+        "modality": "text",
+        "confidence": 0.51,
+        "raw_score": 0.51,
+        "model_version": "desklib-v1.01-fp16",
+        "evidence": {
+          "claim": "Hybrid authorship suspected: chunk scores diverged cleanly (0.14 vs 0.89).",
+          "flags": [
+            "uncertain_authorship_band",
+            "chunk_disagreement"
+          ]
+        }
+      }
+    },
+    "operating_conditions": {
+      "face_detected": true,
+      "audio_present": false
+    },
+    "description": "Edge case: hybrid long document with chunk disagreement cleanly held in UNCERTAIN."
+  }
+]

@@ -1,42 +1,95 @@
 {
-    "detector_name": "rppg",
-    "modality": [
-        "video"
-    ],
-    "version": "rppg-toolbox-physnet-v1",
-    "description": "Detects deepfakes via absence/irregularity of heartbeat-driven skin color signal.",
-    "input_constraints": {
-        "requires_audio": false,
-        "min_duration_seconds": 2.0,
-        "max_duration_seconds": null,
-        "supported_formats": [
-            ".mp4",
-            ".mov"
-        ]
+  "detector_name": "rppg",
+  "modality": [
+    "video"
+  ],
+  "version": "rppg-toolbox-physnet-v1",
+  "description": "Detects deepfakes via absence/irregularity of heartbeat-driven skin color signal.",
+  "input_constraints": {
+    "requires_audio": false,
+    "min_duration_seconds": 2.0,
+    "max_duration_seconds": null,
+    "supported_formats": [
+      ".mp4",
+      ".mov"
+    ]
+  },
+  "performance": {
+    "avg_latency_ms": null,
+    "p95_latency_ms": null,
+    "avg_ram_usage_mb": null,
+    "avg_vram_usage_mb": null,
+    "measured_on": "PENDING \u2014 awaiting Task #1 benchmark report"
+  },
+  "known_failure_modes": [
+    {
+      "condition": "low-light footage",
+      "effect": "unreliable pulse signal extraction, high false-negative rate",
+      "source": "docs/failure_notes.md"
     },
-    "performance": {
-        "avg_latency_ms": null,
-        "p95_latency_ms": null,
-        "avg_ram_usage_mb": null,
-        "avg_vram_usage_mb": null,
-        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    {
+      "condition": "clips under 2 seconds",
+      "effect": "insufficient signal for a stable pulse reading",
+      "source": "docs/failure_notes.md, Week 3 edge-case validation"
     },
-    "known_failure_modes": [
-        {
-            "condition": "low-light footage",
-            "effect": "unreliable pulse signal extraction, high false-negative rate",
-            "source": "docs/failure_notes.md"
-        },
-        {
-            "condition": "clips under 2 seconds",
-            "effect": "insufficient signal for a stable pulse reading",
-            "source": "docs/failure_notes.md, Week 3 edge-case validation"
-        },
-        {
-            "condition": "partially occluded face",
-            "effect": "misleading confident-but-wrong result (e.g. false periodic noise mistaken for a real pulse, incorrect 'authentic' verdict)",
-            "source": "docs/failure_notes.md, Week 3 edge-case validation"
-        }
-    ],
-    "reliability_notes": "Best used as a secondary, explainability-focused signal — not a sole authority, especially in poor lighting, short clips, or when the face is partially occluded."
+    {
+      "condition": "partially occluded face",
+      "effect": "misleading confident-but-wrong result (e.g. false periodic noise mistaken for a real pulse, incorrect 'authentic' verdict)",
+      "source": "docs/failure_notes.md, Week 3 edge-case validation"
+    }
+  ],
+  "reliability_notes": "Best used as a secondary, explainability-focused signal \u2014 not a sole authority, especially in poor lighting, short clips, or when the face is partially occluded.",
+  "authority_tier": "secondary_proxy",
+  "cannot_solely_certify_synthetic": true,
+  "base_reliability_weight": 0.45,
+  "calibration": {
+    "modality": "video_rppg",
+    "preferred_method": "shrinkage",
+    "checkpoint": null
+  },
+  "condition_reliability": {
+    "nominal": {
+      "min_luminance": 40.0,
+      "min_duration": 5.0,
+      "valid_bpm_range": [
+        40.0,
+        180.0
+      ],
+      "weight_multiplier": 1.0,
+      "confidence_damping": 0.9
+    },
+    "invalid_or_zero_bpm": {
+      "valid_bpm_range": [
+        40.0,
+        180.0
+      ],
+      "weight_multiplier": 0.35,
+      "confidence_damping": 0.3
+    },
+    "dim_light_18_to_40": {
+      "min_luminance": 18.0,
+      "max_luminance": 40.0,
+      "weight_multiplier": 0.45,
+      "confidence_damping": 0.35
+    },
+    "severe_dark_lum_lt_18": {
+      "max_luminance": 18.0,
+      "weight_multiplier": 0.15,
+      "confidence_damping": 0.15
+    },
+    "marginal_duration_2s_to_5s": {
+      "min_duration": 2.0,
+      "max_duration": 5.0,
+      "weight_multiplier": 0.55,
+      "confidence_damping": 0.6
+    },
+    "insufficient_duration_lt_2s": {
+      "max_duration": 2.0,
+      "fatal_if_violated": true
+    },
+    "low_skin_coverage": {
+      "min_skin_ratio": 0.12,
+      "fatal_if_violated": true
+    }
+  }
 }

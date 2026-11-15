@@ -82,6 +82,7 @@ class OperatingConditions(BaseModel):
     mean_luminance: Optional[float] = None
     face_detected: bool = True
     audio_present: bool = True
+    video_bitrate_kbps: Optional[float] = None
 
 
 class ForensicClaim(BaseModel):
@@ -147,6 +148,10 @@ class ClaimAdjudication(BaseModel):
     weight_assigned: float
     discount_reason: Optional[str] = None
     findings_retained: List[str] = Field(default_factory=list)
+    authority_tier: Optional[str] = None
+    pre_calibration_confidence: Optional[float] = None
+    calibration_checkpoint: Optional[str] = None
+    applied_conditions: List[str] = Field(default_factory=list)
 
 
 class CourtAdmissibleVerdict(BaseModel):

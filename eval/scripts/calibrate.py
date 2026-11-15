@@ -25,11 +25,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -47,7 +48,7 @@ from eval.calibration.calibrators import (
 )
 from eval.calibration.datasets import get_calibration_dataset
 from eval.calibration.metrics import compute_calibration_comparison, compute_ece
-from eval.calibration.visualization import plot_reliability_diagram
+from eval.calibration import plot_reliability_diagram
 
 logging.basicConfig(
     level=logging.INFO,
@@ -107,17 +108,20 @@ def calibrate_modality(
         ckpt_dest = checkpoints_dir / ckpt_filename
         calibrator.save(ckpt_dest)
 
-        # Plot reliability diagram
+        # Plot reliability diagram (best-effort if matplotlib installed)
         fig_dest = figures_dir / f"reliability_{modality.lower()}_{method_name.lower()}.png"
-        plot_reliability_diagram(
-            before_probs=raw_scores,
-            after_probs=calibrated_probs,
-            labels=labels,
-            modality=modality,
-            method=method_name,
-            save_path=fig_dest,
-            n_bins=n_bins,
-        )
+        try:
+            plot_reliability_diagram(
+                before_probs=raw_scores,
+                after_probs=calibrated_probs,
+                labels=labels,
+                modality=modality,
+                method=method_name,
+                save_path=fig_dest,
+                n_bins=n_bins,
+            )
+        except ImportError:
+            logger.warning("matplotlib not available; skipping reliability plot for %s/%s.", modality, method_name)
 
         ckpt_path_str = str(ckpt_dest.relative_to(REPO_ROOT)).replace("\\", "/")
         fig_png_str = str(fig_dest.relative_to(REPO_ROOT)).replace("\\", "/")
@@ -235,6 +239,107 @@ def build_markdown_report(results: List[Dict[str, Any]], output_path: Path) -> N
     logger.info(f"Audit report successfully written to: {output_path}")
 
 
+def load_predictions_file(path: Path) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
+    """Loads scored predictions from CSV or JSON/JSONL with score/confidence and label/true_label."""
+    scores: List[float] = []
+    labels: List[int] = []
+    if path.suffix.lower() == ".csv":
+        with open(path, "r", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                raw_s = row.get("confidence") or row.get("score") or row.get("raw_score")
+                raw_y = row.get("label") or row.get("true_label") or row.get("y_true")
+                if raw_s is None or raw_y is None:
+                    continue
+                scores.append(float(raw_s))
+                labels.append(1 if str(raw_y).strip().lower() in {"1", "fake", "ai", "synthetic", "true"} else 0)
+    elif path.suffix.lower() == ".jsonl":
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                raw_s = row.get("confidence") if row.get("confidence") is not None else row.get("score")
+                raw_y = row.get("label") if row.get("label") is not None else row.get("true_label")
+                if raw_s is None or raw_y is None:
+                    continue
+                scores.append(float(raw_s))
+                labels.append(1 if str(raw_y).strip().lower() in {"1", "fake", "ai", "synthetic", "true"} else 0)
+    else:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        rows = payload.get("predictions", payload) if isinstance(payload, dict) else payload
+        for row in rows:
+            raw_s = row.get("confidence") if row.get("confidence") is not None else row.get("score")
+            raw_y = row.get("label") if row.get("label") is not None else row.get("true_label")
+            if raw_s is None or raw_y is None:
+                continue
+            scores.append(float(raw_s))
+            labels.append(1 if str(raw_y).strip().lower() in {"1", "fake", "ai", "synthetic", "true"} else 0)
+
+    return np.asarray(scores, dtype=float), np.asarray(labels, dtype=int), {"source_file": str(path)}
+
+
+def calibrate_predictions_file(
+    predictions_file: Path,
+    detector_id: str,
+    methods: List[str],
+    n_bins: int = 10,
+    checkpoints_dir: Path = DEFAULT_CHECKPOINTS_DIR,
+    source_label: str = "heldout_real",
+) -> Dict[str, Any]:
+    """Fits calibrators directly from a real scored predictions file with explicit provenance."""
+    raw_scores, labels, meta = load_predictions_file(predictions_file)
+    if len(raw_scores) < 4:
+        raise ValueError(f"Need >= 4 predictions to calibrate, got {len(raw_scores)} from {predictions_file}")
+
+    uncalib_metrics = compute_ece(raw_scores, labels, n_bins=n_bins)
+    results: Dict[str, Any] = {
+        "detector_id": detector_id,
+        "meta": {**meta, "source": source_label},
+        "n_samples": len(raw_scores),
+        "uncalibrated": uncalib_metrics,
+        "methods": {},
+    }
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+    prefix = detector_id.lower().replace("-", "_")
+
+    for method_name in methods:
+        calibrator = get_calibrator(method_name)
+        calibrator.fit(raw_scores, labels)
+        calibrated_probs = calibrator.predict_proba(raw_scores)
+        comparison = compute_calibration_comparison(raw_scores, calibrated_probs, labels, n_bins=n_bins)
+
+        payload = calibrator.to_dict()
+        payload.setdefault("metadata", {}).update(
+            {
+                "source": source_label,
+                "detector_id": detector_id,
+                "predictions_file": str(predictions_file.name),
+                "uncalibrated_ece": round(uncalib_metrics["ece"], 6),
+                "calibrated_ece": round(comparison["after"]["ece"], 6),
+            }
+        )
+        ckpt_dest = checkpoints_dir / f"{prefix}_{method_name.lower()}_calibrator.json"
+        ckpt_dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+        results["methods"][method_name] = {
+            "metrics": comparison["after"],
+            "ece_reduction": comparison["ece_reduction"],
+            "ece_reduction_pct": comparison["ece_reduction_pct"],
+            "calibrator_path": str(ckpt_dest),
+            "params": payload,
+        }
+        logger.info(
+            "[%s | %s] ECE: %.4f -> %.4f (-%.1f%%). Saved %s",
+            detector_id,
+            method_name,
+            uncalib_metrics["ece"],
+            comparison["after"]["ece"],
+            comparison["ece_reduction_pct"],
+            ckpt_dest.name,
+        )
+    return results
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="AEGIS Task 3 — Calibrate Detectors & Report ECE")
     parser.add_argument(
@@ -254,6 +359,24 @@ def main() -> int:
         type=str,
         default=None,
         help="Optional path to model checkpoint (for video-classifier modular drop-in)",
+    )
+    parser.add_argument(
+        "--predictions-file",
+        type=str,
+        default=None,
+        help="Optional real scored predictions file (CSV/JSON/JSONL) for held-out calibrator fitting",
+    )
+    parser.add_argument(
+        "--detector-id",
+        type=str,
+        default=None,
+        help="Detector ID prefix when using --predictions-file (e.g., detector_text, video-classifier)",
+    )
+    parser.add_argument(
+        "--source-label",
+        type=str,
+        default="heldout_real",
+        help="Metadata provenance tag stored in calibrator JSON (default: heldout_real)",
     )
     parser.add_argument(
         "--bins",
@@ -288,13 +411,27 @@ def main() -> int:
     else:
         methods = [m.strip().lower() for m in args.method.split(",") if m.strip()]
 
+    checkpoints_dir = Path(args.checkpoints_dir)
+
+    if args.predictions_file:
+        det_id = args.detector_id or args.modality
+        res = calibrate_predictions_file(
+            predictions_file=Path(args.predictions_file),
+            detector_id=det_id,
+            methods=methods,
+            n_bins=args.bins,
+            checkpoints_dir=checkpoints_dir,
+            source_label=args.source_label,
+        )
+        print(json.dumps({"detector_id": det_id, "n_samples": res["n_samples"], "uncalibrated": res["uncalibrated"]}, indent=2))
+        return 0
+
     # Parse modalities
     if args.modality.strip().lower() == "all":
         modalities = ["audio", "image", "text", "video"]
     else:
         modalities = [m.strip().lower() for m in args.modality.split(",") if m.strip()]
 
-    checkpoints_dir = Path(args.checkpoints_dir)
     figures_dir = Path(args.figures_dir)
     report_out = Path(args.report_out)
 
