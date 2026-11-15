@@ -42,7 +42,13 @@ DEFAULT_DETECTOR_WEIGHTS = {
     "video-classifier": 1.5,
     "detector_image": 1.5,
     "image": 1.5,
+    "image-mirror": 1.5,
+    "image-frequency": 0.8,
+    "image-exif": 0.5,
     "detector_text": 1.5,
+    "text-desklib": 1.5,
+    "text-stylometry": 0.7,
+    "text-perplexity": 0.7,
     "syncnet": 1.2,
     "aasist": 1.2,
     "rppg": 0.45,  # Aligned with rppg.json manifest base_reliability_weight
@@ -297,6 +303,15 @@ class JudgeArbitrator:
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
 
+        # Multi-signal corroboration boost in consensus
+        has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
+        has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
+
+        if has_img_corrob:
+            calibrated_score = max(calibrated_score, 0.90)
+        if has_txt_corrob:
+            calibrated_score = max(calibrated_score, 0.92)
+
         # Secondary proxy authority safeguard: a secondary proxy alone cannot push verdict >= SYNTHETIC
         non_gap_primary_synth = any(
             not assessments[c.detector_id].cannot_solely_certify_synthetic
@@ -533,20 +548,135 @@ class JudgeArbitrator:
                     "rPPG spectral anomaly with 0.0/invalid BPM discounted per capability manifest."
                 )
 
-        # ── Precedence Rule 8: Image & Text Multi-Signal Corroboration Note ──
+        # ── Precedence Rule 8: Image Intra-Modality Arbitration (MIRROR vs. Frequency vs. EXIF) ──
+        mirror_claim = claims_by_id.get("image-mirror") or img_claim
+        freq_claim = claims_by_id.get("image-frequency")
+        exif_claim = claims_by_id.get("image-exif")
+
+        exif_discounted = False
+        freq_discounted = False
+        image_corroborated_synthetic = False
+
+        img_flags = set()
+        if img_claim:
+            img_flags.update(img_claim.flags)
+        if freq_claim:
+            img_flags.update(freq_claim.flags)
+        if exif_claim:
+            img_flags.update(exif_claim.flags)
+
+        has_freq_anomaly = "frequency_anomaly" in img_flags or (freq_claim is not None and freq_claim.confidence >= 0.65)
+        has_exif_missing = "exif_missing" in img_flags or (exif_claim is not None and exif_claim.confidence >= 0.50)
+
+        # 7A: Missing EXIF on clean visual/spectral image is non-inculpatory (social media stripping)
+        if mirror_claim and not is_coverage_gap(mirror_claim) and mirror_claim.confidence <= 0.35 and not has_freq_anomaly:
+            if has_exif_missing or exif_claim:
+                exif_discounted = True
+                discount_reasons.append(
+                    "Rule 7A Applied (Benign Metadata Stripping): Absent EXIF metadata discounted because visual "
+                    "backbone and frequency spectrum confirm authentic structure; metadata stripping is standard on web/social platforms."
+                )
+
+        # 7B: Deepfake spatial artifacts override intact camera EXIF (forged / pasted metadata)
+        if mirror_claim and not is_coverage_gap(mirror_claim) and mirror_claim.confidence >= 0.70:
+            if exif_claim and exif_claim.confidence <= 0.35:
+                exif_discounted = True
+                discount_reasons.append(
+                    f"Rule 7B Applied (Spoofed EXIF Metadata): Visual backbone detected deepfake synthesis "
+                    f"(conf={mirror_claim.confidence:.2f}) over intact camera EXIF. EXIF containers are easily copied or preserved "
+                    "from original donor captures and do not override spatial manipulation."
+                )
+            if freq_claim and freq_claim.confidence <= 0.35:
+                freq_discounted = True
+                discount_reasons.append(
+                    f"Rule 7B Applied (Visual Manipulation Over Frequency): Visual backbone detected deepfake synthesis "
+                    f"(conf={mirror_claim.confidence:.2f}) over clean frequency spectrum; advanced synthesis bypasses crude grid checks."
+                )
+
+        # 7C: Corroboration of Deepfake Model and Frequency-Domain Grid Artifacts
+        if mirror_claim and not is_coverage_gap(mirror_claim) and mirror_claim.confidence >= 0.65 and has_freq_anomaly:
+            image_corroborated_synthetic = True
+            discount_reasons.append(
+                "Rule 7C Applied (Frequency Corroboration): Visual deepfake detection corroborated by high-frequency upsampling "
+                "grid artifacts. Multi-signal alignment indicates synthetic generator architecture."
+            )
+
+        # 7D: Isolated Frequency Anomaly on Clean Visual/Authentic Canvas
+        if mirror_claim and not is_coverage_gap(mirror_claim) and mirror_claim.confidence <= 0.30 and has_freq_anomaly:
+            freq_discounted = True
+            discount_reasons.append(
+                "Rule 7D Applied (Isolated Spectral Anomaly): Frequency anomaly attenuated because visual structure shows no "
+                "synthesis artifacts; likely attributable to JPEG block recompression or resizing."
+            )
+
+        # ── Precedence Rule 8: Text Intra-Modality Arbitration (Desklib vs. Stylometric vs. Perplexity) ──
+        text_claim = claims_by_id.get("detector_text")
+        desklib_claim = claims_by_id.get("text-desklib") or text_claim
+        stylo_claim = claims_by_id.get("text-stylometry")
+        perp_claim = claims_by_id.get("text-perplexity")
+
+        stylo_discounted = False
+        perp_discounted = False
+        text_corroborated_synthetic = False
+
+        text_flags = set()
+        if text_claim:
+            text_flags.update(text_claim.flags)
+        if stylo_claim:
+            text_flags.update(stylo_claim.flags)
+        if perp_claim:
+            text_flags.update(perp_claim.flags)
+
+        has_stylo_synthetic = "stylometry_synthetic" in text_flags or "low_vocabulary_diversity" in text_flags or (stylo_claim is not None and stylo_claim.confidence >= 0.65)
+        has_low_perp = "uniform_low_perplexity" in text_flags or (perp_claim is not None and perp_claim.confidence >= 0.65)
+
+        # 8A: Corroborated Neural + Stylometric / Perplexity Synthetic Signal
+        if desklib_claim and not is_coverage_gap(desklib_claim) and desklib_claim.confidence >= 0.65:
+            if has_stylo_synthetic or has_low_perp:
+                text_corroborated_synthetic = True
+                discount_reasons.append(
+                    "Rule 8A Applied (Multi-Signal AI Authorship): Desklib neural classifier corroborated by uniformly low "
+                    "perplexity and low sentence-length variation, confirming synthetic text generation."
+                )
+
+        # 8B: Repetitive Technical/Academic Human Text (Vocabulary Compression)
+        if desklib_claim and not is_coverage_gap(desklib_claim) and desklib_claim.confidence <= 0.35:
+            if has_stylo_synthetic or (stylo_claim is not None and stylo_claim.confidence >= 0.60):
+                stylo_discounted = True
+                discount_reasons.append(
+                    "Rule 8B Applied (Technical Jargon Exception): Stylometric repetition / low vocabulary diversity discounted "
+                    "because semantic neural classifier confirms authentic human authorship; typical of legal or scientific terminology."
+                )
+
+        # 8C: Paraphrased / Polished AI Text (Neural Precedence Over Stylometric Burstiness)
+        if desklib_claim and not is_coverage_gap(desklib_claim) and desklib_claim.confidence >= 0.70:
+            if stylo_claim is not None and stylo_claim.confidence <= 0.35:
+                stylo_discounted = True
+                discount_reasons.append(
+                    "Rule 8C Applied (Neural Precedence in Paraphrased AI): Desklib deep semantic features detect LLM synthesis "
+                    f"(conf={desklib_claim.confidence:.2f}) despite human-like stylometric variation (paraphrasing/prompt engineering)."
+                )
+            if perp_claim is not None and perp_claim.confidence <= 0.35:
+                perp_discounted = True
+                discount_reasons.append(
+                    "Rule 8C Applied (Neural Precedence Over Perplexity): Desklib deep semantic features detect LLM synthesis "
+                    f"(conf={desklib_claim.confidence:.2f}) despite high perplexity variance."
+                )
+
+        # ── Precedence Rule Multi-Signal Corroboration Note ──
         for mod_claim in (img_claim, txt_claim):
             if mod_claim and not is_coverage_gap(mod_claim):
                 mod_assess = assessments[mod_claim.detector_id]
                 if "image_forensic_signal_corroboration" in mod_assess.applied_conditions:
                     discount_reasons.append(
-                        f"Rule 8 Applied (Image Corroboration): {mod_claim.detector_id} reinforced by FFT/metadata signals."
+                        f"Rule Corroboration Applied (Image): {mod_claim.detector_id} reinforced by FFT/metadata signals."
                     )
                 elif any(
                     k in mod_assess.applied_conditions
                     for k in ("text_multi_signal_ai_corroboration", "text_multi_signal_human_corroboration")
                 ):
                     discount_reasons.append(
-                        f"Rule 8 Applied (Text Multi-Signal Corroboration): {mod_claim.detector_id} reinforced by perplexity/burstiness/Binoculars."
+                        f"Rule Corroboration Applied (Text): {mod_claim.detector_id} reinforced by perplexity/burstiness/Binoculars."
                     )
 
         # ── Execute Weighting & Adjudication ──────────────────────────────────
@@ -590,6 +720,22 @@ class JudgeArbitrator:
             elif c.detector_id == "aasist" and visual_tampering_case:
                 base_w *= 0.25  # 75% discount
                 discount_note = "Discounted under Visual Tampering Rule (authentic speech over manipulated video)"
+            elif c.detector_id == "image-exif" and exif_discounted:
+                base_w *= 0.15  # 85% discount
+                accepted_conf = 0.50
+                discount_note = "Discounted under Rule 7A / Rule 7B (EXIF subordinate to spatial/spectral analysis)"
+            elif c.detector_id == "image-frequency" and freq_discounted:
+                base_w *= 0.35  # 65% discount
+                accepted_conf = 0.45
+                discount_note = "Discounted under Rule 7B / Rule 7D (isolated frequency anomaly on authentic visual)"
+            elif c.detector_id == "text-stylometry" and stylo_discounted:
+                base_w *= 0.25  # 75% discount
+                accepted_conf = 0.50
+                discount_note = "Discounted under Rule 8B / Rule 8C (stylometry subordinate to deep neural classifier)"
+            elif c.detector_id == "text-perplexity" and perp_discounted:
+                base_w *= 0.20  # 80% discount
+                accepted_conf = 0.50
+                discount_note = "Discounted under Rule 8C (perplexity subordinate to deep neural classifier)"
 
             weighted_conf_sum += accepted_conf * base_w
             total_weight += base_w
@@ -612,6 +758,15 @@ class JudgeArbitrator:
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
 
+        # Multi-signal corroboration boost in consensus
+        has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
+        has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
+
+        if has_img_corrob:
+            calibrated_score = max(calibrated_score, 0.90)
+        if has_txt_corrob:
+            calibrated_score = max(calibrated_score, 0.92)
+
         # If face-swap or voice-clone or visual tampering detected, enforce minimum synthetic score of 0.85
         if face_swap_case:
             calibrated_score = max(calibrated_score, 0.85)
@@ -619,6 +774,10 @@ class JudgeArbitrator:
             calibrated_score = max(calibrated_score, 0.85)
         if visual_tampering_case:
             calibrated_score = max(calibrated_score, 0.85)
+        if image_corroborated_synthetic and calibrated_score < 0.90:
+            calibrated_score = max(calibrated_score, 0.92)
+        if text_corroborated_synthetic and calibrated_score < 0.90:
+            calibrated_score = max(calibrated_score, 0.93)
 
         if rppg_rule7_mode == "7A_uncertain":
             # Hold uncalibrated primary vs invalidated zero-BPM proxy safely inside UNCERTAIN band
