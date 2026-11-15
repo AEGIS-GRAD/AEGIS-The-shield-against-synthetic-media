@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 try:
     from facenet_pytorch import MTCNN
     HAS_MTCNN = True
-except ImportError:
+except Exception:
     MTCNN = None  # type: ignore[assignment,misc]
     HAS_MTCNN = False
     logger.warning(
