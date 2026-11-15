@@ -1,16 +1,19 @@
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import time
 import uuid
 import traceback
+from pathlib import Path
 from judge_bridge import run_judge
 from contextlib import asynccontextmanager
 
 from typing import Optional
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security.api_key import APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN
 try:
@@ -107,6 +110,49 @@ def health():
         "service": "aegis-orchestrator",
         "planner_mode": get_configured_planner_mode(),
     }
+
+
+_evidence_vault_instance = None
+
+
+def _get_evidence_vault():
+    """Lazy-loads UnifiedEvidenceVault from security/forensics if available."""
+    global _evidence_vault_instance
+    if _evidence_vault_instance is not None:
+        return _evidence_vault_instance
+    for candidate_root in (Path("/repo"), Path(__file__).resolve().parent.parent.parent):
+        if (candidate_root / "security" / "forensics" / "evidence_vault.py").exists():
+            if str(candidate_root) not in sys.path:
+                sys.path.insert(0, str(candidate_root))
+            break
+    try:
+        from security.forensics.evidence_vault import UnifiedEvidenceVault
+        vault_dir = os.environ.get("AEGIS_VAULT_DIR")
+        _evidence_vault_instance = UnifiedEvidenceVault(vault_dir=vault_dir) if vault_dir else UnifiedEvidenceVault()
+        return _evidence_vault_instance
+    except Exception as exc:
+        logger.warning(f"UnifiedEvidenceVault unavailable: {exc}")
+        return None
+
+
+@app.get("/vault/export/{record_id}")
+def export_evidence_bundle(record_id: str, api_key: str = Depends(get_api_key)):
+    """Exports a signed, offline-verifiable forensic evidence bundle ZIP for a verification or incident."""
+    vault = _get_evidence_vault()
+    if vault is None:
+        raise HTTPException(status_code=503, detail="Forensic evidence vault is not configured.")
+    try:
+        zip_path = vault.export_signed_bundle(record_id)
+        return FileResponse(
+            path=str(zip_path),
+            filename=zip_path.name,
+            media_type="application/zip",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Failed to export evidence bundle for '{record_id}': {exc}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {exc}")
 
 @app.post("/orchestrate", response_model=OrchestrationResponse)
 async def orchestrate(
@@ -235,6 +281,49 @@ async def orchestrate(
             fallback_reason=fallback_reason,
         )
         log_judge_report(job_id=job_id, report=judge_report)
+
+        # Persist full verification, input hash, model versions, calibration version,
+        # and debate transcript into the tamper-evident UnifiedEvidenceVault.
+        vault = _get_evidence_vault()
+        if vault is not None:
+            try:
+                input_bytes = Path(tmp_path).read_bytes()
+                model_versions = {
+                    r.detector: (r.model_version or "unknown-v0") for r in results
+                }
+                calibration_version = os.environ.get(
+                    "AEGIS_CALIBRATION_VERSION",
+                    judge_report.prompt_version or "aegis-calibrator-v1.0",
+                )
+                judge_transcript = {
+                    "judge_mode": judge_report.judge_mode,
+                    "prompt_version": judge_report.prompt_version,
+                    "llm_model": judge_report.llm_model,
+                    "llm_fallback_used": judge_report.llm_fallback_used,
+                    "debate_transcript_hash": judge_report.debate_transcript_hash,
+                    "guards_applied": judge_report.guards_applied,
+                    "forensic_justification": judge_report.verdict.forensic_justification,
+                    "cross_examination_findings": [
+                        f.model_dump() for f in judge_report.cross_examination_findings
+                    ],
+                    "rounds": [r.model_dump() for r in judge_report.rounds],
+                    "adjudication_latency_ms": judge_report.adjudication_latency_ms,
+                }
+                vault.store_verification(
+                    job_id=job_id,
+                    modality=metadata.modality,
+                    input_filename=metadata.filename,
+                    input_bytes=input_bytes,
+                    verdict=aggregated_verdict,
+                    calibrated_score=aggregated_score,
+                    detector_outputs=[r.model_dump() for r in results],
+                    model_versions=model_versions,
+                    calibration_version=calibration_version,
+                    judge_transcript=judge_transcript,
+                    siem_alert_tier=judge_report.verdict.siem_alert_tier,
+                )
+            except Exception as vault_exc:
+                logger.warning(f"Failed to seal verification in UnifiedEvidenceVault: {vault_exc}")
 
         return OrchestrationResponse(
             input_file=metadata.filename,

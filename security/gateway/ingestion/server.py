@@ -57,8 +57,8 @@ LOGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '
 wazuh_file_dest = FileAlertDestination(os.path.join(LOGS_DIR, "wazuh_alerts.jsonl")) if AlertRouter else None
 alert_router = AlertRouter(destinations=[wazuh_file_dest]) if wazuh_file_dest else None
 
-HOST = '127.0.0.1'
-PORT = 8443
+HOST = os.environ.get("AEGIS_INGESTION_HOST", "127.0.0.1")
+PORT = int(os.environ.get("AEGIS_INGESTION_PORT", "8443"))
 
 # DoS Hardening Parameters (Configurable via environment variables)
 MAX_CONCURRENT_STREAMS = int(os.environ.get("AEGIS_MAX_CONCURRENT_STREAMS", "20"))
@@ -564,8 +564,14 @@ async def start_server():
     client_ca = os.path.join(cert_dir, 'ca.crt')
 
     if not os.path.exists(server_cert):
-        print(f"FATAL: Certificates not found in {cert_dir}. Run generate_certs.py first.")
-        sys.exit(1)
+        print(f"[AEGIS GATEWAY] Certificates not found in {cert_dir}. Auto-generating mTLS PKI...")
+        try:
+            import subprocess
+            gen_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'transport', 'generate_certs.py'))
+            subprocess.run([sys.executable, gen_script], check=True)
+        except Exception as cert_err:
+            print(f"FATAL: Failed to auto-generate certificates in {cert_dir}: {cert_err}")
+            sys.exit(1)
 
     # Configure mTLS context based on active security profile
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
