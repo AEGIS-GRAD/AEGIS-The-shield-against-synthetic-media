@@ -17,6 +17,8 @@ class EvidenceDomain(str, Enum):
     AUDIOVISUAL_SYNC = "audiovisual_sync"
     AUDIO_ACOUSTIC = "audio_acoustic"
     METADATA_INTEGRITY = "metadata_integrity"
+    IMAGE_FORENSIC = "image_forensic"
+    TEXT_FORENSIC = "text_forensic"
 
 
 class ClaimPolarity(str, Enum):
@@ -53,11 +55,29 @@ class AudioMetrics(BaseModel):
     speech_detected: bool = True
 
 
+class ImageForensicMetrics(BaseModel):
+    frequency_anomaly_detected: bool = False
+    exif_metadata_present: bool = True
+    model_score: Optional[float] = None
+    fft_high_frequency_energy: Optional[float] = None
+    grid_artifact_prominence: Optional[float] = None
+
+
+class TextForensicMetrics(BaseModel):
+    perplexity_score: Optional[float] = None
+    perplexity_variance: Optional[float] = None
+    type_token_ratio: Optional[float] = None
+    sentence_length_cov: Optional[float] = None
+    ngram_repetition_rate: Optional[float] = None
+
+
 class ObservationalMetrics(BaseModel):
     spatial: Optional[SpatialMetrics] = None
     physiological: Optional[PhysiologicalMetrics] = None
     audiovisual: Optional[AudioVisualMetrics] = None
     audio: Optional[AudioMetrics] = None
+    image: Optional[ImageForensicMetrics] = None
+    text: Optional[TextForensicMetrics] = None
 
 
 class AttenuationFactors(BaseModel):

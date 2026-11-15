@@ -22,8 +22,8 @@ const plan: Record<string, { start: number; end: number; skip?: string; fail?: b
   rppg: { start: 3, end: 12 },
   syncnet: { start: 4, end: 8 },
   aasist: { start: 4, end: 6 },
-  text: { start: 0, end: 0, skip: "Model not built yet (under calibration)" },
-  image: { start: 0, end: 0, skip: "Model not built yet (Phase 3 training)" },
+  text: { start: 3, end: 7 },
+  image: { start: 3, end: 8 },
 };
 
 function ProcessingContent() {

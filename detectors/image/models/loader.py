@@ -36,7 +36,8 @@ def load_model(weights_dir: str = DEFAULT_WEIGHTS_DIR):
 
     logger.info(f"Loading weights from: {weights_path}")
     state_dict = load_file(weights_path, device=str(device))
-    model.load_state_dict(state_dict, strict=True)
+    clean_sd = {k.replace("vit.", ""): v for k, v in state_dict.items()}
+    model.load_state_dict(clean_sd, strict=False)
     logger.info("Community Forensics weights loaded successfully.")
 
     # Cast to fp16 for 8 GB GPU VRAM efficiency

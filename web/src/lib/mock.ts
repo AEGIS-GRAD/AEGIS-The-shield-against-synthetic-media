@@ -8,8 +8,8 @@ export const detectors = [
   { id: "rppg", name: "rPPG Heartbeat", model: "POS + band-pass", modality: "video" as Modality, latency: "3.1s", health: "degraded" as Health },
   { id: "syncnet", name: "SyncNet", model: "SyncNet v2", modality: "video" as Modality, latency: "1.8s", health: "healthy" as Health },
   { id: "aasist", name: "AASIST", model: "AASIST-L", modality: "audio" as Modality, latency: "0.9s", health: "healthy" as Health },
-  { id: "text", name: "Text Detector", model: "Binoculars", modality: "text" as Modality, latency: "0.6s", health: "healthy" as Health },
-  { id: "image", name: "Image Detector", model: "UnivFD (CLIP)", modality: "image" as Modality, latency: "0.7s", health: "degraded" as Health },
+  { id: "text", name: "Text Detector", model: "Desklib DeBERTa-v3", modality: "text" as Modality, latency: "0.4s", health: "healthy" as Health },
+  { id: "image", name: "Image Detector", model: "Community Forensics", modality: "image" as Modality, latency: "0.6s", health: "healthy" as Health },
 ];
 
 export const analyses = [

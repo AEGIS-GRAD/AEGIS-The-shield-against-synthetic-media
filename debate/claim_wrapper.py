@@ -85,10 +85,12 @@ from debate.schemas import (
     ClaimPolarity,
     EvidenceDomain,
     ForensicClaim,
+    ImageForensicMetrics,
     ObservationalMetrics,
     OperatingConditions,
     PhysiologicalMetrics,
     SpatialMetrics,
+    TextForensicMetrics,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,8 +107,14 @@ DOMAIN_BY_DETECTOR: Dict[str, EvidenceDomain] = {
     "rppg": EvidenceDomain.PHYSIOLOGICAL_BVP,
     "syncnet": EvidenceDomain.AUDIOVISUAL_SYNC,
     "aasist": EvidenceDomain.AUDIO_ACOUSTIC,
-    "detector_image": EvidenceDomain.SPATIAL_PIXEL,
-    "detector_text": EvidenceDomain.METADATA_INTEGRITY,
+    "detector_image": EvidenceDomain.IMAGE_FORENSIC,
+    "image-mirror": EvidenceDomain.IMAGE_FORENSIC,
+    "image-frequency": EvidenceDomain.IMAGE_FORENSIC,
+    "image-exif": EvidenceDomain.METADATA_INTEGRITY,
+    "detector_text": EvidenceDomain.TEXT_FORENSIC,
+    "text-desklib": EvidenceDomain.TEXT_FORENSIC,
+    "text-stylometry": EvidenceDomain.TEXT_FORENSIC,
+    "text-perplexity": EvidenceDomain.TEXT_FORENSIC,
 }
 
 # Order used by wrap_video_detector_outputs (matches the arbitrator's precedence rules).
@@ -448,43 +456,30 @@ def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
 
     has_freq = "frequency_anomaly" in flags
     has_exif = "exif_missing" in flags
-    has_sw_tag = "software_tag_present" in flags
-    has_low_res = "low_resolution" in flags or "heavy_compression" in flags
+
+    if has_freq and has_exif:
+        evidence_summary = "frequency-domain grid artifacts present, no camera metadata"
+    elif has_freq and not has_exif:
+        evidence_summary = "frequency-domain grid artifacts present, camera metadata intact"
+    elif has_exif and not has_freq:
+        evidence_summary = "no camera metadata, no high-frequency grid anomalies"
+    else:
+        evidence_summary = "clean frequency spectrum and intact camera metadata"
 
     if polarity == ClaimPolarity.SYNTHETIC:
-        detail_parts = []
-        if has_freq:
-            detail_parts.append("frequency-domain upsampling grid artefacts")
-        if has_sw_tag:
-            detail_parts.append("generative/editing software signature in metadata")
-        if has_exif:
-            detail_parts.append("absent or inconsistent EXIF metadata")
-        detail = " and ".join(detail_parts) if detail_parts else "spatial pixel anomalies"
         claim = (
-            f"Image-level analysis found {_strength(p)} evidence of synthetic generation "
-            f"({detail}; estimated {pct} probability of synthetic content)."
+            f"Image analysis found {_strength(p)} evidence of synthetic generation "
+            f"({evidence_summary}; estimated {pct} probability of synthetic content)."
         )
     elif polarity == ClaimPolarity.AUTHENTIC:
         claim = (
-            f"Image-level analysis found no significant manipulation artefacts "
-            f"(estimated {pct} probability of synthetic content)."
+            f"Image analysis found no significant manipulation artifacts "
+            f"({evidence_summary}; estimated {pct} probability of synthetic content)."
         )
-        if has_exif and not has_freq and not has_sw_tag:
-            claim += " Note: EXIF metadata is absent, which is non-dispositive in re-saved images."
     else:
-        corroborators = []
-        if has_freq:
-            corroborators.append("frequency anomaly")
-        if has_sw_tag:
-            corroborators.append("software metadata tag")
-        if has_exif and not has_freq and not has_sw_tag:
-            corroborators.append("non-dispositive EXIF absence")
-        if has_low_res:
-            corroborators.append("low resolution/heavy compression")
-        extra = f" (secondary indicators: {', '.join(corroborators)})" if corroborators else ""
         claim = (
-            f"Image-level analysis was borderline ({pct} probability of synthetic content){extra}: "
-            "the primary visual score sits near the decision boundary."
+            f"Image analysis was borderline ({pct} probability of synthetic content): "
+            f"{evidence_summary}."
         )
 
     return _Adapted(
@@ -495,7 +490,57 @@ def _adapt_detector_image(r: Dict[str, Any], flags: List[str]) -> _Adapted:
             spatial=SpatialMetrics(
                 sampled_frames=1,
                 suspicious_frame_ratio=round(p, 4),
-            )
+            ),
+            image=ImageForensicMetrics(
+                frequency_anomaly_detected=has_freq,
+                exif_metadata_present=not has_exif,
+                model_score=r.get("raw_score"),
+            ),
+        ),
+    )
+
+
+def _adapt_image_mirror(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    p = _clamp01(r["confidence"])
+    polarity = _polarity_from_p(p)
+    pct = f"{p:.0%}"
+    if polarity == ClaimPolarity.SYNTHETIC:
+        claim = f"MIRROR visual backbone detected {_strength(p)} deepfake artifacts ({pct} synthetic probability)."
+    elif polarity == ClaimPolarity.AUTHENTIC:
+        claim = f"MIRROR visual backbone confirmed authentic natural image structure ({pct} synthetic probability)."
+    else:
+        claim = f"MIRROR visual backbone was borderline ({pct} synthetic probability)."
+    return _Adapted(p_synthetic=p, polarity=polarity, claim=claim)
+
+
+def _adapt_image_frequency(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    p = _clamp01(r.get("confidence", 0.85 if "frequency_anomaly" in flags else 0.15))
+    polarity = _polarity_from_p(p)
+    if "frequency_anomaly" in flags or polarity == ClaimPolarity.SYNTHETIC:
+        claim = "frequency-domain grid artifacts present from upsampling convolutions or diffusion latent decoding."
+    else:
+        claim = "clean frequency spectrum with natural power-law decay."
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            image=ImageForensicMetrics(frequency_anomaly_detected="frequency_anomaly" in flags)
+        ),
+    )
+
+
+def _adapt_image_exif(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    exif_missing = "exif_missing" in flags or r.get("exif_missing", False)
+    p = 0.55 if exif_missing else 0.10
+    polarity = ClaimPolarity.INCONCLUSIVE if exif_missing else ClaimPolarity.AUTHENTIC
+    claim = "no camera metadata found in image container." if exif_missing else "valid camera hardware EXIF metadata verified."
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            image=ImageForensicMetrics(exif_metadata_present=not exif_missing)
         ),
     )
 
@@ -528,66 +573,103 @@ def _adapt_detector_text(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     polarity = _polarity_from_p(p)
     pct = f"{p:.0%}"
 
+    has_low_perp = "uniform_low_perplexity" in flags or "low_perplexity" in flags or (r.get("perplexity_variance") is not None and r.get("perplexity_variance") < 0.25)
+    has_low_var = "low_sentence_length_variation" in flags or "low_burstiness" in flags or (r.get("sentence_length_cov") is not None and r.get("sentence_length_cov") < 0.35)
     has_stylo = "stylometry_synthetic" in flags
     has_vocab = "low_vocabulary_diversity" in flags
     has_ngram = "high_ngram_repetition" in flags
-    has_low_ppl = "low_perplexity" in flags
-    has_low_burst = "low_burstiness" in flags
-    has_high_ppl = "high_perplexity" in flags
-    has_nat_burst = "natural_burstiness" in flags
-    has_bino_ok = "binoculars_corroborated" in flags
-    has_bino_div = "binoculars_divergence" in flags
-    has_chunk_div = "chunk_disagreement" in flags
-    is_short_attenuated = "short_text_attenuated" in flags
+
+    if has_low_perp and has_low_var:
+        stylometric_summary = "uniformly low perplexity, low sentence-length variation"
+    elif has_stylo or has_vocab:
+        stylometric_summary = "low vocabulary diversity and repetitive stylometric pacing"
+    elif has_ngram:
+        stylometric_summary = "high n-gram repetition across discourse segments"
+    else:
+        stylometric_summary = "natural syntactic burstiness and lexical diversity"
 
     if polarity == ClaimPolarity.SYNTHETIC:
-        detail_parts = []
-        if has_bino_ok:
-            detail_parts.append("Binoculars-small cross-model corroboration")
-        if has_low_ppl or has_low_burst:
-            detail_parts.append("low language-model perplexity / uniform burstiness")
-        if has_stylo:
-            detail_parts.append("synthetic stylometric patterns")
-        if has_vocab:
-            detail_parts.append("low vocabulary diversity")
-        if has_ngram:
-            detail_parts.append("high n-gram repetition")
-        detail = ", ".join(detail_parts) if detail_parts else "AI-generated stylistic markers"
         claim = (
-            f"Text-level analysis found {_strength(p)} evidence of AI authorship "
-            f"({detail}; estimated {pct} probability of synthetic content)."
+            f"Text analysis found {_strength(p)} evidence of AI authorship "
+            f"({stylometric_summary}; estimated {pct} probability of synthetic content)."
         )
     elif polarity == ClaimPolarity.AUTHENTIC:
-        detail_parts = []
-        if has_high_ppl or has_nat_burst:
-            detail_parts.append("elevated perplexity and natural sentence burstiness")
-        detail = ", ".join(detail_parts) if detail_parts else "stylometric patterns consistent with human authorship"
         claim = (
-            f"Text-level analysis found {detail} "
-            f"(estimated {pct} probability of synthetic content)."
+            f"Text analysis found patterns consistent with human authorship "
+            f"({stylometric_summary}; estimated {pct} probability of synthetic content)."
         )
     else:
-        cues = []
-        if has_bino_ok:
-            cues.append("Binoculars corroboration")
-        if has_low_ppl and has_low_burst:
-            cues.append("low perplexity and low burstiness")
-        elif has_high_ppl and has_nat_burst:
-            cues.append("natural perplexity and burstiness")
-        if is_short_attenuated:
-            cues.append("short-text confidence attenuation (40-149 words)")
-        if has_chunk_div or has_bino_div:
-            cues.append("internal chunk/signal divergence")
-        extra = f" [{'; '.join(cues)}]" if cues else ""
         claim = (
-            f"Text-level analysis was borderline ({pct} probability of synthetic content){extra}: "
-            "primary transformer probability sits in the uncertain band."
+            f"Text analysis was borderline ({pct} probability of synthetic content): "
+            f"{stylometric_summary}."
         )
 
     return _Adapted(
         p_synthetic=p,
         polarity=polarity,
         claim=claim,
+        metrics=ObservationalMetrics(
+            text=TextForensicMetrics(
+                perplexity_score=r.get("perplexity_score"),
+                perplexity_variance=r.get("perplexity_variance"),
+                type_token_ratio=r.get("type_token_ratio"),
+                sentence_length_cov=r.get("sentence_length_cov"),
+                ngram_repetition_rate=r.get("ngram_repetition_rate"),
+            )
+        ),
+    )
+
+
+def _adapt_text_desklib(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    p = _clamp01(r["confidence"])
+    polarity = _polarity_from_p(p)
+    pct = f"{p:.0%}"
+    if polarity == ClaimPolarity.SYNTHETIC:
+        claim = f"Fine-tuned Desklib DeBERTa model detected {_strength(p)} markers of LLM generation ({pct} synthetic probability)."
+    elif polarity == ClaimPolarity.AUTHENTIC:
+        claim = f"Fine-tuned Desklib DeBERTa model verified human authorship semantics ({pct} synthetic probability)."
+    else:
+        claim = f"Fine-tuned Desklib DeBERTa classification was borderline ({pct} synthetic probability)."
+    return _Adapted(p_synthetic=p, polarity=polarity, claim=claim)
+
+
+def _adapt_text_stylometry(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    p = _clamp01(r.get("confidence", 0.75 if "stylometry_synthetic" in flags else 0.20))
+    polarity = _polarity_from_p(p)
+    if "stylometry_synthetic" in flags or polarity == ClaimPolarity.SYNTHETIC:
+        claim = "low vocabulary diversity and low sentence-length variation characteristic of LLM output."
+    else:
+        claim = "natural lexical variety and human-like sentence length variance."
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            text=TextForensicMetrics(
+                type_token_ratio=r.get("type_token_ratio"),
+                sentence_length_cov=r.get("sentence_length_cov"),
+            )
+        ),
+    )
+
+
+def _adapt_text_perplexity(r: Dict[str, Any], flags: List[str]) -> _Adapted:
+    p = _clamp01(r.get("confidence", 0.85 if "uniform_low_perplexity" in flags else 0.20))
+    polarity = _polarity_from_p(p)
+    if "uniform_low_perplexity" in flags or polarity == ClaimPolarity.SYNTHETIC:
+        claim = "uniformly low perplexity across all sampled sentence windows."
+    else:
+        claim = "high perplexity variance with natural burstiness."
+    return _Adapted(
+        p_synthetic=p,
+        polarity=polarity,
+        claim=claim,
+        metrics=ObservationalMetrics(
+            text=TextForensicMetrics(
+                perplexity_score=r.get("perplexity_score"),
+                perplexity_variance=r.get("perplexity_variance"),
+            )
+        ),
     )
 
 
@@ -597,7 +679,13 @@ _ADAPTERS: Dict[str, Callable[[Dict[str, Any], List[str]], _Adapted]] = {
     "syncnet": _adapt_syncnet,
     "aasist": _adapt_aasist,
     "detector_image": _adapt_detector_image,
+    "image-mirror": _adapt_image_mirror,
+    "image-frequency": _adapt_image_frequency,
+    "image-exif": _adapt_image_exif,
     "detector_text": _adapt_detector_text,
+    "text-desklib": _adapt_text_desklib,
+    "text-stylometry": _adapt_text_stylometry,
+    "text-perplexity": _adapt_text_perplexity,
 }
 
 
@@ -615,7 +703,8 @@ def wrap_detector_response(
         )
 
     evidence = response.get("evidence") or {}
-    flags, _ = sanitize_flags(list(evidence.get("flags") or []))
+    raw_flags = list(evidence.get("flags") or response.get("flags") or [])
+    flags, _ = sanitize_flags(raw_flags)
     adapted = adapter(response, flags)
     safe_claim = sanitize_claim_text(
         adapted.claim, max_len=MAX_FORENSIC_CLAIM_LEN, source=f"wrapped_claim:{detector_id}"

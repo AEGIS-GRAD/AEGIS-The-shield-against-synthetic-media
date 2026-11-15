@@ -60,4 +60,10 @@ detectors/text-detector/models/*
 !detectors/text-detector/models/desklib-finetuned/
 !detectors/text-detector/models/signal_calibration.json
 
+# Image detector weights & clones
+*.safetensors
+detectors/image/weights/*.safetensors
+detectors/detector_image/models/
+detectors/detector_image/community_forensics/
+
 
