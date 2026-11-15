@@ -30,3 +30,44 @@ audio:
     train: "ASVspoof2019.LA.cm.train.trn.txt"
     dev: "ASVspoof2019.LA.cm.dev.trl.txt"
     eval: "ASVspoof2019.LA.cm.eval.trl.txt"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 4 (Month 3) - image / text / audio-guardrail evaluation sets.
+# Raw data is downloaded MANUALLY to paths OUTSIDE the repo (see eval/DATA.md).
+# Staged sets are written under eval/data/ (gitignored); manifests alongside them.
+# ─────────────────────────────────────────────────────────────────────────────
+task4:
+  raw:
+    openfake_root: "D:/datasets/OpenFake"            # local HF snapshot (parquet)
+    openfake_reddit_root: "D:/datasets/OpenFake_reddit"  # Reddit / in-the-wild split, kept apart
+    human_text_root: "D:/datasets/cnn_dailymail"     # local parquet/csv with article + highlights
+    esc50_root: "D:/datasets/ESC-50-master"
+    music_noise_root: "D:/datasets/music_noise"      # optional (MUSAN music/noise, FMA ...)
+  image:
+    eval_dir: eval/data/image_eval
+    manifest: eval/data/image_eval/manifest.csv
+    fields: {image: image, label: label, generator: model}   # VERIFY against the downloaded parquet
+    eval_generators: []     # whole generators held out of fine-tuning (use --list-generators)
+    finetune_dir: data/finetune/image                         # fine-tuning subset, for the leakage check
+    n_per_class: 150
+    n_variants_per_class: 50
+    reddit_n_per_class: 50
+    seed: 42
+  text:
+    eval_dir: eval/data/text_eval
+    manifest: eval/data/text_eval/manifest.jsonl
+    llm_model: claude-sonnet-4-6    # add a second LLM family for diversity if possible
+    n_per_cell: 50
+    short_words: [40, 80]
+    long_words: [250, 400]
+    finetune_dir: data/finetune/text
+    seed: 42
+  audio_nonspeech:
+    eval_dir: eval/data/audio_nonspeech
+    manifest: eval/data/audio_nonspeech/manifest.csv
+    n_clips: 60
+  audio_dubbed:
+    eval_dir: eval/data/edge_cases/dubbed     # existing edge-case folder (see build_eval_set.py)
+    manifest: eval/data/edge_cases/dubbed/manifest.csv
+    min_clips: 30
+  report: eval/reports/task4_split_note.md

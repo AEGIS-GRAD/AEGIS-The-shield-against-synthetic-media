@@ -5,6 +5,7 @@ Computes:
 - Cross-correlation / Euclidean or Cosine distance across temporal offsets (e.g. [-15, +15] frames).
 - Optimal offset (arg min distance) and sync confidence.
 - Maps sync mismatch to AEGIS normalized confidence (0.0 = Authentic, 1.0 = Synthetic/Dubbed).
+- Applies dubbing-awareness discount to prevent false-fake verdicts on legitimately dubbed content.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import torch
 import torch.nn.functional as F
 
 from models.syncnet import SyncNetModel, load_syncnet_model
-from schemas import Evidence
+from schemas import Evidence, DubbingMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -133,11 +134,24 @@ class SyncNetInference:
         vid_tensors: List[torch.Tensor],
         aud_tensors: Optional[List[torch.Tensor]],
         has_audio: bool,
+        audio_waveform: Optional[np.ndarray] = None,
+        audio_sample_rate: int = 16000,
+        audio_path: Optional[str] = None,
     ) -> Tuple[float, float, Evidence]:
         """Calculates normalized P(synthetic) score and contextual debate evidence.
 
-        Returns:
-            Tuple of (confidence [0.0, 1.0], raw_score, Evidence).
+        Parameters
+        ----------
+        vid_tensors:        Pre-extracted lip video window tensors.
+        aud_tensors:        Pre-extracted audio MFCC tensors.
+        has_audio:          Whether the video has an audio track at all.
+        audio_waveform:     Raw mono float32 waveform (optional) for dubbing analysis.
+        audio_sample_rate:  Sample rate of ``audio_waveform``.
+        audio_path:         File path of the source video (optional, for manifest lookup).
+
+        Returns
+        -------
+        Tuple of (confidence [0.0, 1.0], raw_score, Evidence).
         """
         if not has_audio or aud_tensors is None or len(aud_tensors) == 0:
             return (
@@ -198,4 +212,59 @@ class SyncNetInference:
             )
             flags.extend(["sync_offset_detected", "audio_visual_mismatch"])
 
-        return round(p_synthetic, 4), round(raw_score, 4), Evidence(claim=claim, flags=flags)
+        # ── Dubbing Awareness Discount ─────────────────────────────────────────
+        dubbing_meta: Optional[DubbingMetadata] = None
+        try:
+            from dubbing_awareness import estimate_dubbing_confidence
+
+            # Build waveform from aud_tensors if no explicit waveform provided
+            wav = audio_waveform
+            if wav is None and aud_tensors:
+                # Rough proxy: concatenate MFCC tensors back into a 1-D signal
+                # (we just need something for the acoustic features)
+                try:
+                    concat = torch.cat(aud_tensors, dim=0).cpu().numpy()
+                    wav = concat.flatten().astype(np.float32)
+                    audio_sample_rate = 16000
+                except Exception:
+                    wav = np.zeros(16000, dtype=np.float32)
+
+            dub_result = estimate_dubbing_confidence(
+                waveform=wav if wav is not None else np.zeros(16000, dtype=np.float32),
+                sample_rate=audio_sample_rate,
+                audio_path=audio_path,
+            )
+
+            raw_p_synthetic = p_synthetic
+            p_synthetic = dub_result.apply_discount(p_synthetic)
+
+            dubbing_meta = DubbingMetadata(
+                is_dubbed=dub_result.is_dubbed,
+                dubbing_confidence=dub_result.dubbing_confidence,
+                language_mismatch_prob=dub_result.language_mismatch_prob,
+                discount_factor=dub_result.discount_factor,
+                raw_syncnet_confidence=round(raw_p_synthetic, 4),
+                backend_used=dub_result.backend_used,
+                extra=dub_result.metadata if dub_result.metadata else None,
+            )
+
+            # Merge dubbing flags into the main flags list
+            for f in dub_result.dubbing_flags:
+                if f not in flags:
+                    flags.append(f)
+
+            if dub_result.is_dubbed and dub_result.dubbing_confidence >= 0.55:
+                claim += (
+                    f" Note: dubbing-awareness step detected possible dubbed content "
+                    f"(confidence {dub_result.dubbing_confidence:.2f}); "
+                    f"SyncNet confidence down-weighted by factor {dub_result.discount_factor:.2f}."
+                )
+
+        except Exception as dub_exc:
+            logger.warning("Dubbing awareness step failed: %s", dub_exc)
+
+        return (
+            round(p_synthetic, 4),
+            round(raw_score, 4),
+            Evidence(claim=claim, flags=flags, dubbing_metadata=dubbing_meta),
+        )

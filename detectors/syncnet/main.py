@@ -208,11 +208,49 @@ async def detect(
                 detail=f"Failed to process video media: {exc}",
             )
 
+        # Extract raw audio waveform for dubbing-awareness step
+        raw_audio_waveform = None
+        audio_sample_rate = 16000
+        if has_audio:
+            try:
+                from preprocess import SyncNetPreprocessor as _Pre
+                import soundfile as _sf, io as _io
+                # Use ffmpeg to extract a short audio segment for dubbing analysis
+                import subprocess, tempfile
+                try:
+                    import imageio_ffmpeg
+                    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                except Exception:
+                    ffmpeg_exe = "ffmpeg"
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as _tmp:
+                    _tmp_path = _tmp.name
+                _res = subprocess.run(
+                    [ffmpeg_exe, "-y", "-i", target_video_path,
+                     "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                     "-t", "10",  # first 10 seconds is enough for dubbing check
+                     _tmp_path],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                if _res.returncode == 0:
+                    import numpy as _np
+                    raw_audio_waveform, audio_sample_rate = _sf.read(_tmp_path, dtype="float32")
+                    if raw_audio_waveform.ndim > 1:
+                        raw_audio_waveform = _np.mean(raw_audio_waveform, axis=1)
+                try:
+                    import os as _os; _os.remove(_tmp_path)
+                except Exception:
+                    pass
+            except Exception as _dub_exc:
+                logger.debug("Could not extract raw waveform for dubbing check: %s", _dub_exc)
+
         # Run inference & scoring
         confidence, raw_score, evidence = inference.score_video(
             vid_tensors=vid_seqs,
             aud_tensors=aud_seqs,
             has_audio=has_audio,
+            audio_waveform=raw_audio_waveform,
+            audio_sample_rate=audio_sample_rate,
+            audio_path=target_video_path,
         )
 
         end_time = time.perf_counter()
