@@ -1,32 +1,60 @@
 {
-    "detector_name": "aasist",
-    "modality": [
-        "audio"
-    ],
-    "version": "aasist-v1.2",
-    "description": "Detects synthetic/spoofed speech using spectro-temporal graph attention.",
-    "input_constraints": {
-        "requires_audio": true,
-        "min_duration_seconds": 1.0,
-        "max_duration_seconds": null,
-        "supported_formats": [
-            ".wav",
-            ".mp3"
-        ]
+  "detector_name": "aasist",
+  "modality": [
+    "audio"
+  ],
+  "version": "aasist-v1.2",
+  "description": "Detects synthetic/spoofed speech using spectro-temporal graph attention.",
+  "input_constraints": {
+    "requires_audio": true,
+    "min_duration_seconds": 1.0,
+    "max_duration_seconds": null,
+    "supported_formats": [
+      ".wav",
+      ".mp3"
+    ]
+  },
+  "performance": {
+    "avg_latency_ms": null,
+    "p95_latency_ms": null,
+    "avg_ram_usage_mb": null,
+    "avg_vram_usage_mb": null,
+    "measured_on": "PENDING \u2014 awaiting Task #1 benchmark report"
+  },
+  "known_failure_modes": [
+    {
+      "condition": "very short audio clips (under 1 second)",
+      "effect": "unreliable or misfiring predictions",
+      "source": "docs/failure_notes.md"
+    }
+  ],
+  "reliability_notes": "Trustworthy on clean, longer clips; treat results on sub-1s audio with low confidence.",
+  "authority_tier": "primary",
+  "base_reliability_weight": 1.2,
+  "calibration": {
+    "modality": "audio",
+    "preferred_method": "temperature",
+    "checkpoint": "eval/calibration/checkpoints/audio_temperature_calibrator.json"
+  },
+  "condition_reliability": {
+    "nominal": {
+      "min_duration": 2.0,
+      "weight_multiplier": 1.0,
+      "confidence_damping": 1.0
     },
-    "performance": {
-        "avg_latency_ms": null,
-        "p95_latency_ms": null,
-        "avg_ram_usage_mb": null,
-        "avg_vram_usage_mb": null,
-        "measured_on": "PENDING — awaiting Task #1 benchmark report"
+    "short_audio_1s_to_2s": {
+      "min_duration": 1.0,
+      "max_duration": 2.0,
+      "weight_multiplier": 0.5,
+      "confidence_damping": 0.8
     },
-    "known_failure_modes": [
-        {
-            "condition": "very short audio clips (under 1 second)",
-            "effect": "unreliable or misfiring predictions",
-            "source": "docs/failure_notes.md"
-        }
-    ],
-    "reliability_notes": "Trustworthy on clean, longer clips; treat results on sub-1s audio with low confidence."
+    "insufficient_duration_lt_1s": {
+      "max_duration": 1.0,
+      "fatal_if_violated": true
+    },
+    "noisy_or_non_speech": {
+      "weight_multiplier": 0.6,
+      "confidence_damping": 0.8
+    }
+  }
 }

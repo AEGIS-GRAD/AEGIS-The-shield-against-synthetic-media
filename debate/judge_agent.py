@@ -23,7 +23,12 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from debate.arbitrator import JudgeArbitrator
+from debate.arbitrator import (
+    AUTHENTIC_VERDICT_THRESHOLD,
+    SYNTHETIC_VERDICT_THRESHOLD,
+    JudgeArbitrator,
+)
+from debate.calibration import CalibratorRegistry
 from debate.claim_wrapper import (
     wrap_detector_response,
     wrap_video_detector_outputs,
@@ -34,6 +39,7 @@ from debate.disagreement import (
 )
 from debate.judge_prompt import JUDGE_PROMPT_VERSION, build_judge_prompt
 from debate.llm_client import call_judge_llm
+from debate.manifest_reliability import ManifestReliabilityEngine
 from debate.prompt_security import (
     MAX_FORENSIC_CLAIM_LEN,
     sanitize_claim_text,
@@ -67,11 +73,27 @@ class JudgeAgent:
         arbitrator: Optional[JudgeArbitrator] = None,
         manifests_dir: Optional[Path] = None,
         weights: Optional[Dict[str, float]] = None,
+        reliability_engine: Optional[ManifestReliabilityEngine] = None,
+        calibrator_registry: Optional[CalibratorRegistry] = None,
+        apply_calibrated_video_checkpoint: bool = False,
     ):
         self.mode = "llm" if mode.lower() in ("llm", "llm_agentic_judge", "agentic") else "deterministic"
-        self.arbitrator = arbitrator or JudgeArbitrator(weights=weights)
         self.manifests_dir = manifests_dir or DEFAULT_MANIFESTS_DIR
         self._manifests_cache: Dict[str, Dict[str, Any]] = self._load_manifests()
+        rel_engine = reliability_engine or (
+            ManifestReliabilityEngine(manifests=self._manifests_cache)
+            if manifests_dir is not None and self._manifests_cache
+            else ManifestReliabilityEngine()
+        )
+        cal_reg = calibrator_registry or CalibratorRegistry(
+            apply_calibrated_video_checkpoint=apply_calibrated_video_checkpoint
+        )
+        self.arbitrator = arbitrator or JudgeArbitrator(
+            weights=weights,
+            reliability_engine=rel_engine,
+            calibrator_registry=cal_reg,
+            apply_calibrated_video_checkpoint=apply_calibrated_video_checkpoint,
+        )
 
     def _load_manifests(self) -> Dict[str, Dict[str, Any]]:
         """Loads capability manifests if present on disk, otherwise empty cache."""
@@ -427,6 +449,41 @@ class JudgeAgent:
                     )
                 )
 
+            # 5. Manifest Per-Condition Reliability & Task 3 Calibration Provenance
+            cal_out = self.arbitrator.calibrator_registry.calibrate_score(
+                det,
+                c.confidence,
+                model_version=c.model_version,
+                coverage_gap=is_coverage_gap(c),
+                manifest=manifest or self.arbitrator.reliability_engine.get_manifest(det, c.model_version),
+            )
+            if cal_out.calibrator_applied:
+                findings.append(
+                    CrossExaminationFinding(
+                        detector_id=det,
+                        check_category="probability_calibration",
+                        severity="INFO",
+                        finding=(
+                            f"Applied Task 3 {cal_out.calibrator_type} calibration "
+                            f"({cal_out.checkpoint_name}): raw={cal_out.raw_confidence:.4f} -> "
+                            f"calibrated={cal_out.calibrated_confidence:.4f}."
+                        ),
+                        source=cal_out.checkpoint_name,
+                    )
+                )
+            assess = self.arbitrator.reliability_engine.evaluate_claim(
+                c,
+                conditions=conditions,
+                is_coverage_gap=is_coverage_gap(c),
+                calibrated_confidence=cal_out.calibrated_confidence if cal_out.calibrator_applied else None,
+                all_claims=claims,
+            )
+            existing_msgs = {(f.detector_id, f.finding) for f in findings}
+            for mf in assess.findings:
+                if (mf.detector_id, mf.finding) not in existing_msgs:
+                    findings.append(mf)
+                    existing_msgs.add((mf.detector_id, mf.finding))
+
         return findings
 
     # ── Round 3: Judge Guards Policy Engine ──────────────────────────────────
@@ -439,15 +496,13 @@ class JudgeAgent:
     ) -> Tuple[CourtAdmissibleVerdict, List[str]]:
         """Applies AEGIS forensic integrity guardrails.
 
-        Guards only ever downgrade toward INTEGRITY_UNKNOWN, never toward AUTHENTIC.
+        Guards prevent uncorroborated or contradictory false-authentics (G1/G2A)
+        and block secondary proxies from solo-certifying SYNTHETIC (G2B).
         """
         guards_applied: List[str] = []
         active_claims = [c for c in claims if not is_coverage_gap(c)]
 
         # ── Guard 1 (G1): Unresolved Polarity Conflict Anti-Default ──────────
-        # If an active detector asserted SYNTHETIC while another asserted AUTHENTIC,
-        # but no Forensic Precedence Rule (Rules 1-4) discounted the contradiction,
-        # the system MUST NOT declare AUTHENTIC based merely on weighted averages.
         if analysis.primary_disagreement_type == DisagreementType.POLARITY_INVERSION:
             rule_fired = any(adj.discount_reason is not None for adj in verdict.adjudications)
             if not rule_fired and verdict.final_verdict == JudgeVerdictClass.AUTHENTIC:
@@ -463,10 +518,7 @@ class JudgeAgent:
                 guards_applied.append(g1_note)
                 verdict.forensic_justification += f"\n\n[FORENSIC INTEGRITY GUARD]: {g1_note}"
 
-        # ── Guard 2 (G2): Minimum Corroboration for Authentic ────────────────
-        # A single detector operating alone while other modalities suffer coverage
-        # gaps or dropouts cannot authoritatively certify AUTHENTIC.
-        # Under forensic integrity rules, cross-modal corroboration is required.
+        # ── Guard 2A (G2A): Minimum Corroboration for AUTHENTIC ───────────────
         if verdict.final_verdict == JudgeVerdictClass.AUTHENTIC:
             if len(active_claims) <= 1 and len(claims) > 1:
                 det_name = active_claims[0].detector_id if active_claims else "None"
@@ -480,6 +532,58 @@ class JudgeAgent:
                 )
                 guards_applied.append(g2_note)
                 verdict.forensic_justification += f"\n\n[FORENSIC INTEGRITY GUARD]: {g2_note}"
+
+        # ── Guard 2B (G2B): Secondary Proxy Cannot Solo-Certify SYNTHETIC ─────
+        if verdict.final_verdict == JudgeVerdictClass.SYNTHETIC:
+            active_assessments = [
+                self.arbitrator.reliability_engine.evaluate_claim(
+                    c,
+                    conditions=conditions,
+                    is_coverage_gap=False,
+                    all_claims=claims,
+                )
+                for c in active_claims
+            ]
+            non_secondary_synthetic = [
+                a for a in active_assessments
+                if not a.cannot_solely_certify_synthetic
+                and any(
+                    c.detector_id == a.detector_id
+                    and (c.confidence >= SYNTHETIC_VERDICT_THRESHOLD or a.adjusted_confidence >= SYNTHETIC_VERDICT_THRESHOLD)
+                    for c in active_claims
+                )
+            ]
+            any_secondary_synthetic = any(
+                a.cannot_solely_certify_synthetic
+                and any(
+                    c.detector_id == a.detector_id
+                    and (c.confidence >= SYNTHETIC_VERDICT_THRESHOLD or a.adjusted_confidence >= 0.55)
+                    for c in active_claims
+                )
+                for a in active_assessments
+            )
+            if any_secondary_synthetic and not non_secondary_synthetic:
+                has_fatal = any(
+                    self.arbitrator.reliability_engine.evaluate_claim(
+                        c,
+                        conditions=conditions,
+                        is_coverage_gap=is_coverage_gap(c),
+                        all_claims=claims,
+                    ).is_fatal_gap
+                    for c in claims
+                )
+                verdict.final_verdict = (
+                    JudgeVerdictClass.INTEGRITY_UNKNOWN if has_fatal else JudgeVerdictClass.UNCERTAIN
+                )
+                verdict.calibrated_score = round(min(verdict.calibrated_score, 0.58), 4)
+                verdict.siem_alert_tier = "P2_ELEVATED"
+                g2b_note = (
+                    "Guard 2B Triggered (Secondary Proxy Solo-Certification Blocked): Secondary proxy "
+                    "detector(s) cannot solo-certify SYNTHETIC without primary spatial, acoustic, or AV corroboration. "
+                    f"Downgraded from SYNTHETIC to {verdict.final_verdict.value}."
+                )
+                guards_applied.append(g2b_note)
+                verdict.forensic_justification += f"\n\n[FORENSIC INTEGRITY GUARD]: {g2b_note}"
 
         return verdict, guards_applied
 

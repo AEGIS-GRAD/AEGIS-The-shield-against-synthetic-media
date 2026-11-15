@@ -17,7 +17,7 @@ def decide_detectors_to_call(metadata: InputMetadata) -> List[str]:
     elif metadata.modality == "text":
         detectors.append("detector_text")
 
-    if metadata.has_audio:
+    if metadata.has_audio and metadata.modality != "video":
         detectors.append("aasist")
 
     return detectors

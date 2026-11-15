@@ -25,14 +25,20 @@ COVERAGE_GAP_FLAGS = {
     "insufficient_lighting",
     "silent_video",
     "face_occluded",
+    "text_too_short",
 }
 
 
 def is_coverage_gap(claim: ForensicClaim) -> bool:
-    """Returns True if a claim represents an unprocessable condition or missing modality."""
+    """Returns True if a claim represents an unprocessable condition or missing modality.
+
+    Note (Task 7): ClaimPolarity.INCONCLUSIVE is NOT automatically a coverage gap;
+    an active detector reporting a moderate probability (0.35 < p < 0.65) still
+    contributes forensic evidence and must not be discarded to leave a solo secondary witness.
+    """
     if claim.coverage_gap:
         return True
-    if claim.polarity in (ClaimPolarity.NOT_APPLICABLE, ClaimPolarity.INCONCLUSIVE):
+    if claim.polarity == ClaimPolarity.NOT_APPLICABLE:
         return True
     if any(flag in COVERAGE_GAP_FLAGS for flag in claim.flags):
         # If confidence is neutral 0.5 with a gap flag, treat as gap

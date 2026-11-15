@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 try:
     from facenet_pytorch import MTCNN
     HAS_MTCNN = True
-except ImportError:
+except Exception:
     MTCNN = None
     HAS_MTCNN = False
     logger.warning("facenet-pytorch MTCNN not found. Fallback face cropping will be used.")

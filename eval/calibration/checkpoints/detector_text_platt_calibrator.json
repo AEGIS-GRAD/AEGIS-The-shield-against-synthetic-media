@@ -1,0 +1,18 @@
+{
+  "calibrator_type": "platt",
+  "name": "platt",
+  "a": 0.9493142823239928,
+  "b": -0.05461381496137585,
+  "input_is_probability": true,
+  "is_fitted": true,
+  "metadata": {
+    "loss": 0.26248621703753766,
+    "converged": true,
+    "num_samples": 72,
+    "source": "heldout_real",
+    "detector_id": "detector_text",
+    "predictions_file": "detector_text_fit_predictions.jsonl",
+    "uncalibrated_ece": 0.0823,
+    "calibrated_ece": 0.0793
+  }
+}

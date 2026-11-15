@@ -1,0 +1,81 @@
+suite,case_id,filename,category,true_label,verdict,score,arbitration_mode,siem_tier,guards_count,guards,rules,calibrators,latency_ms
+month1_task7_raw,m1-case-001,296.mp4,disagreement_polarity_inversion,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.67
+month1_task7_raw,m1-case-002,146.mp4,disagreement_polarity_inversion,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.47
+month1_task7_raw,m1-case-003,863.mp4,disagreement_polarity_inversion,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.15
+month1_task7_raw,m1-case-004,992.mp4,disagreement_polarity_inversion,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.14
+month1_task7_raw,m1-case-005,379.mp4,disagreement_polarity_inversion,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.12
+month1_task7_raw,m1-case-006,FaceShifter_761_766.mp4,disagreement_polarity_inversion,fake,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.11
+month1_task7_raw,m1-case-007,DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4,disagreement_polarity_inversion,fake,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.15
+month1_task7_raw,m1-case-008,NeuralTextures_076_079.mp4,disagreement_polarity_inversion,fake,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.31
+month1_task7_raw,m1-case-009,FaceShifter_705_707.mp4,borderline_one_sided,fake,UNCERTAIN,0.5,consensus_fast_path,P2_ELEVATED,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.2
+month1_task7_raw,m1-case-010,067.mp4,borderline_one_sided,real,UNCERTAIN,0.5,consensus_fast_path,P2_ELEVATED,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.16
+month1_task7_raw,m1-case-011,FaceShifter_892_112.mp4,borderline_one_sided,fake,UNCERTAIN,0.5,consensus_fast_path,P2_ELEVATED,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.1
+month1_task7_raw,m1-case-012,FaceSwap_507_418.mp4,borderline_one_sided,fake,UNCERTAIN,0.4,consensus_fast_path,P2_ELEVATED,0,None,Uncalibrated Primary Abstention (M2-L12): Uncalibrated baseline detector asserting AUTHENTIC without corroboration held in UNCERTAIN to prevent false-authentics.,None,1.1
+month1_task7_raw,m1-case-013,721.mp4,gap_or_degraded,real,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.12
+month1_task7_raw,m1-case-014,FaceShifter_526_436.mp4,gap_or_degraded,fake,UNCERTAIN,0.42,expert_deterministic_judge,P2_ELEVATED,0,None,Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary),None,1.13
+month1_task7_raw,m1-case-015,FaceShifter_817_827.mp4,gap_or_degraded,fake,UNCERTAIN,0.4,consensus_fast_path,P2_ELEVATED,0,None,Uncalibrated Primary Abstention (M2-L12): Uncalibrated baseline detector asserting AUTHENTIC without corroboration held in UNCERTAIN to prevent false-authentics.,None,1.07
+month1_task7_raw,m1-case-016,159.mp4,consensus,real,AUTHENTIC,0.2005,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,1.02
+month1_task7_raw,m1-case-017,face_swap_high_spatial.mp4,disagreement_polarity_inversion,fake,SYNTHETIC,0.8764,expert_deterministic_judge,P1_CRITICAL,0,None,Discounted under Face-Swap Inpainting Rule,None,1.1
+month1_task7_raw,m1-case-018,dim_light.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.222,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Precedence Rule (Low Light or Short Clip),None,1.23
+month1_task7_raw,m1-case-019,foreign_dubbed_news.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.263,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Audio Dubbing Rule,None,1.65
+month1_task7_raw,m1-case-020,short_clip.mp4,fully_degraded,real,INTEGRITY_UNKNOWN,0.5,consensus_fast_path,P2_ELEVATED,0,None,None,None,1.08
+month1_video_checkpoint,m1-case-001,296.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.63
+month1_video_checkpoint,m1-case-002,146.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.12
+month1_video_checkpoint,m1-case-003,863.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.15
+month1_video_checkpoint,m1-case-004,992.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.1
+month1_video_checkpoint,m1-case-005,379.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.12
+month1_video_checkpoint,m1-case-006,FaceShifter_761_766.mp4,disagreement_polarity_inversion,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.14
+month1_video_checkpoint,m1-case-007,DeepFakeDetection_10_19__kitchen_still__IDX76N5R.mp4,disagreement_polarity_inversion,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.15
+month1_video_checkpoint,m1-case-008,NeuralTextures_076_079.mp4,disagreement_polarity_inversion,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.13
+month1_video_checkpoint,m1-case-009,FaceShifter_705_707.mp4,borderline_one_sided,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.13
+month1_video_checkpoint,m1-case-010,067.mp4,borderline_one_sided,real,AUTHENTIC,0.1948,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.13
+month1_video_checkpoint,m1-case-011,FaceShifter_892_112.mp4,borderline_one_sided,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.31
+month1_video_checkpoint,m1-case-012,FaceSwap_507_418.mp4,borderline_one_sided,fake,SYNTHETIC,0.7923,expert_deterministic_judge,P1_CRITICAL,0,None,None,None,1.19
+month1_video_checkpoint,m1-case-013,721.mp4,gap_or_degraded,real,AUTHENTIC,0.116,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary),None,1.13
+month1_video_checkpoint,m1-case-014,FaceShifter_526_436.mp4,gap_or_degraded,fake,SYNTHETIC,0.8741,consensus_fast_path,P1_CRITICAL,0,None,Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted),None,1.13
+month1_video_checkpoint,m1-case-015,FaceShifter_817_827.mp4,gap_or_degraded,fake,SYNTHETIC,0.814,expert_deterministic_judge,P1_CRITICAL,0,None,None,None,1.1
+month1_video_checkpoint,m1-case-016,159.mp4,consensus,real,AUTHENTIC,0.2005,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,1.04
+month1_video_checkpoint,m1-case-017,face_swap_high_spatial.mp4,disagreement_polarity_inversion,fake,SYNTHETIC,0.8764,expert_deterministic_judge,P1_CRITICAL,0,None,Discounted under Face-Swap Inpainting Rule,None,1.21
+month1_video_checkpoint,m1-case-018,dim_light.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.222,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Precedence Rule (Low Light or Short Clip),None,1.28
+month1_video_checkpoint,m1-case-019,foreign_dubbed_news.mp4,disagreement_polarity_inversion,real,AUTHENTIC,0.263,expert_deterministic_judge,P4_INFORMATIONAL,0,None,Discounted under Audio Dubbing Rule,None,1.42
+month1_video_checkpoint,m1-case-020,short_clip.mp4,fully_degraded,real,INTEGRITY_UNKNOWN,0.5,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.99
+text_task7,txt-case-001,mage-ood_gpt-0acb49a005e6.txt,clean_human_text,real,AUTHENTIC,0.0052,consensus_fast_path,P4_INFORMATIONAL,0,None,None,detector_text_platt_calibrator.json,0.91
+text_task7,txt-case-002,mage-ood_gpt-0c41ae98297d.txt,clean_human_text,real,AUTHENTIC,0.0017,consensus_fast_path,P4_INFORMATIONAL,0,None,None,detector_text_platt_calibrator.json,0.68
+text_task7,txt-case-003,mage-ood_gpt-0da268336b3a.txt,clean_human_text,real,AUTHENTIC,0.0086,consensus_fast_path,P4_INFORMATIONAL,0,None,None,detector_text_platt_calibrator.json,0.56
+text_task7,txt-case-004,mage-ood_gpt-170ce6abed42.txt,clean_human_text,real,UNCERTAIN,0.6381,consensus_fast_path,P2_ELEVATED,0,None,None,detector_text_platt_calibrator.json,0.69
+text_task7,txt-case-005,mage-ood_gpt-1a3ca1d1c062.txt,clean_human_text,real,AUTHENTIC,0.1137,consensus_fast_path,P4_INFORMATIONAL,0,None,None,detector_text_platt_calibrator.json,0.67
+text_task7,txt-case-006,mage-ood_gpt-081fb8126517.txt,marginal_human_text,real,SYNTHETIC,0.8757,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.77
+text_task7,txt-case-007,mage-ood_gpt-1eb6ac7a5541.txt,short_text_not_applicable,real,INTEGRITY_UNKNOWN,0.5,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.47
+text_task7,txt-case-008,mage-ood_para-03989095ffd4.txt,paraphrased_ai_text,fake,SYNTHETIC,0.9787,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.63
+text_task7,txt-case-009,mage-ood_para-0c3c3804bcca.txt,paraphrased_ai_text,fake,SYNTHETIC,0.9056,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.63
+text_task7,txt-case-010,mage-ood_para-0dbfb9bd39c7.txt,paraphrased_ai_text,fake,SYNTHETIC,0.9998,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.65
+text_task7,txt-case-011,mage-ood_para-10f5cd11837a.txt,paraphrased_ai_text,fake,SYNTHETIC,0.9998,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.67
+text_task7,txt-case-012,mage-ood_gpt-05a3e6de6654.txt,clean_ai_text,fake,SYNTHETIC,0.9998,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.7
+text_task7,txt-case-013,mage-ood_gpt-c8f0c69dcfe8.txt,clean_ai_text,fake,SYNTHETIC,1.0,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.64
+text_task7,txt-case-014,mage-ood_gpt-007567fd06fd.txt,marginal_ai_text,fake,SYNTHETIC,0.7892,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.8
+text_task7,txt-case-015,mage-ood_gpt-1fee0e63a7fc.txt,marginal_ai_text,fake,SYNTHETIC,0.7814,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.65
+text_task7,txt-case-016,mage-ood_gpt-24bc58abf889.txt,marginal_ai_text,fake,SYNTHETIC,0.8149,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.7
+text_task7,txt-case-017,mage-ood_gpt-2854d95d2ff1.txt,marginal_ai_text,fake,SYNTHETIC,0.9489,consensus_fast_path,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.66
+text_task7,txt-case-018,mage-ood_gpt-193e31f4b64b.txt,short_text_not_applicable,fake,INTEGRITY_UNKNOWN,0.5,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.47
+text_task7,txt-case-019,paraphrased_bino_corroborated.txt,multi_signal_rule8_ai,fake,SYNTHETIC,0.6522,consensus_fast_path,P1_CRITICAL,0,None,Rule 8 Applied (Text Perplexity/Burstiness/Binoculars AI Corroboration),detector_text_platt_calibrator.json,0.69
+text_task7,txt-case-020,hybrid_human_ai_document.txt,hybrid_chunk_disagreement,fake,UNCERTAIN,0.4958,consensus_fast_path,P2_ELEVATED,0,None,None,detector_text_platt_calibrator.json,0.6
+image_task7,img-case-001,flickr_real_001.jpg,clean_real_photo,real,AUTHENTIC,0.045,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.92
+image_task7,img-case-002,flickr_real_002.jpg,clean_real_photo,real,AUTHENTIC,0.082,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.45
+image_task7,img-case-003,portrait_real_003.png,clean_real_photo,real,AUTHENTIC,0.115,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.44
+image_task7,img-case-004,street_real_004.jpg,clean_real_photo,real,AUTHENTIC,0.142,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.44
+image_task7,img-case-005,raw_camera_005.dng.jpg,clean_real_photo,real,AUTHENTIC,0.064,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.43
+image_task7,img-case-006,whatsapp_reupload_006.jpg,social_reencoded_exif_missing,real,AUTHENTIC,0.19,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.58
+image_task7,img-case-007,instagram_crop_007.jpg,social_reencoded_exif_missing,real,AUTHENTIC,0.27,consensus_fast_path,P4_INFORMATIONAL,0,None,None,None,0.54
+image_task7,img-case-008,x_compressed_008.jpg,social_reencoded_borderline,real,UNCERTAIN,0.43,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.58
+image_task7,img-case-009,stylegan2_face_009.png,gan_synthetic,fake,SYNTHETIC,0.962,consensus_fast_path,P1_CRITICAL,0,None,None,None,0.62
+image_task7,img-case-010,progan_lsun_010.png,gan_synthetic,fake,SYNTHETIC,0.941,consensus_fast_path,P1_CRITICAL,0,None,None,None,0.55
+image_task7,img-case-011,stargan_edit_011.jpg,gan_synthetic,fake,SYNTHETIC,0.884,consensus_fast_path,P1_CRITICAL,0,None,None,None,0.59
+image_task7,img-case-012,biggan_scene_012.png,gan_synthetic,fake,SYNTHETIC,0.795,consensus_fast_path,P1_CRITICAL,0,None,None,None,0.53
+image_task7,img-case-013,sdxl_portrait_013.png,diffusion_synthetic,fake,SYNTHETIC,0.887,consensus_fast_path,P1_CRITICAL,0,None,None,None,0.59
+image_task7,img-case-014,midjourney_v6_014.png,diffusion_borderline_rule8,fake,SYNTHETIC,0.67,consensus_fast_path,P1_CRITICAL,0,None,Rule 8 Applied (Image FFT/Metadata Corroboration),None,0.6
+image_task7,img-case-015,flux_recompressed_015.png,diffusion_borderline_rule8,fake,SYNTHETIC,0.67,consensus_fast_path,P1_CRITICAL,0,None,Rule 8 Applied (Image FFT/Metadata Corroboration),None,0.64
+image_task7,img-case-016,thumbnail_tiny_016.jpg,low_resolution_degraded,real,UNCERTAIN,0.44,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.64
+image_task7,img-case-017,corrupt_payload_017.bin,unparseable_not_applicable,real,INTEGRITY_UNKNOWN,0.5,consensus_fast_path,P2_ELEVATED,0,None,None,None,0.37
+image_task7,img-case-018,news_real_pair_018.json,multimodal_image_text_real,real,AUTHENTIC,0.0825,consensus_fast_path,P4_INFORMATIONAL,0,None,None,detector_text_platt_calibrator.json,0.81
+image_task7,img-case-019,disinfo_pair_rule8_019.json,multimodal_image_text_fake,fake,SYNTHETIC,0.6954,consensus_fast_path,P1_CRITICAL,0,None,Rule 8 Applied (Image FFT/Metadata Corroboration) | Rule 8 Applied (Text Perplexity/Burstiness/Binoculars AI Corroboration),detector_text_platt_calibrator.json,1.08
+image_task7,img-case-020,synth_meme_human_caption_020.json,multimodal_image_text_fake,fake,SYNTHETIC,0.6618,expert_deterministic_judge,P1_CRITICAL,0,None,None,detector_text_platt_calibrator.json,0.94

@@ -7,7 +7,13 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-import torchvision.models as models
+try:
+    import torchvision.models as models
+    HAS_TORCHVISION = True
+except Exception as exc:
+    models = None
+    HAS_TORCHVISION = False
+    logger.warning("torchvision could not be loaded (%s). Using pure PyTorch fallback.", exc)
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +35,35 @@ def get_mobilenet_v3_small_model(
     """
     target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load MobileNetV3-Small backbone with default pretrained weights
-    try:
-        model = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT)
-    except Exception:
-        model = models.mobilenet_v3_small(pretrained=True)
+    if HAS_TORCHVISION and models is not None:
+        # Load MobileNetV3-Small backbone with default pretrained weights
+        try:
+            model = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT)
+        except Exception:
+            model = models.mobilenet_v3_small(pretrained=True)
 
-    # Replace classifier output layer with 2 outputs (0=Real, 1=Fake)
-    # MobileNetV3-Small classifier has 4 layers: Linear, Hardswish, Dropout, Linear(in_features, 1000)
-    in_features = model.classifier[3].in_features
-    model.classifier[3] = nn.Linear(in_features, 2)
+        # Replace classifier output layer with 2 outputs (0=Real, 1=Fake)
+        in_features = model.classifier[3].in_features
+        model.classifier[3] = nn.Linear(in_features, 2)
+    else:
+        # Pure PyTorch fallback without requiring torchvision / PIL DLLs
+        class FallbackEdgeClassifier(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.features = nn.Sequential(
+                    nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1),
+                    nn.BatchNorm2d(16),
+                    nn.Hardswish(),
+                    nn.AdaptiveAvgPool2d((1, 1)),
+                )
+                self.classifier = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(16, 2)
+                )
+            def forward(self, x):
+                return self.classifier(self.features(x))
+
+        model = FallbackEdgeClassifier()
 
     weights_file = Path(checkpoint_path or DEFAULT_WEIGHTS_PATH)
     if weights_file.exists():

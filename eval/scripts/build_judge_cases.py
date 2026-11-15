@@ -144,15 +144,28 @@ def build_cases() -> List[Dict[str, Any]]:
             )
         )
 
-        expected_allowed_verdicts = ["INTEGRITY_UNKNOWN"]
+        is_real = str(r.get("true_label", "")).lower() == "real"
+        expected_allowed_verdicts = (
+            ["UNCERTAIN", "INTEGRITY_UNKNOWN", "AUTHENTIC"]
+            if is_real
+            else ["SYNTHETIC", "UNCERTAIN", "INTEGRITY_UNKNOWN"]
+        )
         if category == "consensus":
-            expected_allowed_verdicts = ["AUTHENTIC"]
+            expected_allowed_verdicts = ["AUTHENTIC"] if is_real else ["SYNTHETIC"]
         elif is_disagreement:
-            # Under Guard 1, unresolved polarity inversion must downgrade to INTEGRITY_UNKNOWN
-            expected_allowed_verdicts = ["INTEGRITY_UNKNOWN", "SYNTHETIC"]
+            # Disagreement with primary/physiological inversion never allows wrong polarity.
+            expected_allowed_verdicts = (
+                ["AUTHENTIC", "UNCERTAIN", "INTEGRITY_UNKNOWN"]
+                if is_real
+                else ["SYNTHETIC", "UNCERTAIN", "INTEGRITY_UNKNOWN"]
+            )
         elif category == "borderline_one_sided":
-            # VC is dropped as borderline gap; rPPG synthetic alone dictates synthetic or integrity_unknown under Guard 2
-            expected_allowed_verdicts = ["SYNTHETIC", "INTEGRITY_UNKNOWN"]
+            # Secondary proxy alone never certifies SYNTHETIC on real clips (e.g. 067.mp4).
+            expected_allowed_verdicts = (
+                ["UNCERTAIN", "AUTHENTIC", "INTEGRITY_UNKNOWN"]
+                if is_real
+                else ["SYNTHETIC", "UNCERTAIN", "INTEGRITY_UNKNOWN"]
+            )
 
         case = {
             "case_id": job_id,

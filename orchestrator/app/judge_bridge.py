@@ -81,11 +81,27 @@ def build_raw_responses(results: List[DetectorResult]) -> Dict[str, Optional[Dic
                 f"(still present in raw_results on the OrchestrationResponse)."
             )
             continue
+        if r.status == "not_applicable":
+            flags = (r.evidence.flags if r.evidence else []) or ["not_applicable"]
+            raw[r.detector] = {
+                "job_id": r.job_id,
+                "status": "not_applicable",
+                "confidence": 0.5 if r.confidence is None else r.confidence,
+                "raw_score": r.raw_score,
+                "latency_ms": r.latency_ms,
+                "model_version": r.model_version or "unknown-v0",
+                "evidence": {
+                    "claim": r.evidence.claim if r.evidence else "",
+                    "flags": flags,
+                },
+            }
+            continue
         if r.status != "ok" or r.confidence is None:
             raw[r.detector] = None
             continue
         entry: Dict[str, Any] = {
             "job_id": r.job_id,
+            "status": r.status,
             "confidence": r.confidence,
             "raw_score": r.raw_score,
             "latency_ms": r.latency_ms,

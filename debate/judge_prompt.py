@@ -77,8 +77,12 @@ def build_judge_prompt(
     for adj in locked_verdict.adjudications:
         adjudications_payload.append({
             "detector_id": adj.detector_id,
+            "authority_tier": adj.authority_tier,
+            "pre_calibration_confidence": adj.pre_calibration_confidence,
+            "calibration_checkpoint": adj.calibration_checkpoint,
             "accepted_confidence": adj.accepted_confidence,
             "weight_assigned": adj.weight_assigned,
+            "applied_conditions": adj.applied_conditions,
             "discount_reason": adj.discount_reason,
         })
 

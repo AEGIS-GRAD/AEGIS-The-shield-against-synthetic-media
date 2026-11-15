@@ -9,9 +9,23 @@ import hashlib
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from debate.disagreement import evaluate_disagreement, is_coverage_gap
+from debate.calibration import (
+    UNCALIBRATED_MODEL_VERSIONS,
+    CalibrationOutcome,
+    CalibratorRegistry,
+)
+from debate.disagreement import (
+    AUTHENTIC_POLARITY_THRESHOLD,
+    SYNTHETIC_POLARITY_THRESHOLD,
+    evaluate_disagreement,
+    is_coverage_gap,
+)
+from debate.manifest_reliability import (
+    ConditionReliabilityAssessment,
+    ManifestReliabilityEngine,
+)
 from debate.schemas import (
     ClaimAdjudication,
     ClaimPolarity,
@@ -26,9 +40,13 @@ from debate.schemas import (
 # ── Baseline Weights & Thresholds ───────────────────────────────────────────
 DEFAULT_DETECTOR_WEIGHTS = {
     "video-classifier": 1.5,
+    "detector_image": 1.5,
+    "image": 1.5,
+    "detector_text": 1.5,
     "syncnet": 1.2,
-    "rppg": 0.8,  # Calibrated down from Month 1's 1.2 due to 10% benchmark agreement
     "aasist": 1.2,
+    "rppg": 0.45,  # Aligned with rppg.json manifest base_reliability_weight
+    "streaming-rppg": 0.45,
 }
 
 SYNTHETIC_VERDICT_THRESHOLD = 0.65
@@ -56,10 +74,81 @@ def compute_evidence_hash(claims: List[ForensicClaim], job_id: str) -> str:
 
 
 class JudgeArbitrator:
-    """The Judge Agent and Arbitration Engine for conflicting video evidence."""
+    """The Judge Agent and Arbitration Engine for multimodal forensic evidence."""
 
-    def __init__(self, weights: Optional[dict] = None):
+    def __init__(
+        self,
+        weights: Optional[dict] = None,
+        reliability_engine: Optional[ManifestReliabilityEngine] = None,
+        calibrator_registry: Optional[CalibratorRegistry] = None,
+        apply_calibrated_video_checkpoint: bool = False,
+    ):
+        self._custom_weights = weights is not None
         self.weights = weights or DEFAULT_DETECTOR_WEIGHTS.copy()
+        self.reliability_engine = reliability_engine or ManifestReliabilityEngine()
+        self.apply_calibrated_video_checkpoint = apply_calibrated_video_checkpoint
+        self.calibrator_registry = calibrator_registry or CalibratorRegistry(
+            apply_calibrated_video_checkpoint=apply_calibrated_video_checkpoint
+        )
+
+    def _assess_claims(
+        self,
+        claims: List[ForensicClaim],
+        conditions: Optional[OperatingConditions],
+    ) -> Tuple[
+        Dict[str, CalibrationOutcome],
+        Dict[str, ConditionReliabilityAssessment],
+        List[str],
+        List[str],
+    ]:
+        """Run Task 3 calibration and manifest per-condition reliability over all claims."""
+        cal_outcomes: Dict[str, CalibrationOutcome] = {}
+        assessments: Dict[str, ConditionReliabilityAssessment] = {}
+        all_warnings: List[str] = []
+        fatal_warnings: List[str] = []
+
+        for c in claims:
+            manifest = self.reliability_engine.get_manifest(c.detector_id, c.model_version)
+            gap = is_coverage_gap(c)
+            cal_out = self.calibrator_registry.calibrate_score(
+                c.detector_id,
+                c.confidence,
+                model_version=c.model_version,
+                coverage_gap=gap,
+                manifest=manifest,
+            )
+            cal_for_eval = cal_out.calibrated_confidence if cal_out.calibrator_applied else None
+            assess = self.reliability_engine.evaluate_claim(
+                c,
+                conditions=conditions,
+                is_coverage_gap=gap,
+                calibrated_confidence=cal_for_eval,
+                all_claims=claims,
+            )
+            cal_outcomes[c.detector_id] = cal_out
+            assessments[c.detector_id] = assess
+
+            if gap:
+                if assess.is_advisory_gap:
+                    all_warnings.append(
+                        f"Advisory Gap: Detector '{c.detector_id}' not applicable due to absent secondary modality."
+                    )
+                else:
+                    msg = (
+                        f"Coverage Gap: Detector '{c.detector_id}' could not evaluate input due to "
+                        "missing modality or prerequisite."
+                    )
+                    all_warnings.append(msg)
+                    fatal_warnings.append(msg)
+            elif assess.is_fatal_gap:
+                msg = (
+                    f"Fatal Reliability Gap: Detector '{c.detector_id}' violated critical operating "
+                    f"constraint ({', '.join(assess.applied_conditions)})."
+                )
+                all_warnings.append(msg)
+                fatal_warnings.append(msg)
+
+        return cal_outcomes, assessments, all_warnings, fatal_warnings
 
     def arbitrate(
         self,
@@ -87,14 +176,9 @@ class JudgeArbitrator:
                 evidence_manifest_hash=evidence_hash,
             )
 
-        # Step 1: Disagreement Analysis
+        # Step 1: Calibrate, evaluate manifest condition reliability, and analyze disagreement
+        cal_outcomes, assessments, coverage_warnings, fatal_warnings = self._assess_claims(claims, conditions)
         analysis: DisagreementAnalysis = evaluate_disagreement(claims)
-
-        coverage_warnings = []
-        for gap_detector in analysis.coverage_gaps:
-            coverage_warnings.append(
-                f"Coverage Gap: Detector '{gap_detector}' could not evaluate input due to missing modality or prerequisite."
-            )
 
         # Step 2: Route by dispute necessity
         if not analysis.requires_arbitration:
@@ -105,6 +189,9 @@ class JudgeArbitrator:
                 job_id=resolved_job_id,
                 evidence_hash=evidence_hash,
                 coverage_warnings=coverage_warnings,
+                fatal_warnings=fatal_warnings,
+                cal_outcomes=cal_outcomes,
+                assessments=assessments,
             )
 
         # Step 3: Full Dispute Arbitration via Forensic Precedence Matrix
@@ -116,6 +203,9 @@ class JudgeArbitrator:
             job_id=resolved_job_id,
             evidence_hash=evidence_hash,
             coverage_warnings=coverage_warnings,
+            fatal_warnings=fatal_warnings,
+            cal_outcomes=cal_outcomes,
+            assessments=assessments,
         )
 
     def _synthesize_consensus_verdict(
@@ -126,8 +216,15 @@ class JudgeArbitrator:
         job_id: str,
         evidence_hash: str,
         coverage_warnings: List[str],
+        fatal_warnings: Optional[List[str]] = None,
+        cal_outcomes: Optional[Dict[str, CalibrationOutcome]] = None,
+        assessments: Optional[Dict[str, ConditionReliabilityAssessment]] = None,
     ) -> CourtAdmissibleVerdict:
-        """Fast-path consensus synthesis when detectors agree within tolerance."""
+        """Fast-path consensus synthesis with Task 3 calibration & manifest reliability."""
+        if cal_outcomes is None or assessments is None:
+            cal_outcomes, assessments, coverage_warnings, fatal_warnings = self._assess_claims(claims, None)
+        fatal_list = fatal_warnings or []
+
         active_claims = [c for c in claims if not is_coverage_gap(c)]
 
         if not active_claims:
@@ -140,7 +237,7 @@ class JudgeArbitrator:
                 arbitration_mode="consensus_fast_path",
                 adjudications=[],
                 forensic_justification=(
-                    "All submitted detectors reported coverage gaps or inconclusive results. "
+                    "All submitted detectors reported coverage gaps or inapplicable inputs. "
                     "Per AEGIS Forensic Integrity standards, inconclusive media cannot be certified authentic."
                 ),
                 coverage_warnings=coverage_warnings,
@@ -151,10 +248,34 @@ class JudgeArbitrator:
         adjudications: List[ClaimAdjudication] = []
         weighted_conf_sum = 0.0
         total_weight = 0.0
+        notes: List[str] = []
 
         for c in active_claims:
-            w = self.weights.get(c.detector_id, 1.0)
-            eff_conf = c.effective_confidence
+            cal_out = cal_outcomes[c.detector_id]
+            assess = assessments[c.detector_id]
+            w = (
+                self.weights.get(c.detector_id, assess.base_weight) * assess.weight_multiplier
+                if self._custom_weights
+                else assess.effective_weight
+            )
+            eff_conf = assess.adjusted_confidence
+            discount_note = None
+
+            if "rppg_invalid_bpm_synthetic_discount" in assess.applied_conditions:
+                eff_conf = 0.50
+                w *= 0.15
+                discount_note = "Rule 7 Applied (Secondary Zero/Invalid BPM Proxy Discounted)"
+                notes.append(discount_note)
+            elif "image_forensic_signal_corroboration" in assess.applied_conditions:
+                discount_note = "Rule 8 Applied (Image FFT/Metadata Corroboration)"
+                notes.append(discount_note)
+            elif "text_multi_signal_ai_corroboration" in assess.applied_conditions:
+                discount_note = "Rule 8 Applied (Text Perplexity/Burstiness/Binoculars AI Corroboration)"
+                notes.append(discount_note)
+            elif "text_multi_signal_human_corroboration" in assess.applied_conditions:
+                discount_note = "Rule 8 Applied (Text Natural Perplexity/Burstiness Human Corroboration)"
+                notes.append(discount_note)
+
             weighted_conf_sum += eff_conf * w
             total_weight += w
 
@@ -163,14 +284,65 @@ class JudgeArbitrator:
                     detector_id=c.detector_id,
                     original_polarity=c.polarity,
                     original_confidence=c.confidence,
-                    accepted_confidence=eff_conf,
-                    weight_assigned=w,
-                    discount_reason=None,
+                    accepted_confidence=round(eff_conf, 4),
+                    weight_assigned=round(w, 4),
+                    discount_reason=discount_note,
                     findings_retained=[c.claim],
+                    authority_tier=assess.authority_tier,
+                    pre_calibration_confidence=round(c.confidence, 4),
+                    calibration_checkpoint=cal_out.checkpoint_name if cal_out.calibrator_applied else None,
+                    applied_conditions=list(assess.applied_conditions),
                 )
             )
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
+
+        # Secondary proxy authority safeguard: a secondary proxy alone cannot push verdict >= SYNTHETIC
+        non_gap_primary_synth = any(
+            not assessments[c.detector_id].cannot_solely_certify_synthetic
+            and assessments[c.detector_id].adjusted_confidence >= SYNTHETIC_POLARITY_THRESHOLD
+            for c in active_claims
+        )
+        any_secondary_synth = any(
+            assessments[c.detector_id].cannot_solely_certify_synthetic
+            and (c.confidence >= SYNTHETIC_POLARITY_THRESHOLD or assessments[c.detector_id].adjusted_confidence >= 0.55)
+            for c in active_claims
+        )
+        if any_secondary_synth and not non_gap_primary_synth and calibrated_score >= SYNTHETIC_VERDICT_THRESHOLD:
+            calibrated_score = min(calibrated_score, 0.58)
+            notes.append(
+                "Secondary Authority Cap: Secondary proxy synthetic claim without primary corroboration "
+                "cannot certify SYNTHETIC; held in UNCERTAIN."
+            )
+
+        # Uncalibrated baseline single-witness safeguard for AUTHENTIC in multi-detector runs (e.g. M2-L12)
+        auth_witnesses = [
+            adj for adj in adjudications
+            if adj.accepted_confidence <= AUTHENTIC_POLARITY_THRESHOLD
+        ]
+        all_auth_uncalibrated = bool(auth_witnesses) and all(
+            (c.model_version or "").strip().lower() in UNCALIBRATED_MODEL_VERSIONS
+            and not cal_outcomes[c.detector_id].calibrator_applied
+            and not self.apply_calibrated_video_checkpoint
+            for c in active_claims
+            if any(a.detector_id == c.detector_id for a in auth_witnesses)
+        )
+        uncalibrated_auth_hold = (
+            calibrated_score <= AUTHENTIC_VERDICT_THRESHOLD
+            and len(claims) > 1
+            and len(auth_witnesses) < 2
+            and all_auth_uncalibrated
+        )
+        if uncalibrated_auth_hold:
+            calibrated_score = round(max(calibrated_score, 0.40), 4)
+            uncal_note = (
+                "Uncalibrated Primary Abstention (M2-L12): Uncalibrated baseline detector asserting AUTHENTIC "
+                "without corroboration held in UNCERTAIN to prevent false-authentics."
+            )
+            notes.append(uncal_note)
+            for adj in auth_witnesses:
+                if adj.discount_reason is None:
+                    adj.discount_reason = uncal_note
 
         if calibrated_score >= SYNTHETIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.SYNTHETIC
@@ -178,7 +350,7 @@ class JudgeArbitrator:
         elif calibrated_score <= AUTHENTIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.AUTHENTIC
             siem_tier = "P4_INFORMATIONAL"
-        elif coverage_warnings:
+        elif fatal_list:
             final_verdict = JudgeVerdictClass.INTEGRITY_UNKNOWN
             siem_tier = "P2_ELEVATED"
         else:
@@ -188,9 +360,11 @@ class JudgeArbitrator:
         conf_margin = round(analysis.confidence_spread / 2.0, 3)
         interval = [max(0.0, round(calibrated_score - conf_margin, 3)), min(1.0, round(calibrated_score + conf_margin, 3))]
 
+        note_suffix = (" Constraints: " + "; ".join(notes)) if notes else ""
         justification = (
             f"CONSENSUS RULING: Detectors operate in alignment (confidence spread {analysis.confidence_spread:.2f} "
             f"< threshold). Calibrated ensemble score of {calibrated_score:.2f} confirms {final_verdict.value} status."
+            f"{note_suffix}"
         )
 
         return CourtAdmissibleVerdict(
@@ -216,8 +390,15 @@ class JudgeArbitrator:
         job_id: str,
         evidence_hash: str,
         coverage_warnings: List[str],
+        fatal_warnings: Optional[List[str]] = None,
+        cal_outcomes: Optional[Dict[str, CalibrationOutcome]] = None,
+        assessments: Optional[Dict[str, ConditionReliabilityAssessment]] = None,
     ) -> CourtAdmissibleVerdict:
         """Full Forensic Precedence Matrix dispute resolution."""
+        if cal_outcomes is None or assessments is None:
+            cal_outcomes, assessments, coverage_warnings, fatal_warnings = self._assess_claims(claims, conditions)
+        fatal_list = fatal_warnings or []
+
         claims_by_id = {c.detector_id: c for c in claims}
         adjudications: List[ClaimAdjudication] = []
         discount_reasons: List[str] = []
@@ -230,9 +411,22 @@ class JudgeArbitrator:
         rppg_claim = claims_by_id.get("rppg")
         sync_claim = claims_by_id.get("syncnet")
         aasist_claim = claims_by_id.get("aasist")
+        img_claim = claims_by_id.get("detector_image") or claims_by_id.get("image")
+        txt_claim = claims_by_id.get("detector_text")
+
+        def _conf(cl: Optional[ForensicClaim]) -> float:
+            if cl is None:
+                return 0.5
+            return assessments[cl.detector_id].adjusted_confidence
+
+        vc_conf = _conf(vc_claim)
+        rppg_conf = _conf(rppg_claim)
+        sync_conf = _conf(sync_claim)
+        aasist_conf = _conf(aasist_claim)
 
         # ── Precedence Rule 1: Low-Light Score Inversion Trap on rPPG ─────────
         rppg_discounted = False
+        rppg_rule7_mode: Optional[str] = None  # "7A_uncertain" or "7B_calibrated"
         if rppg_claim and not is_coverage_gap(rppg_claim):
             has_low_light_flag = "low_light_attenuation" in rppg_claim.flags or "insufficient_lighting" in rppg_claim.flags
             if mean_lum < 40.0 or has_low_light_flag:
@@ -255,7 +449,7 @@ class JudgeArbitrator:
         # ── Precedence Rule 3: Face-Swap Pulse Preservation ───────────────────
         face_swap_case = False
         if vc_claim and rppg_claim and not is_coverage_gap(vc_claim) and not is_coverage_gap(rppg_claim):
-            if vc_claim.confidence >= 0.70 and rppg_claim.confidence <= 0.35 and not rppg_discounted:
+            if vc_conf >= 0.70 and rppg_conf <= 0.35 and not rppg_discounted:
                 face_swap_case = True
                 discount_reasons.append(
                     "Rule 3 Applied (Face-Swap Inpainting): video-classifier detected spatial warping / boundary anomalies, "
@@ -266,13 +460,13 @@ class JudgeArbitrator:
         # ── Precedence Rule 4: Dubbing / Non-English Content on SyncNet ───────
         dubbing_case = False
         if sync_claim and not is_coverage_gap(sync_claim):
-            if sync_claim.confidence >= 0.70:
+            if sync_conf >= 0.70:
                 other_authentic = []
-                if vc_claim and not is_coverage_gap(vc_claim) and vc_claim.confidence <= 0.35:
+                if vc_claim and not is_coverage_gap(vc_claim) and vc_conf <= 0.35:
                     other_authentic.append(vc_claim)
-                if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_claim.confidence <= 0.35:
+                if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_conf <= 0.35:
                     other_authentic.append(rppg_claim)
-                if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_claim.confidence <= 0.35:
+                if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_conf <= 0.35:
                     other_authentic.append(aasist_claim)
 
                 if len(other_authentic) >= 1:
@@ -285,30 +479,75 @@ class JudgeArbitrator:
         # ── Precedence Rule 5: Synthetic Voice / Audio Clone Injection ────────
         voice_clone_case = False
         if aasist_claim and not is_coverage_gap(aasist_claim):
-            if aasist_claim.confidence >= 0.70:
+            if aasist_conf >= 0.70:
                 visual_authentic = []
-                if vc_claim and not is_coverage_gap(vc_claim) and vc_claim.confidence <= 0.35:
+                if vc_claim and not is_coverage_gap(vc_claim) and vc_conf <= 0.35:
                     visual_authentic.append(vc_claim.detector_id)
-                if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_claim.confidence <= 0.35:
+                if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted and rppg_conf <= 0.35:
                     visual_authentic.append(rppg_claim.detector_id)
 
                 if visual_authentic:
                     voice_clone_case = True
                     discount_reasons.append(
                         f"Rule 5 Applied (Synthetic Voice / Audio Clone Injection): AASIST detected synthetic/cloned speech "
-                        f"(conf={aasist_claim.confidence:.2f}) while visual detectors ({visual_authentic}) verify authentic footage. "
+                        f"(conf={aasist_conf:.2f}) while visual detectors ({visual_authentic}) verify authentic footage. "
                         "In multi-modal forensics, synthetic audio overrides visual donor authenticity to confirm a voice-clone attack."
                     )
 
         # ── Precedence Rule 6: Visual Tampering Over Authentic Audio ─────────
         visual_tampering_case = False
-        if vc_claim and not is_coverage_gap(vc_claim) and vc_claim.confidence >= 0.70:
-            if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_claim.confidence <= 0.35:
+        if vc_claim and not is_coverage_gap(vc_claim) and vc_conf >= 0.70:
+            if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_conf <= 0.35:
                 visual_tampering_case = True
                 discount_reasons.append(
                     "Rule 6 Applied (Visual Tampering Over Authentic Audio): video-classifier detected spatial manipulation "
-                    f"(conf={vc_claim.confidence:.2f}) over authentic human speech. Spatial tampering overrides authentic audio track."
+                    f"(conf={vc_conf:.2f}) over authentic human speech. Spatial tampering overrides authentic audio track."
                 )
+
+        # ── Precedence Rule 7: Zero / Out-of-Band BPM Proxy Conflict ──────────
+        if (
+            rppg_claim
+            and not is_coverage_gap(rppg_claim)
+            and not rppg_discounted
+            and "rppg_invalid_bpm_synthetic_discount" in assessments[rppg_claim.detector_id].applied_conditions
+        ):
+            rppg_discounted = True
+            vc_is_calibrated = bool(
+                vc_claim
+                and (
+                    cal_outcomes[vc_claim.detector_id].calibrator_applied
+                    or self.apply_calibrated_video_checkpoint
+                )
+            )
+            if vc_claim and vc_conf <= AUTHENTIC_VERDICT_THRESHOLD and not vc_is_calibrated:
+                rppg_rule7_mode = "7A_uncertain"
+                discount_reasons.append(
+                    "Rule 7A Applied (Secondary Zero-BPM Proxy Invalidated; Uncalibrated Primary Held in UNCERTAIN): "
+                    "rPPG emitted synthetic score with 0.0/invalid BPM, while video-classifier carries uncalibrated baseline "
+                    "weights; holding UNCERTAIN rather than certifying AUTHENTIC or INTEGRITY_UNKNOWN."
+                )
+            else:
+                rppg_rule7_mode = "7B_calibrated"
+                discount_reasons.append(
+                    "Rule 7B Applied (Secondary Zero-BPM Proxy Discounted Against Verified Primary): "
+                    "rPPG spectral anomaly with 0.0/invalid BPM discounted per capability manifest."
+                )
+
+        # ── Precedence Rule 8: Image & Text Multi-Signal Corroboration Note ──
+        for mod_claim in (img_claim, txt_claim):
+            if mod_claim and not is_coverage_gap(mod_claim):
+                mod_assess = assessments[mod_claim.detector_id]
+                if "image_forensic_signal_corroboration" in mod_assess.applied_conditions:
+                    discount_reasons.append(
+                        f"Rule 8 Applied (Image Corroboration): {mod_claim.detector_id} reinforced by FFT/metadata signals."
+                    )
+                elif any(
+                    k in mod_assess.applied_conditions
+                    for k in ("text_multi_signal_ai_corroboration", "text_multi_signal_human_corroboration")
+                ):
+                    discount_reasons.append(
+                        f"Rule 8 Applied (Text Multi-Signal Corroboration): {mod_claim.detector_id} reinforced by perplexity/burstiness/Binoculars."
+                    )
 
         # ── Execute Weighting & Adjudication ──────────────────────────────────
         active_claims = [c for c in claims if not is_coverage_gap(c)]
@@ -316,14 +555,29 @@ class JudgeArbitrator:
         total_weight = 0.0
 
         for c in active_claims:
-            base_w = self.weights.get(c.detector_id, 1.0)
-            accepted_conf = c.effective_confidence
+            cal_out = cal_outcomes[c.detector_id]
+            assess = assessments[c.detector_id]
+            base_w = (
+                self.weights.get(c.detector_id, assess.base_weight) * assess.weight_multiplier
+                if self._custom_weights
+                else assess.effective_weight
+            )
+            accepted_conf = assess.adjusted_confidence
             discount_note = None
 
             if c.detector_id == "rppg" and rppg_discounted:
-                base_w *= 0.10  # 90% discount
-                accepted_conf = 0.50
-                discount_note = "Discounted under Precedence Rule (Low Light or Short Clip)"
+                if rppg_rule7_mode is not None:
+                    base_w *= 0.15
+                    accepted_conf = 0.50
+                    discount_note = (
+                        "Discounted under Rule 7A (Zero-BPM Proxy Invalidated; Uncalibrated Primary)"
+                        if rppg_rule7_mode == "7A_uncertain"
+                        else "Discounted under Rule 7B (Zero-BPM Proxy vs Verified Primary)"
+                    )
+                else:
+                    base_w *= 0.10  # 90% discount for Rules 1 & 2
+                    accepted_conf = 0.50
+                    discount_note = "Discounted under Precedence Rule (Low Light or Short Clip)"
             elif c.detector_id == "rppg" and face_swap_case:
                 base_w *= 0.20  # 80% discount
                 discount_note = "Discounted under Face-Swap Inpainting Rule"
@@ -346,9 +600,13 @@ class JudgeArbitrator:
                     original_polarity=c.polarity,
                     original_confidence=c.confidence,
                     accepted_confidence=round(accepted_conf, 4),
-                    weight_assigned=round(base_w, 3),
+                    weight_assigned=round(base_w, 4),
                     discount_reason=discount_note,
                     findings_retained=[c.claim],
+                    authority_tier=assess.authority_tier,
+                    pre_calibration_confidence=round(c.confidence, 4),
+                    calibration_checkpoint=cal_out.checkpoint_name if cal_out.calibrator_applied else None,
+                    applied_conditions=list(assess.applied_conditions),
                 )
             )
 
@@ -362,6 +620,19 @@ class JudgeArbitrator:
         if visual_tampering_case:
             calibrated_score = max(calibrated_score, 0.85)
 
+        if rppg_rule7_mode == "7A_uncertain":
+            # Hold uncalibrated primary vs invalidated zero-BPM proxy safely inside UNCERTAIN band
+            calibrated_score = round(min(max(calibrated_score, 0.42), 0.58), 4)
+
+        # Secondary proxy authority safeguard inside dispute resolution
+        non_gap_primary_synth = any(
+            not assessments[c.detector_id].cannot_solely_certify_synthetic
+            and assessments[c.detector_id].adjusted_confidence >= SYNTHETIC_POLARITY_THRESHOLD
+            for c in active_claims
+        )
+        if not non_gap_primary_synth and calibrated_score >= SYNTHETIC_VERDICT_THRESHOLD:
+            calibrated_score = 0.58
+
         # Step 4: Final Verdict Classification
         if calibrated_score >= SYNTHETIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.SYNTHETIC
@@ -369,7 +640,7 @@ class JudgeArbitrator:
         elif calibrated_score <= AUTHENTIC_VERDICT_THRESHOLD:
             final_verdict = JudgeVerdictClass.AUTHENTIC
             siem_tier = "P4_INFORMATIONAL"
-        elif coverage_warnings:
+        elif fatal_list:
             final_verdict = JudgeVerdictClass.INTEGRITY_UNKNOWN
             siem_tier = "P2_ELEVATED"
         else:
