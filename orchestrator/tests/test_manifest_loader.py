@@ -56,6 +56,8 @@ KNOWN_DETECTORS = {
     "fusion",
     "detector_image",
     "detector_text",
+    "image",
+    "streaming-rppg",
 }
 
 

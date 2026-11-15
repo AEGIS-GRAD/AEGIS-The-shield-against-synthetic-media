@@ -72,8 +72,64 @@ PLANNER_MODELS = [
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "inclusionai/ling-3.0-flash-fin:free",
 ]
+LOCAL_LLM_URL = os.environ.get("AEGIS_LOCAL_LLM_URL", "http://localhost:11434/api/chat")
+LOCAL_LLM_MODEL = os.environ.get("AEGIS_LOCAL_LLM_MODEL", "qwen2.5:0.5b")
+LOCAL_LLM_TIMEOUT_S = float(os.environ.get("AEGIS_LOCAL_LLM_TIMEOUT_S", "2.0"))
+LOCAL_LLM_ENABLED = os.environ.get("AEGIS_LOCAL_LLM_ENABLED", "1").strip().lower() in {"1", "true", "yes"}
+
 PLANNER_TIMEOUT_S = float(os.environ.get("AEGIS_PLANNER_TIMEOUT_S", "10.0"))
 DEFAULT_COMPUTE_BUDGET_S = float(os.environ.get("AEGIS_DEFAULT_BUDGET_S", "15.0"))
+PLANNER_CACHE_TTL_S = float(os.environ.get("AEGIS_PLAN_CACHE_TTL_S", "60.0"))
+PLANNER_CACHE_ENABLED = os.environ.get("AEGIS_PLAN_CACHE_ENABLED", "1").strip().lower() in {"1", "true", "yes"}
+
+# Thread-safe in-memory decision cache: cache_key -> (timestamp, PlanningResult)
+_PLAN_CACHE: Dict[str, Tuple[float, PlanningResult]] = {}
+
+
+def clear_plan_cache() -> None:
+    """Clears the decision cache (useful for testing or cache resets)."""
+    global _PLAN_CACHE
+    _PLAN_CACHE.clear()
+
+
+def make_cache_key(
+    modality: str,
+    has_audio: bool,
+    duration_seconds: Optional[float],
+    risk_profile: str,
+    budget_s: float,
+    degraded_detectors: Optional[List[str]] = None,
+) -> str:
+    """
+    Constructs a discrete cache key based on modality, audio presence,
+    duration bin, risk profile, budget ceiling bucket, and any active degraded detectors.
+    """
+    # Duration bucket: <=2s, <=5s, <=10s, <=30s, >30s
+    dur = duration_seconds or 0.0
+    if dur <= 2.0:
+        dur_bucket = "dur_le_2s"
+    elif dur <= 5.0:
+        dur_bucket = "dur_le_5s"
+    elif dur <= 10.0:
+        dur_bucket = "dur_le_10s"
+    elif dur <= 30.0:
+        dur_bucket = "dur_le_30s"
+    else:
+        dur_bucket = "dur_gt_30s"
+
+    # Budget bucket: <=5s, <=10s, <=20s, >20s
+    if budget_s <= 5.0:
+        budget_bucket = "b_le_5s"
+    elif budget_s <= 10.0:
+        budget_bucket = "b_le_10s"
+    elif budget_s <= 20.0:
+        budget_bucket = "b_le_20s"
+    else:
+        budget_bucket = "b_gt_20s"
+
+    degraded_str = ",".join(sorted(degraded_detectors or []))
+    return f"{modality.lower()}|audio={has_audio}|{dur_bucket}|risk={risk_profile.lower()}|{budget_bucket}|degraded={degraded_str}"
+
 
 REQUIRED_PLAN_KEYS: Set[str] = {
     "plan_version",
@@ -185,6 +241,59 @@ _PLANNER_SYSTEM_PROMPT = (
 )
 
 
+def call_local_llm(
+    prompt: str,
+    canary: Optional[str] = None,
+) -> Tuple[Optional[Dict[str, Any]], str, float]:
+    """
+    Invokes the local lightweight quantized model (sized to share 8 GB GPU with
+    Community Forensics and desklib detectors). Has strict 2.0s timeout to enforce
+    the 3-second SLA. Returns (plan_dict, model_name, latency_s).
+    """
+    if not LOCAL_LLM_ENABLED:
+        return None, "LOCAL_LLM_DISABLED", 0.0
+
+    messages = build_isolated_chat_messages(_PLANNER_SYSTEM_PROMPT, prompt, canary=canary)
+    payload = {
+        "model": LOCAL_LLM_MODEL,
+        "messages": messages,
+        "format": "json",
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "num_predict": 512,
+        },
+    }
+
+    t0 = time.time()
+    try:
+        if httpx is not None:
+            with httpx.Client(timeout=LOCAL_LLM_TIMEOUT_S) as client:
+                resp = client.post(LOCAL_LLM_URL, json=payload)
+        elif requests is not None:
+            resp = requests.post(LOCAL_LLM_URL, json=payload, timeout=LOCAL_LLM_TIMEOUT_S)
+        else:
+            return None, "NO_HTTP_CLIENT_AVAILABLE", 0.0
+
+        latency = time.time() - t0
+        if resp.status_code != 200:
+            return None, f"LOCAL_HTTP_{resp.status_code}", round(latency, 3)
+
+        data = resp.json()
+        content = data.get("message", {}).get("content", "").strip()
+        if content.startswith("```"):
+            content = content.split("```", 2)[1]
+            if content.startswith("json"):
+                content = content[4:]
+            content = content.strip()
+
+        parsed = json.loads(content)
+        return parsed, f"local/{LOCAL_LLM_MODEL}", round(latency, 3)
+    except Exception as exc:
+        latency = round(time.time() - t0, 3)
+        return None, f"LOCAL_LLM_UNAVAILABLE: {exc}", latency
+
+
 def call_llm(
     prompt: str,
     mock: bool = False,
@@ -192,20 +301,29 @@ def call_llm(
     canary: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, float]:
     """
-    Invokes the LLM via OpenRouter API with separated system/user messages and canary tracking.
-    Returns (parsed_plan_dict_or_None, model_or_error_str, latency_seconds).
+    Invokes LLM with tiered execution:
+    1. Fast local model on 8 GB GPU (Ollama/Qwen, <2s timeout)
+    2. Fallback to Cloud LLM (OpenRouter)
+    3. Returns parsed plan or None with latency and model identity.
     """
     if mock:
         t0 = time.time()
         return mock_plan or {}, "deterministic-reference-planner (mock)", round(time.time() - t0, 3)
 
+    # 1. Tier 1: Try local quantized model first
+    local_plan, local_model, local_latency = call_local_llm(prompt, canary=canary)
+    if local_plan is not None:
+        return local_plan, local_model, local_latency
+
+    logger.info(f"Local LLM bypassed or failed ({local_model}); falling back to cloud LLM endpoint.")
+
+    # 2. Tier 2: Cloud model fallback (OpenRouter)
     api_key = os.environ.get("OPENROUTER_API_KEY", OPENROUTER_API_KEY)
     if not api_key:
-        # Check if offline mock mode is explicitly requested
         if os.environ.get("AEGIS_MOCK_LLM", "").lower() in ("1", "true", "yes"):
             t0 = time.time()
             return mock_plan or {}, "deterministic-reference-planner (mock-env)", round(time.time() - t0, 3)
-        return None, "NO_API_KEY_SET", 0.0
+        return None, f"{local_model} -> NO_OPENROUTER_API_KEY_SET", local_latency
 
     target_url = (
         os.environ.get("AEGIS_LLM_BRIDGE_URL")
@@ -232,6 +350,7 @@ def call_llm(
             "model": model_name,
             "messages": messages,
             "temperature": 0,
+            "response_format": {"type": "json_object"},
         }
         try:
             if httpx is not None:
@@ -379,6 +498,42 @@ def plan_detectors(
     eligible_ids = {m["detector_name"] for m in eligible}
     eligible_names = sorted(eligible_ids)
 
+    # Step D0: Check Decision Cache (keyed by modality, audio, duration bucket, risk, budget, degradation)
+    degraded_list = []
+    if telemetry:
+        for dname, tdata in telemetry.items():
+            if getattr(tdata, "status", None) == "degraded":
+                degraded_list.append(dname)
+
+    cache_key = make_cache_key(
+        modality=metadata.modality,
+        has_audio=bool(metadata.has_audio),
+        duration_seconds=metadata.duration_seconds,
+        risk_profile=risk_profile,
+        budget_s=compute_budget,
+        degraded_detectors=degraded_list,
+    )
+
+    now = time.time()
+    if PLANNER_CACHE_ENABLED:
+        cached = _PLAN_CACHE.get(cache_key)
+        if cached:
+            cached_time, cached_res = cached
+            if now - cached_time < PLANNER_CACHE_TTL_S:
+                logger.info(f"Planner decision cache HIT for {cache_key} (age: {now - cached_time:.1f}s)")
+                # Return cached result with updated lookup latency (<1ms)
+                return PlanningResult(
+                    detectors_to_call=list(cached_res.detectors_to_call),
+                    plan=dict(cached_res.plan) if cached_res.plan else None,
+                    planner_mode=cached_res.planner_mode,
+                    fallback=cached_res.fallback,
+                    fallback_reason=cached_res.fallback_reason,
+                    model_used=f"{cached_res.model_used} (cache-hit)",
+                    planning_latency_s=round(time.time() - start_time, 4),
+                    eligible_detectors=eligible_names,
+                    excluded_detectors=excluded,
+                )
+
     # Step D: Build instruction-isolated prompt with per-run canary token
     canary = generate_canary_token()
     prompt = build_planning_prompt(
@@ -435,7 +590,7 @@ def plan_detectors(
     total_latency = round(time.time() - start_time, 3)
     logger.info(f"LLM Planner successfully generated plan using {model_or_err}: {detectors_to_call} ({total_latency}s)")
 
-    return PlanningResult(
+    res = PlanningResult(
         detectors_to_call=detectors_to_call,
         plan=plan,
         planner_mode="llm",
@@ -446,3 +601,8 @@ def plan_detectors(
         eligible_detectors=eligible_names,
         excluded_detectors=excluded,
     )
+
+    if PLANNER_CACHE_ENABLED:
+        _PLAN_CACHE[cache_key] = (time.time(), res)
+
+    return res

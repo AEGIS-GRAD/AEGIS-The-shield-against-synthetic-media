@@ -32,7 +32,7 @@ from debate.prompt_security import (
     wrap_untrusted_evidence,
 )
 
-PROMPT_VERSION = "planner-v3.0"
+PROMPT_VERSION = "planner-v3.1-compact"
 
 # Fallback latency figures from eval/reports/week_benchmark_report.md
 # (Month 1, 120-sample full-pipeline run), used only when live telemetry
@@ -241,29 +241,11 @@ Respond with JSON ONLY. No markdown fences, no commentary outside the JSON.
 
 # 10. FEW-SHOT EXAMPLES
 
-Example A — video with audio, standard risk, generous budget, good conditions:
+Example A — video with audio, standard risk:
 Input: {{"modality": "video", "has_audio": true, "duration_seconds": 10, "face_visibility": 0.9, "luminance": 0.5}}
 Constraints: risk_profile=standard, compute_budget_s=20
 Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier", "aasist"], "mode": "parallel"}}, {{"stage": 2, "run": ["rppg", "syncnet"], "mode": "parallel", "condition": "stage 1 inconclusive"}}], "skipped": [], "coverage_warnings": [], "estimated_latency_s": 18.5, "rationale": "Conditions are good for all four detectors; run the fast ones first and escalate within budget."}}
-
-Example B — audio-only file:
-Input: {{"modality": "audio", "has_audio": true, "duration_seconds": 4.5}}
-Constraints: risk_profile=standard, compute_budget_s=10
-Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["aasist"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["No video-based evidence available — input has no visual track."], "estimated_latency_s": 0.3, "rationale": "Only aasist is eligible for an audio-only input."}}
-
-Example C — silent video, high risk, tight budget:
-Input: {{"modality": "video", "has_audio": false, "duration_seconds": 6, "face_visibility": 0.85, "luminance": 0.4}}
-Constraints: risk_profile=high, compute_budget_s=6
-Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier"], "mode": "parallel"}}], "skipped": [{{"detector_name": "rppg", "reason": "eligible but would exceed the tight 6s budget alongside video-classifier"}}], "coverage_warnings": ["No audio-based evidence available — input has no audio track.", "rppg skipped due to budget, reducing coverage despite high risk profile."], "estimated_latency_s": 5.1, "rationale": "High risk normally favors more coverage, but the 6s budget only fits the cheapest eligible detector."}}
-
-Example D — low light, face partially visible — technically eligible but known weak conditions for rppg:
-Input: {{"modality": "video", "has_audio": true, "duration_seconds": 10, "face_visibility": 0.3, "luminance": 0.08}}
-Constraints: risk_profile=standard, compute_budget_s=20
-Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier", "aasist"], "mode": "parallel"}}], "skipped": [{{"detector_name": "rppg", "reason": "input is low-light with a partially occluded face — rppg's known_failure_modes document this as producing a confident-but-wrong result"}}], "coverage_warnings": ["rppg excluded despite being technically eligible, because this input matches its documented failure condition."], "estimated_latency_s": 7.3, "rationale": "rppg is eligible by duration/modality, but its documented failure mode is a confident wrong answer — safer to skip it here."}}
+{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier", "aasist"], "mode": "parallel"}}, {{"stage": 2, "run": ["rppg", "syncnet"], "mode": "parallel", "condition": "stage 1 inconclusive"}}], "skipped": [], "coverage_warnings": [], "estimated_latency_s": 18.5, "rationale": "Conditions good; run fast detectors first and escalate within budget."}}
 
 Example E — LIVE TELEMETRY DEGRADATION (AASIST experiencing 8.2s latency spike vs 0.3s baseline):
 Input: {{"modality": "video", "has_audio": true, "duration_seconds": 8, "face_visibility": 0.9, "luminance": 0.5}}
@@ -271,18 +253,6 @@ Telemetry: aasist status=DEGRADED, live_p95=8.2s (baseline: 0.33s, 24.5x degrada
 Constraints: risk_profile=standard, compute_budget_s=10
 Output:
 {{"plan_version": "3", "stages": [{{"stage": 1, "run": ["video-classifier"], "mode": "parallel"}}], "skipped": [{{"detector_name": "aasist", "reason": "live telemetry indicates severe latency degradation (8.2s p95); running concurrently with video-classifier would exceed 10s budget"}}], "coverage_warnings": ["aasist deprioritized due to real-time latency spike (8.2s), sacrificing audio deepfake coverage to preserve system latency budget."], "estimated_latency_s": 7.0, "rationale": "Under a 10s budget, aasist's measured 8.2s latency spike makes concurrent execution with video-classifier (7.0s) budget-infeasible; prioritizing video-classifier."}}
-
-Example F — single image file:
-Input: {{"modality": "image", "has_audio": false, "duration_seconds": 0}}
-Constraints: risk_profile=standard, compute_budget_s=10
-Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_image"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["No audio or temporal video track available — running static image forensic detector."], "estimated_latency_s": 2.0, "rationale": "Only detector_image is eligible for a standalone image input."}}
-
-Example G — text document:
-Input: {{"modality": "text", "has_audio": false, "duration_seconds": 0}}
-Constraints: risk_profile=standard, compute_budget_s=10
-Output:
-{{"plan_version": "3", "stages": [{{"stage": 1, "run": ["detector_text"], "mode": "parallel"}}], "skipped": [], "coverage_warnings": ["Text document — audio/video forensic detectors excluded."], "estimated_latency_s": 0.64, "rationale": "Only detector_text is eligible for text inputs."}}
 
 Now produce the plan for the INPUT SUMMARY, REQUEST CONSTRAINTS, and LIVE TELEMETRY given above. JSON only.
 """
