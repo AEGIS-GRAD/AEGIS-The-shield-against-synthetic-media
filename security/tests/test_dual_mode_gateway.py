@@ -17,9 +17,11 @@ import time
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from gateway.ingestion.server import LiveHashChainValidator, StreamRateLimiter
-from gateway.ingestion.telemetry import telemetry_hub, telemetry_app
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+from security.gateway.ingestion.server import LiveHashChainValidator, StreamRateLimiter
+from security.gateway.ingestion.telemetry import telemetry_hub, telemetry_app
 
 
 @pytest.mark.asyncio

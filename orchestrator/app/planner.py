@@ -505,13 +505,16 @@ def plan_detectors(
             if getattr(tdata, "status", None) == "degraded":
                 degraded_list.append(dname)
 
-    cache_key = make_cache_key(
-        modality=metadata.modality,
-        has_audio=bool(metadata.has_audio),
-        duration_seconds=metadata.duration_seconds,
-        risk_profile=risk_profile,
-        budget_s=compute_budget,
-        degraded_detectors=degraded_list,
+    cache_key = (
+        make_cache_key(
+            modality=metadata.modality,
+            has_audio=bool(metadata.has_audio),
+            duration_seconds=metadata.duration_seconds,
+            risk_profile=risk_profile,
+            budget_s=compute_budget,
+            degraded_detectors=degraded_list,
+        )
+        + f"|mock={int(bool(mock_llm))}"
     )
 
     now = time.time()

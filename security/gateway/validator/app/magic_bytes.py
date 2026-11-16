@@ -111,3 +111,14 @@ def sniff_audio_payload(content: bytes) -> SniffResult:
     return SniffResult(
         False, "unknown", "Decoded payload does not match WAV or MP3 signatures"
     )
+
+
+def sniff_image_payload(content: bytes) -> SniffResult:
+    """Confirm decoded image bytes match JPEG or PNG magic signatures."""
+    if _is_jpeg(content):
+        return SniffResult(True, ".jpg", "Magic bytes match JPEG")
+    if _is_png(content):
+        return SniffResult(True, ".png", "Magic bytes match PNG")
+    return SniffResult(
+        False, "unknown", "Decoded payload does not match JPEG or PNG signatures"
+    )

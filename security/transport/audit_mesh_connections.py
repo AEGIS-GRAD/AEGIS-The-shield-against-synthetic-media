@@ -223,7 +223,7 @@ def audit_static_configuration(report: AuditReport, repo_root: Path = REPO_ROOT)
     ok_gw_tls, gw_tls_detail = _check_ssl_command_flags(gw_cfg.get("command"))
     report.add("compose", "gateway_validator", "mTLS listener enforced", ok_gw_tls, gw_tls_detail)
     gw_env = gw_cfg.get("environment", {})
-    for url_var in ("VIDEO_DETECTOR_URL", "AUDIO_DETECTOR_URL"):
+    for url_var in ("VIDEO_DETECTOR_URL", "AUDIO_DETECTOR_URL", "IMAGE_DETECTOR_URL", "TEXT_DETECTOR_URL"):
         val = gw_env.get(url_var, "")
         report.add(
             "compose",

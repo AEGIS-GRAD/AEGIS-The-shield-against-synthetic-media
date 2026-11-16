@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 from pathlib import Path
@@ -50,17 +51,22 @@ def export_to_onnx(output_path: Path = FP32_ONNX_PATH) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Exporting PyTorch model to FP32 ONNX at {output_path}...")
 
-    torch.onnx.export(
-        model,
-        dummy_input,
-        str(output_path),
+    export_kwargs = dict(
         export_params=True,
         opset_version=17,
         do_constant_folding=True,
         input_names=["input"],
         output_names=["output"],
         dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
-        dynamo=False,
+    )
+    if "dynamo" in inspect.signature(torch.onnx.export).parameters:
+        export_kwargs["dynamo"] = False
+
+    torch.onnx.export(
+        model,
+        dummy_input,
+        str(output_path),
+        **export_kwargs,
     )
 
     # Validate ONNX model

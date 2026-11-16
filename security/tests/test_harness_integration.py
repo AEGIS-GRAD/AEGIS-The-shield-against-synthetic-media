@@ -21,6 +21,17 @@ SECURITY_FIXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'
 EVAL_FIXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'eval', 'fixtures', 'tampered_streams'))
 FIXTURES_DIR = SECURITY_FIXTURES if os.path.exists(SECURITY_FIXTURES) else EVAL_FIXTURES
 
+def _wait_for_port(host: str, port: int, timeout: float = 10.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.3):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise RuntimeError(f"Ingestion server did not open {host}:{port} within {timeout}s")
+
+
 def run_server():
     server_script = os.path.join(os.path.dirname(__file__), '..', 'gateway', 'ingestion', 'server.py')
     return subprocess.Popen([sys.executable, server_script])
@@ -187,7 +198,7 @@ def stream_scenario(scenario_name, index_row, context, clean_hashes):
             break
             
         frame_idx += 1
-        time.sleep(0.01) # Small delay to not overwhelm the loop
+        time.sleep(0.028) # ~35 FPS, safely below MAX_STREAM_FPS=60 on high-res Linux timers
         
     cap.release()
     try:
@@ -217,44 +228,46 @@ def test_harness_integration():
 
     print("[SYSTEM] Booting Ingestion Server in background...")
     server_proc = run_server()
-    time.sleep(2) 
-    
-    cert_dir = os.path.join(os.path.dirname(__file__), '..', 'transport', 'certs')
-    client_cert = os.path.join(cert_dir, 'client.crt')
-    client_key = os.path.join(cert_dir, 'client.key')
-    ca_cert = os.path.join(cert_dir, 'ca.crt')
+    try:
+        _wait_for_port(HOST, PORT, timeout=10.0)
 
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
-    context.load_cert_chain(certfile=client_cert, keyfile=client_key)
-    context.check_hostname = False
+        cert_dir = os.path.join(os.path.dirname(__file__), '..', 'transport', 'certs')
+        client_cert = os.path.join(cert_dir, 'client.crt')
+        client_key = os.path.join(cert_dir, 'client.key')
+        ca_cert = os.path.join(cert_dir, 'ca.crt')
 
-    index_path = os.path.join(FIXTURES_DIR, 'index.csv')
-    if not os.path.exists(index_path):
-        print("[FATAL] Attack fixtures not found. Run security/attacks/generate_attack_streams.py first.")
+        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+        context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+        context.check_hostname = False
+
+        index_path = os.path.join(FIXTURES_DIR, 'index.csv')
+        if not os.path.exists(index_path):
+            print("[FATAL] Attack fixtures not found. Run security/attacks/generate_attack_streams.py first.")
+            sys.exit(1)
+
+        print("[SYSTEM] Generating true hardware hashes from clean reference stream...")
+        clean_hashes = read_clean_hashes(os.path.join(FIXTURES_DIR, 'clean'))
+
+        all_passed = True
+        with open(index_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                passed = stream_scenario(row['scenario'], row, context, clean_hashes)
+                if not passed:
+                    all_passed = False
+
+        print("\n=========================================================")
+        if all_passed:
+            print("  ALL HARNESS SCENARIOS SUCCESSFULLY DEFEATED!  ")
+        else:
+            print("  SOME ATTACKS BYPASSED THE GATEWAY.  ")
+        print("=========================================================")
+
+        if not all_passed:
+            sys.exit(1)
+    finally:
         server_proc.kill()
-        sys.exit(1)
-
-    print("[SYSTEM] Generating true hardware hashes from clean reference stream...")
-    clean_hashes = read_clean_hashes(os.path.join(FIXTURES_DIR, 'clean'))
-
-    all_passed = True
-    with open(index_path, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            passed = stream_scenario(row['scenario'], row, context, clean_hashes)
-            if not passed:
-                all_passed = False
-
-    print("\n=========================================================")
-    if all_passed:
-        print("  ALL HARNESS SCENARIOS SUCCESSFULLY DEFEATED!  ")
-    else:
-        print("  SOME ATTACKS BYPASSED THE GATEWAY.  ")
-    print("=========================================================")
-    
-    server_proc.kill()
-    if not all_passed:
-        sys.exit(1)
+        server_proc.wait()
 
 if __name__ == "__main__":
     test_harness_integration()

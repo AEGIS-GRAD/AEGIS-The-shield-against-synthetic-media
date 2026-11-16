@@ -50,6 +50,8 @@ services:
       - AEGIS_MESH_DETECTORS=video-classifier,aasist,rppg,syncnet,image,text
       - VIDEO_DETECTOR_URL=https://aegis_detector_video_classifier:8000/detect
       - AUDIO_DETECTOR_URL=https://aegis_detector_aasist:8000/detect
+      - IMAGE_DETECTOR_URL=https://aegis_detector_image:8000/detect
+      - TEXT_DETECTOR_URL=https://aegis_detector_text:8000/detect
     healthcheck:
       test: [ "CMD", "curl", "-fs", "--cacert", "/mesh/mesh_ca.crt",
               "--cert", "/mesh/mesh_gateway_validator.crt",

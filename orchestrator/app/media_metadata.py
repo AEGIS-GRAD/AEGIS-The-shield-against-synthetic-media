@@ -118,6 +118,27 @@ def _compute_visual_conditions(
     return None, None
 
 
+_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
+_AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a"}
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".tiff"}
+_TEXT_EXTS = {".txt", ".md", ".json", ".csv", ".doc", ".docx"}
+_STILL_IMAGE_CODECS = {"png", "bmp", "webp", "tiff"}
+
+
+def _infer_modality_from_ext(file_path: str) -> tuple[str, bool]:
+    """Infers (modality, has_audio) from file extension when ffprobe stream info is absent."""
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in _VIDEO_EXTS:
+        return "video", True
+    if ext in _AUDIO_EXTS:
+        return "audio", True
+    if ext in _IMAGE_EXTS:
+        return "image", False
+    if ext in _TEXT_EXTS:
+        return "text", False
+    return "unknown", False
+
+
 def get_input_metadata(
     file_path: str,
     original_filename: str | None = None,
@@ -133,13 +154,13 @@ def get_input_metadata(
     resolution = None
     modality = "unknown"
     ffprobe_tags: Dict[str, Any] = {}
+    ext_hint = os.path.splitext(original_filename or file_path)[1].lower()
 
     try:
         probe = subprocess.run(
             [
                 "ffprobe", "-v", "error",
-                "-show_entries", "stream=codec_type,width,height",
-                "-show_entries", "format=duration:format_tags",
+                "-show_entries", "stream=codec_type,codec_name,width,height:format=duration:format_tags",
                 "-of", "json", file_path,
             ],
             capture_output=True, text=True, timeout=30,
@@ -150,7 +171,10 @@ def get_input_metadata(
         fmt = info.get("format", {})
         has_audio = any(s.get("codec_type") == "audio" for s in streams)
         video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
-        duration = float(fmt.get("duration", 0.0))
+        try:
+            duration = float(fmt.get("duration") or 0.0)
+        except (TypeError, ValueError):
+            duration = 0.0
         if isinstance(fmt.get("tags"), dict):
             ffprobe_tags.update(fmt["tags"])
 
@@ -159,36 +183,20 @@ def get_input_metadata(
             h = video_stream.get("height")
             if w and h:
                 resolution = [int(w), int(h)]
-            modality = "video"
+            codec_name = str(video_stream.get("codec_name") or "").lower()
+            # ffprobe treats still images (JPEG/PNG/WebP/etc.) as single-frame video streams.
+            if (ext_hint in _IMAGE_EXTS or codec_name in _STILL_IMAGE_CODECS) and not has_audio:
+                modality = "image"
+                duration = 0.0
+            else:
+                modality = "video"
         elif has_audio:
             modality = "audio"
         else:
-            ext = os.path.splitext(file_path)[1].lower()
-            if ext in (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"):
-                modality = "image"
-            elif ext in (".txt", ".md", ".json", ".csv", ".doc", ".docx"):
-                modality = "text"
-            else:
-                modality = "unknown"
+            modality, has_audio = _infer_modality_from_ext(original_filename or file_path)
 
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, ValueError):
-        ext = os.path.splitext(file_path)[1].lower()
-        video_exts = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
-        audio_exts = {".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a"}
-        image_exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"}
-        text_exts = {".txt", ".md", ".json", ".csv", ".doc", ".docx"}
-        if ext in video_exts:
-            modality = "video"
-            has_audio = True
-        elif ext in audio_exts:
-            modality = "audio"
-            has_audio = True
-        elif ext in image_exts:
-            modality = "image"
-        elif ext in text_exts:
-            modality = "text"
-        else:
-            modality = "unknown"
+        modality, has_audio = _infer_modality_from_ext(original_filename or file_path)
 
     merged_raw_tags = dict(ffprobe_tags)
     if raw_tags:
