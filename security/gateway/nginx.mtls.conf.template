@@ -50,6 +50,30 @@ server {
         proxy_ssl_protocols TLSv1.2 TLSv1.3;
     }
 
+    location /api/image {
+        proxy_pass https://aegis_gateway_validator:8080/validate/image;
+        proxy_set_header Host $host;
+        proxy_ssl_certificate /mesh/mesh_api_gateway.crt;
+        proxy_ssl_certificate_key /mesh/mesh_api_gateway.key;
+        proxy_ssl_trusted_certificate /mesh/mesh_ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_name aegis_gateway_validator;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+    }
+
+    location /api/text {
+        proxy_pass https://aegis_gateway_validator:8080/validate/text;
+        proxy_set_header Host $host;
+        proxy_ssl_certificate /mesh/mesh_api_gateway.crt;
+        proxy_ssl_certificate_key /mesh/mesh_api_gateway.key;
+        proxy_ssl_trusted_certificate /mesh/mesh_ca.crt;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_name aegis_gateway_validator;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+    }
+
     location @payload_too_large {
         default_type application/json;
         return 413 '{"error": "Payload exceeds the 50 MB upload limit."}';

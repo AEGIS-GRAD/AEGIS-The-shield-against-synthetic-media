@@ -21,13 +21,31 @@ ALLOWED_EXTENSIONS = {".mp4", ".mov", ".wav", ".mp3", ".jpg", ".jpeg", ".png", "
 SHARED_VOLUME_ROOT = os.getenv("SHARED_VOLUME_ROOT", "/shared_volume")
 
 # Upstream detector services this validator forwards clean requests to.
-# Only routes with a real backend today are wired up in main.py.
 VIDEO_DETECTOR_URL = os.getenv(
     "VIDEO_DETECTOR_URL", "http://aegis_detector_video_classifier:8000/detect"
 )
 AUDIO_DETECTOR_URL = os.getenv(
     "AUDIO_DETECTOR_URL", "http://aegis_detector_aasist:8000/detect"
 )
+IMAGE_DETECTOR_URL = os.getenv(
+    "IMAGE_DETECTOR_URL", "http://aegis_detector_image:8000/detect"
+)
+TEXT_DETECTOR_URL = os.getenv(
+    "TEXT_DETECTOR_URL", "http://aegis_detector_text:8000/detect"
+)
+
+# Deep inspection bounds for image and text payloads (DoS / decompression-bomb / prompt guards).
+MAX_IMAGE_WIDTH = int(os.getenv("MAX_IMAGE_WIDTH", "16384"))
+MAX_IMAGE_HEIGHT = int(os.getenv("MAX_IMAGE_HEIGHT", "16384"))
+MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", str(40_000_000)))
+MAX_IMAGE_DECOMPRESSED_BYTES = int(
+    os.getenv("MAX_IMAGE_DECOMPRESSED_BYTES", str(128 * 1024 * 1024))
+)
+MAX_PNG_COMPRESSION_RATIO = float(os.getenv("MAX_PNG_COMPRESSION_RATIO", "250.0"))
+MAX_EXIF_BYTES = int(os.getenv("MAX_EXIF_BYTES", str(256 * 1024)))
+MAX_ICC_BYTES = int(os.getenv("MAX_ICC_BYTES", str(512 * 1024)))
+MAX_TEXT_BYTES = int(os.getenv("MAX_TEXT_BYTES", str(800_000)))
+MAX_TEXT_CHARS = int(os.getenv("MAX_TEXT_CHARS", "200000"))
 
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
