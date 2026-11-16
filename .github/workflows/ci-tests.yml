@@ -28,7 +28,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-            torch==2.2.2+cpu torchvision==0.17.2+cpu
+            "torch>=2.4.0" "torchvision>=0.19.0"
           pip install -r requirements.txt
           grep -vE "^(torch|#)" engine/requirements.txt > /tmp/engine_reqs.txt
           pip install -r /tmp/engine_reqs.txt
@@ -95,7 +95,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-            torch==2.2.2+cpu torchvision==0.17.2+cpu
+            "torch>=2.4.0" "torchvision>=0.19.0"
           grep -vE "^(torch|#)" engine/requirements.txt > /tmp/engine_reqs.txt
           pip install -r requirements.txt -r /tmp/engine_reqs.txt pytest
 
@@ -135,9 +135,12 @@ jobs:
           python -m pip install --upgrade pip
           if [ "${{ matrix.detector }}" = "text-detector" ]; then
             pip install --extra-index-url https://download.pytorch.org/whl/cpu "torch>=2.4.0"
+          elif [ "${{ matrix.detector }}" = "rppg" ] || [ "${{ matrix.detector }}" = "video-classifier" ]; then
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+              torch==2.2.2+cpu torchvision==0.17.2+cpu "numpy>=1.24.0,<2.0.0"
           else
             pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-              torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu
+              "torch>=2.4.0" "torchvision>=0.19.0" "torchaudio>=2.4.0"
           fi
           grep -vE "^(torch|#)" requirements.txt > /tmp/det_reqs.txt
           pip install -r ../../requirements.txt -r /tmp/det_reqs.txt pytest httpx jsonschema

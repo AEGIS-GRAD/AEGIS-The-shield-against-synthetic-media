@@ -1,5 +1,6 @@
 import os
 import sys
+import csv
 import ssl
 import json
 import time
@@ -144,6 +145,27 @@ def test_live_prnu_validator_sampling_interval():
     assert msg3 != "INTERVAL_SKIP"
 
 
+def _wait_for_port(host: str, port: int, timeout: float = 10.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.3):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise RuntimeError(f"Ingestion server did not open {host}:{port} within {timeout}s")
+
+
+def _first_tampered_index(manifest_path: str, default: int = 50) -> int:
+    if not os.path.exists(manifest_path):
+        return default
+    with open(manifest_path, "r", encoding="utf-8", newline="") as fh:
+        for row in csv.DictReader(fh):
+            if str(row.get("is_tampered", "")).strip().lower() == "true":
+                return int(row["position"])
+    return default
+
+
 def test_continuous_prnu_stream_monitoring_e2e():
     """
     E2E Ingestion Pipeline Test:
@@ -154,7 +176,7 @@ def test_continuous_prnu_stream_monitoring_e2e():
     """
     server_script = os.path.join(os.path.dirname(__file__), '..', 'gateway', 'ingestion', 'server.py')
     server_proc = subprocess.Popen([sys.executable, server_script])
-    time.sleep(2) # Give server time to bind and preload baselines
+    _wait_for_port(HOST, PORT, timeout=10.0)
     
     cert_dir = os.path.join(os.path.dirname(__file__), '..', 'transport', 'certs')
     client_cert = os.path.join(cert_dir, 'client.crt')
@@ -207,10 +229,12 @@ def test_continuous_prnu_stream_monitoring_e2e():
         # Frame 4: INJECT FOREIGN SENSOR FRAME (PRNU Splice)
         # We craft a FORGED HASH that matches the spliced frame bytes perfectly
         # If the server only checked hash-chains, this frame would PASS.
-        for _ in range(20):
+        splice_manifest = os.path.join(fixtures_dir, 'prnu_splice', 'manifest.csv')
+        splice_pos = _first_tampered_index(splice_manifest, default=50)
+        for _ in range(splice_pos):
             cap_splice.read()
         ret_s, spliced_frame = cap_splice.read()
-        assert ret_s, "Failed to read spliced frame"
+        assert ret_s, f"Failed to read spliced frame at position {splice_pos}"
         
         spliced_bytes = spliced_frame.tobytes()
         hasher = hashlib.sha256()

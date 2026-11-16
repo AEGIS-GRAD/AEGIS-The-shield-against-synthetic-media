@@ -21,6 +21,7 @@ def setup_dirs():
     os.makedirs("security/tests/fixtures", exist_ok=True)
 
 def test_happy_path():
+    setup_dirs()
     chain = FrameHashChain()
     
     print("1. Generating hash chain manifest...")
@@ -32,6 +33,7 @@ def test_happy_path():
     print(f"   [OK] Clean video passed! Status: {msg}")
 
 def test_tampering_dropped_frame():
+    setup_dirs()
     # Simulate a dropped frame attack by corrupting the manifest.
     # We remove frame index 5, so the validator's 6th hash computation 
     # will not match what it expects.
