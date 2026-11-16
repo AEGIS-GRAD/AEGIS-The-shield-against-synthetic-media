@@ -386,6 +386,10 @@ class TestPrometheusTelemetryMTLS:
 
         prom_app = FastAPI()
 
+        @prom_app.get("/-/healthy")
+        def prom_healthy():
+            return {"status": "healthy"}
+
         @prom_app.get("/api/v1/query")
         def query(query: str):
             if "up{" in query:

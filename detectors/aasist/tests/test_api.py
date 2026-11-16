@@ -35,7 +35,7 @@ SCHEMA_PATH = _find_schema_path()
 def initialize_model():
     """Ensure model is loaded for test execution."""
     default_weights = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../weights/AASIST.pth")
+        os.path.join(os.path.dirname(__file__), "../AASIST.pth")
     )
     weights_path = os.getenv("MODEL_WEIGHTS_PATH", default_weights)
     load_model(weights_path)

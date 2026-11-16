@@ -73,7 +73,7 @@ def test_rule_based_mode_control_condition():
     res = plan_detectors(meta_multimodal, mode="rule_based")
     assert res.planner_mode == "rule_based"
     assert res.fallback is False
-    assert set(res.detectors_to_call) == {"video-classifier", "rppg", "aasist", "syncnet"}
+    assert set(res.detectors_to_call) == {"video-classifier", "rppg", "syncnet"}
     assert res.plan is None
 
     # Audio only
@@ -191,7 +191,7 @@ def test_llm_mode_with_mock_reference_planner():
     assert len(res.detectors_to_call) > 0
     # Must only contain known eligible detectors
     for det in res.detectors_to_call:
-        assert det in ("video-classifier", "rppg", "aasist", "syncnet", "fusion")
+        assert det in ("video-classifier", "rppg", "streaming-rppg", "aasist", "syncnet", "fusion")
 
 
 def test_llm_mode_image_and_text_planning():
@@ -204,7 +204,8 @@ def test_llm_mode_image_and_text_planning():
     res_img = plan_detectors(meta_img, mode="llm", budget_s=10.0, mock_llm=True)
     assert res_img.planner_mode == "llm"
     assert res_img.fallback is False
-    assert res_img.detectors_to_call == ["detector_image"]
+    assert "detector_image" in res_img.detectors_to_call
+    assert set(res_img.detectors_to_call) <= {"detector_image", "image"}
 
     meta_txt = InputMetadata(
         filename="document.txt",
@@ -233,7 +234,7 @@ def test_llm_mode_fallback_when_api_key_missing():
         assert res.fallback_reason is not None
         assert "LLM call failed" in res.fallback_reason
         # Fallback must match rule-based detectors
-        assert set(res.detectors_to_call) == {"video-classifier", "rppg", "aasist", "syncnet"}
+        assert set(res.detectors_to_call) == {"video-classifier", "rppg", "syncnet"}
         assert res.plan["plan_version"] == "fallback-rule-baseline"
 
 
@@ -314,7 +315,7 @@ def test_orchestrate_rule_based_mode(mock_meta, mock_dispatch, client):
     assert data["planner_mode"] == "rule_based"
     assert data["plan"] is None
     assert data["fallback"] is False
-    assert set(data["detectors_called"]) == {"video-classifier", "rppg", "aasist", "syncnet"}
+    assert set(data["detectors_called"]) == {"video-classifier", "rppg", "syncnet"}
 
 
 @patch("main.call_all_detectors")

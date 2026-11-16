@@ -1,0 +1,149 @@
+name: AEGIS Core & Surveillance CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+jobs:
+  surveillance-and-security:
+    name: Surveillance, Stream Integrity & Security Suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system multimedia & GL dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgl1 libglib2.0-0
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            torch==2.2.2+cpu torchvision==0.17.2+cpu
+          pip install -r requirements.txt
+          grep -vE "^(torch|#)" engine/requirements.txt > /tmp/engine_reqs.txt
+          pip install -r /tmp/engine_reqs.txt
+          pip install -r security/gateway/validator/requirements.txt
+          pip install -r security/requirements.txt
+          pip install pyyaml prometheus-client==0.20.0 psutil requests sqlalchemy uvicorn[standard]
+
+      - name: Generate ephemeral mTLS PKI certificates
+        run: python security/transport/generate_certs.py
+
+      - name: Generate clean and tampered surveillance stream fixtures
+        run: python security/attacks/generate_attack_streams.py --output-dir security/fixtures/tampered_streams --fps 30
+
+      - name: Run root pytest collection check
+        run: pytest --collect-only -q
+
+      - name: Run surveillance integration tests (clean & tampered streams)
+        run: pytest live_pipeline/ security/stream_integrity/tests/ security/fusion/tests/ -v
+
+      - name: Run gateway validator & security test suites
+        run: pytest security/gateway/validator/tests/ security/tests/ -v
+
+  orchestrator-and-debate:
+    name: Orchestrator & Debate Suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system multimedia dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r orchestrator/requirements.txt -r debate/requirements.txt
+          pip install pytest pytest-asyncio opencv-python-headless Pillow
+
+      - name: Run orchestrator and debate suites
+        env:
+          PYTHONPATH: ".:orchestrator/app"
+        run: pytest orchestrator/tests/ debate/tests/ -v
+
+  engine-edge:
+    name: Edge Inference & Quantization Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            torch==2.2.2+cpu torchvision==0.17.2+cpu
+          grep -vE "^(torch|#)" engine/requirements.txt > /tmp/engine_reqs.txt
+          pip install -r requirements.txt -r /tmp/engine_reqs.txt pytest
+
+      - name: Run engine tests
+        run: pytest engine/tests/ -v
+
+  detectors:
+    name: Detector Suite (${{ matrix.detector }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        detector:
+          - aasist
+          - image
+          - rppg
+          - syncnet
+          - text-detector
+          - video-classifier
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system audio/video dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+
+      - name: Install detector dependencies (CPU PyTorch)
+        working-directory: ./detectors/${{ matrix.detector }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.detector }}" = "text-detector" ]; then
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu "torch>=2.4.0"
+          else
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+              torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu
+          fi
+          grep -vE "^(torch|#)" requirements.txt > /tmp/det_reqs.txt
+          pip install -r ../../requirements.txt -r /tmp/det_reqs.txt pytest httpx jsonschema
+
+      - name: Run detector tests
+        working-directory: ./detectors/${{ matrix.detector }}
+        env:
+          PYTHONPATH: ".:${{ github.workspace }}"
+        run: pytest tests/ -v

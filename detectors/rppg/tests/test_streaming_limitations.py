@@ -6,8 +6,16 @@ When any limitation is fixed in production, update both the test and
 the corresponding LIMITATIONS.md entry.
 """
 
+import os
+import sys
+
 import numpy as np
 import pytest
+
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 from detectors.rppg.streaming.streaming import StreamingRPPG, roi_mean_rgb
 
 

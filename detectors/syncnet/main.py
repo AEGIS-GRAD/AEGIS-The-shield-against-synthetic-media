@@ -10,6 +10,7 @@ Exposes:
 from __future__ import annotations
 
 import base64
+import importlib
 import logging
 import os
 import tempfile
@@ -216,9 +217,9 @@ async def detect(
                 from preprocess import SyncNetPreprocessor as _Pre
                 import soundfile as _sf, io as _io
                 # Use ffmpeg to extract a short audio segment for dubbing analysis
-                import subprocess, tempfile
+                import subprocess
                 try:
-                    import imageio_ffmpeg
+                    imageio_ffmpeg = importlib.import_module("imageio_ffmpeg")
                     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
                 except Exception:
                     ffmpeg_exe = "ffmpeg"
