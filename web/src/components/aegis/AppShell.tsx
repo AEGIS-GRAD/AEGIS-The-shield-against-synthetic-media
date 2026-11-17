@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               title="Offline File Verification Mode (Single-Pass Adjudication)"
             >
               <span>Offline File</span>
-              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block", !liveMode ? "bg-accent-soft text-accent" : "opacity-60")}>
+              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block font-semibold", !liveMode ? "bg-accent text-accent-foreground" : "bg-secondary text-foreground/80")}>
                 Single-Pass
               </span>
             </Link>
@@ -101,7 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <span className={cn("size-1.5 rounded-full", liveMode ? "bg-emerald-500 animate-live" : "bg-muted-foreground")} />
               <span>Live Surveillance</span>
-              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block", liveMode ? "bg-emerald-500/20 text-emerald-400" : "opacity-60")}>
+              <span className={cn("text-[9px] px-1 py-0.2 rounded font-sans hidden sm:inline-block font-semibold", liveMode ? "bg-emerald-800 text-white" : "bg-secondary text-foreground/80")}>
                 Stream
               </span>
             </Link>
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-4 px-6 py-2 text-xs">
             <button onClick={() => setFooterOpen(!footerOpen)} className="flex items-center gap-1.5 font-semibold text-primary">
               {footerOpen ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />} Recent activity
-              <span className="ml-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">Demo data</span>
+              <span className="ml-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-300">Demo data</span>
             </button>
             {footerOpen && (
               <div className="flex min-w-0 flex-1 gap-6 overflow-hidden">

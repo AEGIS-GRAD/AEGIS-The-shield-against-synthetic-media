@@ -31,10 +31,10 @@ export default function SettingsPage() {
           {([["synth", "Flag as Synthetic above"], ["incon", "Inconclusive above"]] as const).map(([k, l]) => (
             <div key={k} className="mb-4">
               <div className="mb-1 flex justify-between text-sm">
-                <span>{l}</span>
+                <label htmlFor={`range-${k}`}>{l}</label>
                 <span className="mono">{t[k]}%</span>
               </div>
-              <input type="range" min={10} max={95} value={t[k]} onChange={(e) => setT({ ...t, [k]: +e.target.value })} className="w-full accent-[var(--color-accent)]" />
+              <input id={`range-${k}`} aria-label={l} type="range" min={10} max={95} value={t[k]} onChange={(e) => setT({ ...t, [k]: +e.target.value })} className="w-full accent-[var(--color-accent)]" />
             </div>
           ))}
           <label className="flex items-center justify-between border-t pt-4 text-sm">
