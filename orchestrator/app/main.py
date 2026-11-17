@@ -15,6 +15,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security.api_key import APIKeyHeader
+from pydantic import BaseModel, Field
 from starlette.status import HTTP_403_FORBIDDEN
 try:
     from starlette.status import HTTP_413_CONTENT_TOO_LARGE as HTTP_413_TOO_LARGE
@@ -28,6 +29,7 @@ from dispatch import call_all_detectors, get_all_breakers
 from aggregate import aggregate_results
 from db import init_db, log_decision, log_judge_report
 from models import OrchestrationResponse
+from reliability_feedback import ReliabilityFeedbackEngine
 from telemetry import (
     metrics_app,
     PLANNER_LATENCY,
@@ -38,7 +40,10 @@ from telemetry import (
     DETECTOR_CALL_LATENCY,
     JUDGE_ADJUDICATION_LATENCY,
     ORCHESTRATOR_REQUESTS_TOTAL,
+    DETECTOR_OVERRULES_TOTAL,
+    DETECTOR_CONFIRMED_WRONG_TOTAL,
     update_circuit_breaker_metrics,
+    update_reliability_metrics,
 )
 
 # Configure vibrant terminal logging
@@ -153,6 +158,68 @@ def export_evidence_bundle(record_id: str, api_key: str = Depends(get_api_key)):
     except Exception as exc:
         logger.error(f"Failed to export evidence bundle for '{record_id}': {exc}")
         raise HTTPException(status_code=500, detail=f"Export failed: {exc}")
+
+
+_reliability_engine_instance: Optional[ReliabilityFeedbackEngine] = None
+
+
+def _get_reliability_engine() -> ReliabilityFeedbackEngine:
+    global _reliability_engine_instance
+    if _reliability_engine_instance is None:
+        _reliability_engine_instance = ReliabilityFeedbackEngine(
+            manifests_dir=None,
+            telemetry_hook=update_reliability_metrics,
+        )
+    return _reliability_engine_instance
+
+
+class GroundTruthFeedbackRequest(BaseModel):
+    ground_truth_label: str = Field(..., description="Confirmed label: AUTHENTIC/REAL or SYNTHETIC/FAKE")
+    confirmed_by: str = Field(default="analyst")
+    apply_to_manifests: bool = Field(default=True)
+
+
+@app.post("/feedback/{job_id}")
+def submit_ground_truth_feedback(
+    job_id: str,
+    payload: GroundTruthFeedbackRequest,
+    api_key: str = Depends(get_api_key),
+):
+    """
+    Records post-hoc ground-truth confirmation for an orchestration job, marks
+    confirmed-wrong overruled claims, recomputes rolling per-condition reliability,
+    and writes updates back into capability manifests.
+    """
+    engine = _get_reliability_engine()
+    try:
+        result = engine.confirm_and_update(
+            job_id=job_id,
+            ground_truth_label=payload.ground_truth_label,
+            confirmed_by=payload.confirmed_by,
+            apply_to_manifests=payload.apply_to_manifests,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    if not result.get("updated_claims"):
+        raise HTTPException(status_code=404, detail=f"No detector claim outcomes found for job_id='{job_id}'")
+
+    for claim in result["updated_claims"]:
+        if claim.get("confirmed_overrule"):
+            for cond in claim.get("condition_tags") or ["nominal"]:
+                DETECTOR_CONFIRMED_WRONG_TOTAL.labels(
+                    detector=claim["detector_name"],
+                    condition=cond,
+                ).inc()
+
+    return result
+
+
+@app.get("/reliability/summary")
+def get_reliability_summary(api_key: str = Depends(get_api_key)):
+    """Returns rolling per-detector, per-condition reliability metrics."""
+    engine = _get_reliability_engine()
+    return {"reliability_summary": engine.get_summary()}
 
 @app.post("/orchestrate", response_model=OrchestrationResponse)
 async def orchestrate(
@@ -282,6 +349,23 @@ async def orchestrate(
         )
         log_judge_report(job_id=job_id, report=judge_report)
 
+        try:
+            outcome_records = _get_reliability_engine().record_adjudication(
+                job_id=job_id,
+                metadata=metadata,
+                raw_results=results,
+                judge_report=judge_report,
+            )
+            for rec in outcome_records:
+                if rec.get("overruled_by_judge"):
+                    for cond in rec.get("condition_tags") or ["nominal"]:
+                        DETECTOR_OVERRULES_TOTAL.labels(
+                            detector=rec["detector_name"],
+                            condition=cond,
+                        ).inc()
+        except Exception as rel_exc:
+            logger.warning(f"Failed to log detector claim outcomes: {rel_exc}")
+
         # Persist full verification, input hash, model versions, calibration version,
         # and debate transcript into the tamper-evident UnifiedEvidenceVault.
         vault = _get_evidence_vault()
@@ -326,6 +410,7 @@ async def orchestrate(
                 logger.warning(f"Failed to seal verification in UnifiedEvidenceVault: {vault_exc}")
 
         return OrchestrationResponse(
+            job_id=job_id,
             input_file=metadata.filename,
             metadata=metadata,
             detectors_called=detectors_to_call,

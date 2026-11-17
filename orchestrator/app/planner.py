@@ -50,7 +50,13 @@ except ImportError:
 from models import InputMetadata
 from rules import decide_detectors_to_call
 from manifest_loader import load_all_manifests, ManifestError
-from eligibility import filter_detectors, apply_telemetry_constraints
+from eligibility import (
+    filter_detectors,
+    apply_telemetry_constraints,
+    extract_input_condition_tags,
+    compute_deprioritization_map,
+    reliability_signature,
+)
 from prompt_builder import build_planning_prompt, PROMPT_VERSION
 from telemetry_client import get_telemetry_snapshot, DetectorTelemetry, BASELINE_LATENCIES_MS
 try:
@@ -99,10 +105,13 @@ def make_cache_key(
     risk_profile: str,
     budget_s: float,
     degraded_detectors: Optional[List[str]] = None,
+    condition_tags: Optional[List[str]] = None,
+    reliability_sig: Optional[str] = None,
 ) -> str:
     """
     Constructs a discrete cache key based on modality, audio presence,
-    duration bin, risk profile, budget ceiling bucket, and any active degraded detectors.
+    duration bin, risk profile, budget ceiling bucket, active degraded detectors,
+    operating conditions, and manifest reliability signature.
     """
     # Duration bucket: <=2s, <=5s, <=10s, <=30s, >30s
     dur = duration_seconds or 0.0
@@ -128,7 +137,15 @@ def make_cache_key(
         budget_bucket = "b_gt_20s"
 
     degraded_str = ",".join(sorted(degraded_detectors or []))
-    return f"{modality.lower()}|audio={has_audio}|{dur_bucket}|risk={risk_profile.lower()}|{budget_bucket}|degraded={degraded_str}"
+    key = (
+        f"{modality.lower()}|audio={has_audio}|{dur_bucket}|"
+        f"risk={risk_profile.lower()}|{budget_bucket}|degraded={degraded_str}"
+    )
+    if condition_tags:
+        key += f"|cond={','.join(sorted(condition_tags))}"
+    if reliability_sig:
+        key += f"|rel={reliability_sig}"
+    return key
 
 
 REQUIRED_PLAN_KEYS: Set[str] = {
@@ -174,48 +191,110 @@ def get_configured_planner_mode() -> str:
 # LLM Calling & Plan Validation
 # ---------------------------------------------------------------------------
 
+_AUTHORITY_ORDER = {
+    "video-classifier": 0,
+    "detector_image": 0,
+    "detector_text": 0,
+    "aasist": 0,
+    "syncnet": 1,
+    "image": 2,
+    "rppg": 3,
+    "streaming-rppg": 4,
+    "fusion": 5,
+}
+
+
+def _detector_latency_s(manifest: dict, telemetry: Optional[Dict[str, Any]]) -> Tuple[float, Optional[str]]:
+    name = manifest["detector_name"]
+    tel = telemetry.get(name) if telemetry else None
+    status = getattr(tel, "status", None) if tel else None
+    p95 = getattr(tel, "p95_latency_ms", None) if tel else None
+    if p95 is None:
+        perf = manifest.get("performance", {})
+        p95 = perf.get("p95_latency_ms")
+    if p95 is None and name in BASELINE_LATENCIES_MS:
+        p95 = BASELINE_LATENCIES_MS[name].get("p95")
+    latency_s = (p95 / 1000.0) if p95 else 1.0
+    return latency_s, status
+
+
 def _simulate_reference_plan(
     eligible: List[dict],
     excluded: List[dict],
     telemetry: Optional[Dict[str, Any]] = None,
     budget_s: float = 15.0,
+    active_conditions: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Deterministic reference planning engine for mock / offline environments.
-    Adheres strictly to the prompt schema and selection guidance.
+    Adheres strictly to the prompt schema, telemetry load constraints, and
+    manifest-grounded historical reliability feedback.
     """
-    eligible_names = [m["detector_name"] for m in eligible]
+    conds = active_conditions or ["nominal"]
+    dep_map = compute_deprioritization_map(eligible, conds)
+
     skipped: List[Dict[str, str]] = []
     coverage_warnings: List[str] = []
     run_detectors: List[str] = []
 
-    # Check for degraded detectors in telemetry
-    total_latency = 0.0
-    for m in eligible:
+    def _sort_key(m: dict):
         name = m["detector_name"]
+        info = dep_map.get(name, {})
         tel = telemetry.get(name) if telemetry else None
-        status = getattr(tel, "status", None) if tel else None
-        p95 = getattr(tel, "p95_latency_ms", None) if tel else None
-        if p95 is None:
-            perf = m.get("performance", {})
-            p95 = perf.get("p95_latency_ms")
-        if p95 is None and name in BASELINE_LATENCIES_MS:
-            p95 = BASELINE_LATENCIES_MS[name].get("p95")
-        latency_s = (p95 / 1000.0) if p95 else 1.0
+        tel_status = getattr(tel, "status", None) if tel else None
+        is_degraded = 1 if tel_status == "degraded" else 0
+        is_caution = 1 if info.get("status") == "caution" else 0
+        tier_rank = _AUTHORITY_ORDER.get(name, 2)
+        rr = info.get("rolling_reliability")
+        rr_sort = -(rr if isinstance(rr, (int, float)) else 0.8)
+        return (is_degraded, is_caution, tier_rank, rr_sort, name)
 
-        if status == "degraded" and (total_latency + latency_s > budget_s):
+    candidates = sorted(eligible, key=_sort_key)
+
+    parallel_wall_s = 0.0
+    cumulative_sum_s = 0.0
+    for m in candidates:
+        name = m["detector_name"]
+        info = dep_map.get(name, {})
+
+        # 1. Reliability feedback loop deprioritization
+        if info.get("should_deprioritize"):
+            cond = info.get("condition") or ",".join(conds)
+            rr = info.get("rolling_reliability")
+            n = info.get("sample_count", 0)
+            ov = info.get("confirmed_overrule_count", 0)
+            rr_str = f"{rr:.2f}" if isinstance(rr, (int, float)) else "?"
             skipped.append({
                 "detector_name": name,
-                "reason": f"live telemetry indicates latency degradation ({latency_s:.1f}s p95); deprioritized to preserve budget"
+                "reason": (
+                    f"historical reliability feedback: {name} rolling_reliability={rr_str} "
+                    f"(n={n}, confirmed_overruled={ov}) under '{cond}' — deprioritized"
+                ),
+            })
+            coverage_warnings.append(
+                f"{name} deprioritized under '{cond}' due to historical reliability feedback (rolling={rr_str})."
+            )
+            continue
+
+        latency_s, status = _detector_latency_s(m, telemetry)
+
+        if status == "degraded" and (cumulative_sum_s + latency_s > budget_s):
+            skipped.append({
+                "detector_name": name,
+                "reason": f"live telemetry indicates latency degradation ({latency_s:.1f}s p95); deprioritized to preserve budget",
             })
             coverage_warnings.append(f"{name} deprioritized due to real-time latency degradation.")
-        elif total_latency + latency_s <= budget_s:
+            continue
+
+        new_wall_s = max(parallel_wall_s, latency_s)
+        if new_wall_s <= budget_s:
             run_detectors.append(name)
-            total_latency += latency_s
+            parallel_wall_s = new_wall_s
+            cumulative_sum_s += latency_s
         else:
             skipped.append({
                 "detector_name": name,
-                "reason": f"skipped to remain within budget ceiling of {budget_s}s"
+                "reason": f"skipped to remain within budget ceiling of {budget_s}s",
             })
 
     # Record excluded reasons in coverage warnings if no video or audio
@@ -230,9 +309,72 @@ def _simulate_reference_plan(
         "stages": [{"stage": 1, "run": run_detectors, "mode": "parallel"}] if run_detectors else [],
         "skipped": skipped,
         "coverage_warnings": coverage_warnings,
-        "estimated_latency_s": round(total_latency, 2),
-        "rationale": f"Selected {run_detectors} from eligible set based on budget and system load.",
+        "estimated_latency_s": round(parallel_wall_s, 2),
+        "rationale": f"Selected {run_detectors} from eligible set based on reliability feedback, budget, and system load.",
     }
+
+
+def _enforce_reliability_deprioritization(
+    plan: Dict[str, Any],
+    dep_map: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Post-check guard for live LLM outputs: if a plan still schedules a detector
+    flagged `should_deprioritize=True` alongside at least one reliable detector,
+    move the unreliable detector to `skipped` and log a coverage warning.
+    """
+    if not plan or not dep_map:
+        return plan
+
+    scheduled = [
+        det
+        for stg in plan.get("stages", [])
+        for det in stg.get("run", [])
+    ]
+    non_dep_scheduled = [
+        d for d in scheduled if not dep_map.get(d, {}).get("should_deprioritize", False)
+    ]
+    if not non_dep_scheduled:
+        return plan  # safety invariant: never empty out all detectors
+
+    to_drop = {
+        d for d in scheduled if dep_map.get(d, {}).get("should_deprioritize", False)
+    }
+    if not to_drop:
+        return plan
+
+    new_stages = []
+    for stg in plan.get("stages", []):
+        kept = [d for d in stg.get("run", []) if d not in to_drop]
+        if kept:
+            new_stg = dict(stg)
+            new_stg["run"] = kept
+            new_stages.append(new_stg)
+    plan["stages"] = new_stages
+
+    skipped = list(plan.get("skipped") or [])
+    warnings = list(plan.get("coverage_warnings") or [])
+    already_skipped = {s.get("detector_name") for s in skipped if isinstance(s, dict)}
+    for d in sorted(to_drop):
+        info = dep_map.get(d, {})
+        cond = info.get("condition") or "degraded_condition"
+        rr = info.get("rolling_reliability")
+        rr_str = f"{rr:.2f}" if isinstance(rr, (int, float)) else "?"
+        if d not in already_skipped:
+            skipped.append({
+                "detector_name": d,
+                "reason": (
+                    f"historical reliability feedback: {d} rolling_reliability={rr_str} "
+                    f"under '{cond}' — deprioritized"
+                ),
+            })
+        warn_msg = f"{d} deprioritized under '{cond}' due to historical reliability feedback (rolling={rr_str})."
+        if warn_msg not in warnings:
+            warnings.append(warn_msg)
+
+    plan["skipped"] = skipped
+    plan["coverage_warnings"] = warnings
+    return plan
 
 
 _PLANNER_SYSTEM_PROMPT = (
@@ -424,6 +566,7 @@ def plan_detectors(
     risk_profile: str = "standard",
     budget_s: Optional[float] = None,
     mock_llm: bool = False,
+    manifests_dir: Optional[Path] = None,
 ) -> PlanningResult:
     """
     Executes the planning phase for an incoming media request.
@@ -456,7 +599,7 @@ def plan_detectors(
 
     # Step A: Load manifests
     try:
-        manifests = load_all_manifests()
+        manifests = load_all_manifests(manifests_dir=manifests_dir)
     except Exception as exc:
         logger.error(f"Failed to load capability manifests: {exc}. Falling back to rule-based baseline.")
         rule_fallback = decide_detectors_to_call(metadata)
@@ -479,11 +622,18 @@ def plan_detectors(
     }
     if metadata.resolution:
         input_summary["resolution"] = metadata.resolution
+    if getattr(metadata, "mean_luminance", None) is not None:
+        input_summary["mean_luminance"] = metadata.mean_luminance
+    if getattr(metadata, "face_detected", None) is not None:
+        input_summary["face_detected"] = metadata.face_detected
     raw_tags = getattr(metadata, "metadata_tags", None)
     if isinstance(raw_tags, dict) and raw_tags:
         clean_tags, _ = sanitize_exif_metadata(raw_tags)
         if clean_tags:
             input_summary["metadata_tags"] = clean_tags
+
+    active_conditions = extract_input_condition_tags(metadata)
+    input_summary["operating_conditions"] = active_conditions
 
     eligible, excluded = filter_detectors(manifests, input_summary)
 
@@ -497,8 +647,10 @@ def plan_detectors(
 
     eligible_ids = {m["detector_name"] for m in eligible}
     eligible_names = sorted(eligible_ids)
+    dep_map = compute_deprioritization_map(eligible, active_conditions)
+    rel_sig = reliability_signature(eligible, active_conditions)
 
-    # Step D0: Check Decision Cache (keyed by modality, audio, duration bucket, risk, budget, degradation)
+    # Step D0: Check Decision Cache (keyed by modality, audio, duration bucket, risk, budget, degradation, condition, reliability)
     degraded_list = []
     if telemetry:
         for dname, tdata in telemetry.items():
@@ -513,8 +665,11 @@ def plan_detectors(
             risk_profile=risk_profile,
             budget_s=compute_budget,
             degraded_detectors=degraded_list,
+            condition_tags=active_conditions,
+            reliability_sig=rel_sig,
         )
         + f"|mock={int(bool(mock_llm))}"
+        + (f"|mdir={manifests_dir}" if manifests_dir is not None else "")
     )
 
     now = time.time()
@@ -546,10 +701,17 @@ def plan_detectors(
         risk_profile=risk_profile,
         budget_s=compute_budget,
         telemetry=telemetry,
+        active_conditions=active_conditions,
     )
 
     # Step E: Call LLM
-    reference_mock_plan = _simulate_reference_plan(eligible, excluded, telemetry, compute_budget)
+    reference_mock_plan = _simulate_reference_plan(
+        eligible,
+        excluded,
+        telemetry,
+        compute_budget,
+        active_conditions=active_conditions,
+    )
     plan, model_or_err, llm_latency = call_llm(
         prompt=prompt,
         mock=mock_llm,
@@ -582,6 +744,9 @@ def plan_detectors(
             eligible_detectors=eligible_names,
             excluded_detectors=excluded,
         )
+
+    # Step F2: Enforce manifest-grounded reliability deprioritization on validated plans
+    plan = _enforce_reliability_deprioritization(plan, dep_map)
 
     # Step G: Extract detectors scheduled to run in plan
     detectors_to_call: List[str] = []

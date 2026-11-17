@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="760" viewBox="0 0 1120 760" style="background:#ffffff;font-family:Segoe UI,Arial,sans-serif;">
+<text x="560.0" y="26" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">AEGIS Task 5 (RQ2): Reliability Feedback Loop Learning Curves (Loop ON vs. Loop OFF)</text>
+<rect x="60" y="55" width="470" height="280" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="60" y="47" font-size="13" font-weight="600" fill="#1e293b">A. Failing-Condition Dispatch Rate (%)</text>
+<line x1="60" y1="335.0" x2="530" y2="335.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="339.0" text-anchor="end" font-size="10" fill="#475569">0%</text>
+<line x1="60" y1="265.0" x2="530" y2="265.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="269.0" text-anchor="end" font-size="10" fill="#475569">26%</text>
+<line x1="60" y1="195.0" x2="530" y2="195.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="199.0" text-anchor="end" font-size="10" fill="#475569">52%</text>
+<line x1="60" y1="125.0" x2="530" y2="125.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="129.0" text-anchor="end" font-size="10" fill="#475569">79%</text>
+<line x1="60" y1="55.0" x2="530" y2="55.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="59.0" text-anchor="end" font-size="10" fill="#475569">105%</text>
+<text x="84.0" y="351" text-anchor="middle" font-size="10" fill="#475569">S1</text>
+<text x="144.3" y="351" text-anchor="middle" font-size="10" fill="#475569">S2</text>
+<text x="204.6" y="351" text-anchor="middle" font-size="10" fill="#475569">S3</text>
+<text x="264.9" y="351" text-anchor="middle" font-size="10" fill="#475569">S4</text>
+<text x="325.1" y="351" text-anchor="middle" font-size="10" fill="#475569">S5</text>
+<text x="385.4" y="351" text-anchor="middle" font-size="10" fill="#475569">S6</text>
+<text x="445.7" y="351" text-anchor="middle" font-size="10" fill="#475569">S7</text>
+<text x="506.0" y="351" text-anchor="middle" font-size="10" fill="#475569">S8</text>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.2" points="84.0,68.3 144.3,68.3 204.6,68.3 264.9,68.3 325.1,68.3 385.4,68.3 445.7,68.3 506.0,68.3"/>
+<circle cx="84.0" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="144.3" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="204.6" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="264.9" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="325.1" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="385.4" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="445.7" cy="68.3" r="3.2" fill="#dc2626"/>
+<circle cx="506.0" cy="68.3" r="3.2" fill="#dc2626"/>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.2" points="84.0,68.3 144.3,250.8 204.6,250.8 264.9,335.0 325.1,335.0 385.4,335.0 445.7,335.0 506.0,335.0"/>
+<circle cx="84.0" cy="68.3" r="3.2" fill="#16a34a"/>
+<circle cx="144.3" cy="250.8" r="3.2" fill="#16a34a"/>
+<circle cx="204.6" cy="250.8" r="3.2" fill="#16a34a"/>
+<circle cx="264.9" cy="335.0" r="3.2" fill="#16a34a"/>
+<circle cx="325.1" cy="335.0" r="3.2" fill="#16a34a"/>
+<circle cx="385.4" cy="335.0" r="3.2" fill="#16a34a"/>
+<circle cx="445.7" cy="335.0" r="3.2" fill="#16a34a"/>
+<circle cx="506.0" cy="335.0" r="3.2" fill="#16a34a"/>
+<rect x="335" y="67" width="188" height="36" rx="4" fill="#ffffff" fill-opacity="0.88" stroke="#cbd5e1" stroke-width="0.8"/>
+<line x1="341" y1="77" x2="359" y2="77" stroke="#dc2626" stroke-width="2.2"/>
+<text x="364" y="80" font-size="9.5" fill="#0f172a">Loop OFF (control)</text>
+<line x1="341" y1="91" x2="359" y2="91" stroke="#16a34a" stroke-width="2.2"/>
+<text x="364" y="94" font-size="9.5" fill="#0f172a">Loop ON (feedback)</text>
+<rect x="595" y="55" width="470" height="280" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="595" y="47" font-size="13" font-weight="600" fill="#1e293b">B. Rolling Reliability by (Detector, Condition)</text>
+<line x1="595" y1="335.0" x2="1065" y2="335.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="339.0" text-anchor="end" font-size="10" fill="#475569">0.00</text>
+<line x1="595" y1="265.0" x2="1065" y2="265.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="269.0" text-anchor="end" font-size="10" fill="#475569">0.26</text>
+<line x1="595" y1="195.0" x2="1065" y2="195.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="199.0" text-anchor="end" font-size="10" fill="#475569">0.53</text>
+<line x1="595" y1="125.0" x2="1065" y2="125.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="129.0" text-anchor="end" font-size="10" fill="#475569">0.79</text>
+<line x1="595" y1="55.0" x2="1065" y2="55.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="59.0" text-anchor="end" font-size="10" fill="#475569">1.05</text>
+<text x="619.0" y="351" text-anchor="middle" font-size="10" fill="#475569">S1</text>
+<text x="679.3" y="351" text-anchor="middle" font-size="10" fill="#475569">S2</text>
+<text x="739.6" y="351" text-anchor="middle" font-size="10" fill="#475569">S3</text>
+<text x="799.9" y="351" text-anchor="middle" font-size="10" fill="#475569">S4</text>
+<text x="860.1" y="351" text-anchor="middle" font-size="10" fill="#475569">S5</text>
+<text x="920.4" y="351" text-anchor="middle" font-size="10" fill="#475569">S6</text>
+<text x="980.7" y="351" text-anchor="middle" font-size="10" fill="#475569">S7</text>
+<text x="1041.0" y="351" text-anchor="middle" font-size="10" fill="#475569">S8</text>
+<line x1="595" y1="188.3" x2="1065" y2="188.3" stroke="#64748b" stroke-width="1.2" stroke-dasharray="5,4"/>
+<text x="1059" y="184.3" text-anchor="end" font-size="9.5" fill="#475569">Deprioritize (0.55)</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.2" points="619.0,117.7 679.3,128.3 739.6,123.7 799.9,117.7 860.1,102.9 920.4,83.2 980.7,93.0 1041.0,107.8"/>
+<circle cx="619.0" cy="117.7" r="3.2" fill="#2563eb"/>
+<circle cx="679.3" cy="128.3" r="3.2" fill="#2563eb"/>
+<circle cx="739.6" cy="123.7" r="3.2" fill="#2563eb"/>
+<circle cx="799.9" cy="117.7" r="3.2" fill="#2563eb"/>
+<circle cx="860.1" cy="102.9" r="3.2" fill="#2563eb"/>
+<circle cx="920.4" cy="83.2" r="3.2" fill="#2563eb"/>
+<circle cx="980.7" cy="93.0" r="3.2" fill="#2563eb"/>
+<circle cx="1041.0" cy="107.8" r="3.2" fill="#2563eb"/>
+<polyline fill="none" stroke="#0d9488" stroke-width="2.2" points="619.0,151.7 679.3,144.5 739.6,128.3 799.9,140.1 860.1,127.6 920.4,127.6 980.7,122.7 1041.0,112.8"/>
+<circle cx="619.0" cy="151.7" r="3.2" fill="#0d9488"/>
+<circle cx="679.3" cy="144.5" r="3.2" fill="#0d9488"/>
+<circle cx="739.6" cy="128.3" r="3.2" fill="#0d9488"/>
+<circle cx="799.9" cy="140.1" r="3.2" fill="#0d9488"/>
+<circle cx="860.1" cy="127.6" r="3.2" fill="#0d9488"/>
+<circle cx="920.4" cy="127.6" r="3.2" fill="#0d9488"/>
+<circle cx="980.7" cy="122.7" r="3.2" fill="#0d9488"/>
+<circle cx="1041.0" cy="112.8" r="3.2" fill="#0d9488"/>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.2" points="619.0,256.0 679.3,256.0 739.6,256.0 799.9,256.0 860.1,256.0 920.4,256.0 980.7,256.0 1041.0,256.0"/>
+<circle cx="619.0" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="679.3" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="739.6" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="799.9" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="860.1" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="920.4" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="980.7" cy="256.0" r="3.2" fill="#dc2626"/>
+<circle cx="1041.0" cy="256.0" r="3.2" fill="#dc2626"/>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.2" stroke-dasharray="4,3" points="619.0,250.8 679.3,250.8 739.6,250.8 799.9,250.8 860.1,250.8 920.4,250.8 980.7,250.8 1041.0,250.8"/>
+<circle cx="619.0" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="679.3" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="739.6" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="799.9" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="860.1" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="920.4" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="980.7" cy="250.8" r="3.2" fill="#ea580c"/>
+<circle cx="1041.0" cy="250.8" r="3.2" fill="#ea580c"/>
+<polyline fill="none" stroke="#9333ea" stroke-width="2.2" stroke-dasharray="6,3" points="619.0,151.7 679.3,163.6 739.6,195.0 799.9,195.0 860.1,195.0 920.4,195.0 980.7,195.0 1041.0,195.0"/>
+<circle cx="619.0" cy="151.7" r="3.2" fill="#9333ea"/>
+<circle cx="679.3" cy="163.6" r="3.2" fill="#9333ea"/>
+<circle cx="739.6" cy="195.0" r="3.2" fill="#9333ea"/>
+<circle cx="799.9" cy="195.0" r="3.2" fill="#9333ea"/>
+<circle cx="860.1" cy="195.0" r="3.2" fill="#9333ea"/>
+<circle cx="920.4" cy="195.0" r="3.2" fill="#9333ea"/>
+<circle cx="980.7" cy="195.0" r="3.2" fill="#9333ea"/>
+<circle cx="1041.0" cy="195.0" r="3.2" fill="#9333ea"/>
+<rect x="870" y="67" width="188" height="78" rx="4" fill="#ffffff" fill-opacity="0.88" stroke="#cbd5e1" stroke-width="0.8"/>
+<line x1="876" y1="77" x2="894" y2="77" stroke="#2563eb" stroke-width="2.2"/>
+<text x="899" y="80" font-size="9.5" fill="#0f172a">video-classifier @ low_light</text>
+<line x1="876" y1="91" x2="894" y2="91" stroke="#0d9488" stroke-width="2.2"/>
+<text x="899" y="94" font-size="9.5" fill="#0f172a">rppg @ nominal</text>
+<line x1="876" y1="105" x2="894" y2="105" stroke="#dc2626" stroke-width="2.2"/>
+<text x="899" y="108" font-size="9.5" fill="#0f172a">rppg @ low_light</text>
+<line x1="876" y1="119" x2="894" y2="119" stroke="#ea580c" stroke-width="2.2" stroke-dasharray="4,3"/>
+<text x="899" y="122" font-size="9.5" fill="#0f172a">rppg @ short_clip</text>
+<line x1="876" y1="133" x2="894" y2="133" stroke="#9333ea" stroke-width="2.2" stroke-dasharray="6,3"/>
+<text x="899" y="136" font-size="9.5" fill="#0f172a">syncnet @ dubbed_audio</text>
+<rect x="60" y="420" width="470" height="280" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="60" y="412" font-size="13" font-weight="600" fill="#1e293b">C. Confirmed-Wrong Overrules per 50-Input Session</text>
+<line x1="60" y1="700.0" x2="530" y2="700.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="704.0" text-anchor="end" font-size="10" fill="#475569">0</text>
+<line x1="60" y1="630.0" x2="530" y2="630.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="634.0" text-anchor="end" font-size="10" fill="#475569">8</text>
+<line x1="60" y1="560.0" x2="530" y2="560.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="564.0" text-anchor="end" font-size="10" fill="#475569">17</text>
+<line x1="60" y1="490.0" x2="530" y2="490.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="494.0" text-anchor="end" font-size="10" fill="#475569">25</text>
+<line x1="60" y1="420.0" x2="530" y2="420.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="54" y="424.0" text-anchor="end" font-size="10" fill="#475569">33</text>
+<text x="84.0" y="716" text-anchor="middle" font-size="10" fill="#475569">S1</text>
+<text x="144.3" y="716" text-anchor="middle" font-size="10" fill="#475569">S2</text>
+<text x="204.6" y="716" text-anchor="middle" font-size="10" fill="#475569">S3</text>
+<text x="264.9" y="716" text-anchor="middle" font-size="10" fill="#475569">S4</text>
+<text x="325.1" y="716" text-anchor="middle" font-size="10" fill="#475569">S5</text>
+<text x="385.4" y="716" text-anchor="middle" font-size="10" fill="#475569">S6</text>
+<text x="445.7" y="716" text-anchor="middle" font-size="10" fill="#475569">S7</text>
+<text x="506.0" y="716" text-anchor="middle" font-size="10" fill="#475569">S8</text>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.2" points="84.0,498.5 144.3,506.9 204.6,456.5 264.9,464.9 325.1,456.5 385.4,498.5 445.7,481.7 506.0,490.1"/>
+<circle cx="84.0" cy="498.5" r="3.2" fill="#dc2626"/>
+<circle cx="144.3" cy="506.9" r="3.2" fill="#dc2626"/>
+<circle cx="204.6" cy="456.5" r="3.2" fill="#dc2626"/>
+<circle cx="264.9" cy="464.9" r="3.2" fill="#dc2626"/>
+<circle cx="325.1" cy="456.5" r="3.2" fill="#dc2626"/>
+<circle cx="385.4" cy="498.5" r="3.2" fill="#dc2626"/>
+<circle cx="445.7" cy="481.7" r="3.2" fill="#dc2626"/>
+<circle cx="506.0" cy="490.1" r="3.2" fill="#dc2626"/>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.2" points="84.0,498.5 144.3,658.0 204.6,590.9 264.9,658.0 325.1,666.4 385.4,666.4 445.7,666.4 506.0,641.2"/>
+<circle cx="84.0" cy="498.5" r="3.2" fill="#16a34a"/>
+<circle cx="144.3" cy="658.0" r="3.2" fill="#16a34a"/>
+<circle cx="204.6" cy="590.9" r="3.2" fill="#16a34a"/>
+<circle cx="264.9" cy="658.0" r="3.2" fill="#16a34a"/>
+<circle cx="325.1" cy="666.4" r="3.2" fill="#16a34a"/>
+<circle cx="385.4" cy="666.4" r="3.2" fill="#16a34a"/>
+<circle cx="445.7" cy="666.4" r="3.2" fill="#16a34a"/>
+<circle cx="506.0" cy="641.2" r="3.2" fill="#16a34a"/>
+<rect x="335" y="432" width="188" height="36" rx="4" fill="#ffffff" fill-opacity="0.88" stroke="#cbd5e1" stroke-width="0.8"/>
+<line x1="341" y1="442" x2="359" y2="442" stroke="#dc2626" stroke-width="2.2"/>
+<text x="364" y="445" font-size="9.5" fill="#0f172a">Loop OFF (overruled & wrong)</text>
+<line x1="341" y1="456" x2="359" y2="456" stroke="#16a34a" stroke-width="2.2"/>
+<text x="364" y="459" font-size="9.5" fill="#0f172a">Loop ON (overruled & wrong)</text>
+<rect x="595" y="420" width="470" height="280" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="595" y="412" font-size="13" font-weight="600" fill="#1e293b">D. Mean Detector Compute Cost (detector-s / input)</text>
+<line x1="595" y1="700.0" x2="1065" y2="700.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="704.0" text-anchor="end" font-size="10" fill="#475569">0.0s</text>
+<line x1="595" y1="630.0" x2="1065" y2="630.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="634.0" text-anchor="end" font-size="10" fill="#475569">6.2s</text>
+<line x1="595" y1="560.0" x2="1065" y2="560.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="564.0" text-anchor="end" font-size="10" fill="#475569">12.5s</text>
+<line x1="595" y1="490.0" x2="1065" y2="490.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="494.0" text-anchor="end" font-size="10" fill="#475569">18.8s</text>
+<line x1="595" y1="420.0" x2="1065" y2="420.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="589" y="424.0" text-anchor="end" font-size="10" fill="#475569">25.0s</text>
+<text x="619.0" y="716" text-anchor="middle" font-size="10" fill="#475569">S1</text>
+<text x="679.3" y="716" text-anchor="middle" font-size="10" fill="#475569">S2</text>
+<text x="739.6" y="716" text-anchor="middle" font-size="10" fill="#475569">S3</text>
+<text x="799.9" y="716" text-anchor="middle" font-size="10" fill="#475569">S4</text>
+<text x="860.1" y="716" text-anchor="middle" font-size="10" fill="#475569">S5</text>
+<text x="920.4" y="716" text-anchor="middle" font-size="10" fill="#475569">S6</text>
+<text x="980.7" y="716" text-anchor="middle" font-size="10" fill="#475569">S7</text>
+<text x="1041.0" y="716" text-anchor="middle" font-size="10" fill="#475569">S8</text>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.2" points="619.0,488.7 679.3,482.3 739.6,479.5 799.9,475.7 860.1,489.1 920.4,485.6 980.7,489.0 1041.0,485.6"/>
+<circle cx="619.0" cy="488.7" r="3.2" fill="#dc2626"/>
+<circle cx="679.3" cy="482.3" r="3.2" fill="#dc2626"/>
+<circle cx="739.6" cy="479.5" r="3.2" fill="#dc2626"/>
+<circle cx="799.9" cy="475.7" r="3.2" fill="#dc2626"/>
+<circle cx="860.1" cy="489.1" r="3.2" fill="#dc2626"/>
+<circle cx="920.4" cy="485.6" r="3.2" fill="#dc2626"/>
+<circle cx="980.7" cy="489.0" r="3.2" fill="#dc2626"/>
+<circle cx="1041.0" cy="485.6" r="3.2" fill="#dc2626"/>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.2" points="619.0,488.7 679.3,514.3 739.6,502.6 799.9,529.7 860.1,532.4 920.4,539.8 980.7,535.7 1041.0,532.7"/>
+<circle cx="619.0" cy="488.7" r="3.2" fill="#16a34a"/>
+<circle cx="679.3" cy="514.3" r="3.2" fill="#16a34a"/>
+<circle cx="739.6" cy="502.6" r="3.2" fill="#16a34a"/>
+<circle cx="799.9" cy="529.7" r="3.2" fill="#16a34a"/>
+<circle cx="860.1" cy="532.4" r="3.2" fill="#16a34a"/>
+<circle cx="920.4" cy="539.8" r="3.2" fill="#16a34a"/>
+<circle cx="980.7" cy="535.7" r="3.2" fill="#16a34a"/>
+<circle cx="1041.0" cy="532.7" r="3.2" fill="#16a34a"/>
+<rect x="870" y="432" width="188" height="36" rx="4" fill="#ffffff" fill-opacity="0.88" stroke="#cbd5e1" stroke-width="0.8"/>
+<line x1="876" y1="442" x2="894" y2="442" stroke="#dc2626" stroke-width="2.2"/>
+<text x="899" y="445" font-size="9.5" fill="#0f172a">Loop OFF compute (s/input)</text>
+<line x1="876" y1="456" x2="894" y2="456" stroke="#16a34a" stroke-width="2.2"/>
+<text x="899" y="459" font-size="9.5" fill="#0f172a">Loop ON compute (s/input)</text>
+</svg>

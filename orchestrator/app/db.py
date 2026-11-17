@@ -74,6 +74,34 @@ class JudgeAuditLog(Base):
     debate_transcript_json = Column(String)  # full JSON of all 3 DebateRound objects
 
 
+class DetectorClaimOutcome(Base):
+    """Per-detector claim adjudication and post-hoc ground truth confirmation."""
+
+    __tablename__ = "detector_claim_outcomes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, index=True)
+    session_id = Column(String, nullable=True, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    detector_name = Column(String, index=True)
+    model_version = Column(String, nullable=True)
+    modality = Column(String, default="unknown")
+    condition_tags_json = Column(String, default='["nominal"]')
+    original_polarity = Column(String)
+    original_confidence = Column(Float)
+    accepted_confidence = Column(Float)
+    weight_assigned = Column(Float)
+    judge_verdict = Column(String)
+    overruled_by_judge = Column(Boolean, default=False)
+    discount_reason = Column(String, nullable=True)
+    ground_truth_label = Column(String, nullable=True)
+    detector_was_wrong = Column(Boolean, nullable=True)
+    confirmed_overrule = Column(Boolean, nullable=True)
+    judge_was_correct = Column(Boolean, nullable=True)
+    confirmed_by = Column(String, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+
+
 def _column_default_sql(col) -> str:
     """Builds a safe SQLite DEFAULT clause for scalar model column defaults."""
     if col.default is None or not col.default.is_scalar:
@@ -199,5 +227,229 @@ def log_decision(
     except Exception as e:
         print(f"Error logging to DB: {e}")
         db.rollback()
+    finally:
+        db.close()
+
+
+def normalize_ground_truth_label(label: str) -> str:
+    """Normalizes ground-truth labels to canonical AUTHENTIC or SYNTHETIC."""
+    norm = (label or "").strip().upper()
+    if norm in ("REAL", "AUTHENTIC", "HUMAN", "BONAFIDE"):
+        return "AUTHENTIC"
+    if norm in ("FAKE", "SYNTHETIC", "AI", "MANIPULATED", "SPOOF"):
+        return "SYNTHETIC"
+    raise ValueError(f"Unsupported ground_truth_label '{label}'. Expected AUTHENTIC/REAL or SYNTHETIC/FAKE.")
+
+
+def _ensure_claim_outcome_table(db_session) -> None:
+    DetectorClaimOutcome.__table__.create(bind=db_session.get_bind(), checkfirst=True)
+
+
+def log_claim_outcomes(
+    records: list[dict],
+    session_factory=None,
+) -> int:
+    """
+    Persists per-detector claim adjudication outcomes (including judge overrule flags)
+    for a completed orchestration job. Returns the count of inserted rows.
+    """
+    if not records:
+        return 0
+    factory = session_factory or SessionLocal
+    db = factory()
+    try:
+        _ensure_claim_outcome_table(db)
+        inserted = 0
+        for rec in records:
+            conds = rec.get("condition_tags") or ["nominal"]
+            cond_json = json.dumps(list(dict.fromkeys(str(c) for c in conds)))
+            row = DetectorClaimOutcome(
+                job_id=rec["job_id"],
+                session_id=rec.get("session_id"),
+                detector_name=rec["detector_name"],
+                model_version=rec.get("model_version"),
+                modality=rec.get("modality", "unknown"),
+                condition_tags_json=cond_json,
+                original_polarity=rec["original_polarity"],
+                original_confidence=float(rec["original_confidence"]),
+                accepted_confidence=float(rec["accepted_confidence"]),
+                weight_assigned=float(rec["weight_assigned"]),
+                judge_verdict=rec["judge_verdict"],
+                overruled_by_judge=bool(rec.get("overruled_by_judge", False)),
+                discount_reason=rec.get("discount_reason"),
+            )
+            db.add(row)
+            inserted += 1
+        db.commit()
+        return inserted
+    except Exception as e:
+        print(f"Error logging DetectorClaimOutcome rows: {e}")
+        db.rollback()
+        return 0
+    finally:
+        db.close()
+
+
+def _apply_ground_truth_to_row(
+    row: DetectorClaimOutcome,
+    norm_gt: str,
+    confirmed_by: str,
+    now: datetime,
+) -> dict:
+    row.ground_truth_label = norm_gt
+    row.confirmed_by = confirmed_by
+    row.confirmed_at = now
+    row.judge_was_correct = (row.judge_verdict == norm_gt)
+    if row.original_polarity in ("AUTHENTIC", "SYNTHETIC"):
+        wrong = row.original_polarity != norm_gt
+        row.detector_was_wrong = wrong
+        row.confirmed_overrule = bool(row.overruled_by_judge and wrong)
+    else:
+        row.detector_was_wrong = None
+        row.confirmed_overrule = False
+    return {
+        "job_id": row.job_id,
+        "detector_name": row.detector_name,
+        "condition_tags": json.loads(row.condition_tags_json or '["nominal"]'),
+        "original_polarity": row.original_polarity,
+        "overruled_by_judge": bool(row.overruled_by_judge),
+        "ground_truth_label": norm_gt,
+        "detector_was_wrong": row.detector_was_wrong,
+        "confirmed_overrule": bool(row.confirmed_overrule),
+        "judge_was_correct": bool(row.judge_was_correct),
+    }
+
+
+def confirm_ground_truth(
+    job_id: str,
+    ground_truth_label: str,
+    confirmed_by: str = "analyst",
+    session_factory=None,
+) -> list[dict]:
+    """
+    Records post-hoc ground truth for all detector claim rows matching `job_id`.
+    Computes `detector_was_wrong`, `confirmed_overrule`, and `judge_was_correct`.
+    Returns updated outcome dicts for the job.
+    """
+    norm_gt = normalize_ground_truth_label(ground_truth_label)
+    factory = session_factory or SessionLocal
+    db = factory()
+    try:
+        _ensure_claim_outcome_table(db)
+        rows = (
+            db.query(DetectorClaimOutcome)
+            .filter(DetectorClaimOutcome.job_id == job_id)
+            .all()
+        )
+        if not rows:
+            return []
+
+        now = datetime.now(timezone.utc)
+        updated = [_apply_ground_truth_to_row(row, norm_gt, confirmed_by, now) for row in rows]
+        db.commit()
+        return updated
+    except Exception as e:
+        print(f"Error confirming ground truth for job '{job_id}': {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def confirm_ground_truth_batch(
+    confirmations: list[tuple[str, str]],
+    confirmed_by: str = "batch_eval",
+    session_factory=None,
+) -> list[dict]:
+    """
+    Records post-hoc ground truth for multiple `(job_id, ground_truth_label)`
+    pairs inside a single DB transaction.
+    """
+    if not confirmations:
+        return []
+    gt_by_job = {
+        job_id: normalize_ground_truth_label(label)
+        for job_id, label in confirmations
+    }
+    factory = session_factory or SessionLocal
+    db = factory()
+    try:
+        _ensure_claim_outcome_table(db)
+        rows = (
+            db.query(DetectorClaimOutcome)
+            .filter(DetectorClaimOutcome.job_id.in_(list(gt_by_job.keys())))
+            .all()
+        )
+        if not rows:
+            return []
+        now = datetime.now(timezone.utc)
+        updated = [
+            _apply_ground_truth_to_row(row, gt_by_job[row.job_id], confirmed_by, now)
+            for row in rows
+            if row.job_id in gt_by_job
+        ]
+        db.commit()
+        return updated
+    except Exception as e:
+        print(f"Error confirming batch ground truth: {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def fetch_confirmed_claim_outcomes(
+    detector_name: str | None = None,
+    limit: int | None = None,
+    session_factory=None,
+) -> list[dict]:
+    """
+    Fetches confirmed claim outcomes ordered oldest-to-newest so rolling windows
+    can take the latest W observations per (detector, condition).
+    """
+    factory = session_factory or SessionLocal
+    db = factory()
+    try:
+        _ensure_claim_outcome_table(db)
+        q = db.query(DetectorClaimOutcome).filter(
+            DetectorClaimOutcome.ground_truth_label.isnot(None)
+        )
+        if detector_name:
+            q = q.filter(DetectorClaimOutcome.detector_name == detector_name)
+        q = q.order_by(DetectorClaimOutcome.id.asc())
+        if limit is not None and limit > 0:
+            rows = q.all()[-limit:]
+        else:
+            rows = q.all()
+
+        results: list[dict] = []
+        for r in rows:
+            try:
+                conds = json.loads(r.condition_tags_json or '["nominal"]')
+            except Exception:
+                conds = ["nominal"]
+            results.append({
+                "id": r.id,
+                "job_id": r.job_id,
+                "session_id": r.session_id,
+                "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+                "detector_name": r.detector_name,
+                "model_version": r.model_version,
+                "modality": r.modality,
+                "condition_tags": conds or ["nominal"],
+                "original_polarity": r.original_polarity,
+                "original_confidence": r.original_confidence,
+                "accepted_confidence": r.accepted_confidence,
+                "weight_assigned": r.weight_assigned,
+                "judge_verdict": r.judge_verdict,
+                "overruled_by_judge": bool(r.overruled_by_judge),
+                "discount_reason": r.discount_reason,
+                "ground_truth_label": r.ground_truth_label,
+                "detector_was_wrong": r.detector_was_wrong,
+                "confirmed_overrule": bool(r.confirmed_overrule),
+                "judge_was_correct": r.judge_was_correct,
+                "confirmed_at": r.confirmed_at.isoformat() if r.confirmed_at else None,
+            })
+        return results
     finally:
         db.close()

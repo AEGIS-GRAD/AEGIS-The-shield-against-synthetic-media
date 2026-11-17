@@ -30,7 +30,12 @@ point spending a call to get a known not_applicable back), but we quote
 the manifest's own wording as the reason, not an invented one.
 """
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
+
+try:
+    from reliability_feedback import extract_condition_tags_from_input
+except ImportError:  # pragma: no cover
+    from orchestrator.app.reliability_feedback import extract_condition_tags_from_input
 
 
 def check_eligibility(manifest: dict, metadata: dict) -> tuple[bool, Optional[str]]:
@@ -60,6 +65,20 @@ def check_eligibility(manifest: dict, metadata: dict) -> tuple[bool, Optional[st
     if supported and ext is not None:
         if ext not in supported:
             return False, f"format '{ext}' not in supported_formats {supported}"
+
+    # --- severe prerequisite failures documented with fatal_if_violated ---
+    cond_rel = manifest.get("condition_reliability") or {}
+    severe_dark = cond_rel.get("severe_dark_or_face_lost")
+    if isinstance(severe_dark, dict) and severe_dark.get("fatal_if_violated"):
+        min_lum = severe_dark.get("min_luminance")
+        lum = metadata.get("mean_luminance")
+        if min_lum is not None and lum is not None and float(lum) < float(min_lum):
+            return False, (
+                f"mean_luminance={lum} < {min_lum} (severe_dark_or_face_lost in manifest; "
+                "returns not_applicable)"
+            )
+        if metadata.get("face_detected") is False:
+            return False, "face_detected=false (severe_dark_or_face_lost in manifest; returns not_applicable)"
 
     return True, None
 
@@ -114,4 +133,131 @@ def apply_telemetry_constraints(
         new_eligible.append(m)
 
     return new_eligible, new_excluded
+
+
+_STATUS_SEVERITY = {
+    "deprioritize": 3,
+    "caution": 2,
+    "reliable": 1,
+    "insufficient_data": 0,
+    "no_history": 0,
+}
+
+
+def extract_input_condition_tags(metadata: Any) -> List[str]:
+    """Returns canonical operating condition tags for an input metadata dict or model."""
+    return extract_condition_tags_from_input(metadata)
+
+
+def assess_manifest_condition_reliability(
+    manifest: Dict[str, Any],
+    active_conditions: List[str],
+) -> Dict[str, Any]:
+    """
+    Inspects a manifest's `observed_reliability.by_condition` for the current
+    input's active operating conditions and returns the most severe status found.
+    """
+    obs = manifest.get("observed_reliability")
+    if not isinstance(obs, dict):
+        return {
+            "status": "no_history",
+            "condition": None,
+            "rolling_reliability": None,
+            "sample_count": 0,
+            "confirmed_overrule_count": 0,
+            "revision": 0,
+        }
+
+    by_cond = obs.get("by_condition") or {}
+    revision = int(obs.get("revision", 0) or 0)
+    best_match: Optional[Dict[str, Any]] = None
+    best_rank = (-1, 1.0)  # (severity desc, reliability asc)
+
+    for cond in active_conditions:
+        entry = by_cond.get(cond)
+        if not isinstance(entry, dict):
+            continue
+        status = str(entry.get("status", "insufficient_data"))
+        sev = _STATUS_SEVERITY.get(status, 0)
+        rel = float(entry.get("rolling_reliability", 1.0))
+        rank = (sev, -rel)
+        if rank > best_rank:
+            best_rank = rank
+            best_match = {
+                "status": status,
+                "condition": cond,
+                "rolling_reliability": rel,
+                "sample_count": int(entry.get("sample_count", 0)),
+                "confirmed_overrule_count": int(entry.get("confirmed_overrule_count", 0)),
+                "wrong_count": int(entry.get("wrong_count", 0)),
+                "revision": revision,
+            }
+
+    if best_match is None:
+        return {
+            "status": "no_history",
+            "condition": None,
+            "rolling_reliability": None,
+            "sample_count": 0,
+            "confirmed_overrule_count": 0,
+            "revision": revision,
+        }
+    return best_match
+
+
+def compute_deprioritization_map(
+    eligible: List[Dict[str, Any]],
+    active_conditions: List[str],
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Computes per-detector feedback reliability assessment and whether the detector
+    should be deprioritized under `active_conditions`.
+
+    Safety invariant: a detector marked `deprioritize` is ONLY flagged for skipping
+    when at least one other eligible detector sharing its modality is NOT
+    marked `deprioritize` (so modality coverage never collapses to zero).
+    """
+    assessments: Dict[str, Dict[str, Any]] = {}
+    for m in eligible:
+        name = m["detector_name"]
+        info = assess_manifest_condition_reliability(m, active_conditions)
+        info["modalities"] = set(m.get("modality", []))
+        info["should_deprioritize"] = False
+        assessments[name] = info
+
+    for m in eligible:
+        name = m["detector_name"]
+        info = assessments[name]
+        if info["status"] != "deprioritize":
+            continue
+        my_mods = info["modalities"]
+        has_reliable_alt = any(
+            other_name != name
+            and assessments[other_name]["status"] != "deprioritize"
+            and bool(my_mods & assessments[other_name]["modalities"])
+            for other_name in assessments
+        )
+        if has_reliable_alt:
+            info["should_deprioritize"] = True
+
+    return assessments
+
+
+def reliability_signature(
+    eligible: List[Dict[str, Any]],
+    active_conditions: List[str],
+) -> str:
+    """
+    Returns a compact signature of manifest reliability revisions & active statuses
+    so planner decision cache invalidates cleanly when manifests update.
+    """
+    parts = []
+    for m in sorted(eligible, key=lambda x: x["detector_name"]):
+        info = assess_manifest_condition_reliability(m, active_conditions)
+        rev = info.get("revision", 0)
+        status = info.get("status", "no_history")
+        if rev or status != "no_history":
+            parts.append(f"{m['detector_name']}:r{rev}:{status}")
+    return "|".join(parts)
+
 
