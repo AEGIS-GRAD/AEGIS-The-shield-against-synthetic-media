@@ -40,6 +40,7 @@ from debate.disagreement import (
 from debate.judge_prompt import JUDGE_PROMPT_VERSION, build_judge_prompt
 from debate.llm_client import call_judge_llm
 from debate.manifest_reliability import ManifestReliabilityEngine
+from debate.poisoning_guard import PoisoningMitigationConfig
 from debate.prompt_security import (
     MAX_FORENSIC_CLAIM_LEN,
     sanitize_claim_text,
@@ -76,6 +77,8 @@ class JudgeAgent:
         reliability_engine: Optional[ManifestReliabilityEngine] = None,
         calibrator_registry: Optional[CalibratorRegistry] = None,
         apply_calibrated_video_checkpoint: bool = False,
+        mitigate_poisoning: bool = False,
+        poisoning_config: Optional[PoisoningMitigationConfig] = None,
     ):
         self.mode = "llm" if mode.lower() in ("llm", "llm_agentic_judge", "agentic") else "deterministic"
         self.manifests_dir = manifests_dir or DEFAULT_MANIFESTS_DIR
@@ -93,6 +96,8 @@ class JudgeAgent:
             reliability_engine=rel_engine,
             calibrator_registry=cal_reg,
             apply_calibrated_video_checkpoint=apply_calibrated_video_checkpoint,
+            mitigate_poisoning=mitigate_poisoning,
+            poisoning_config=poisoning_config,
         )
 
     def _load_manifests(self) -> Dict[str, Dict[str, Any]]:

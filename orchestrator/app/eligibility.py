@@ -205,9 +205,23 @@ def assess_manifest_condition_reliability(
     return best_match
 
 
+_CANONICAL_AUTHORITY_TIERS: Dict[str, str] = {
+    "video-classifier": "primary",
+    "syncnet": "primary",
+    "aasist": "primary",
+    "detector_image": "primary",
+    "image": "primary",
+    "detector_text": "primary",
+    "rppg": "secondary_proxy",
+    "streaming-rppg": "secondary_proxy",
+    "fusion": "secondary_proxy",
+}
+
+
 def compute_deprioritization_map(
     eligible: List[Dict[str, Any]],
     active_conditions: List[str],
+    require_primary_quorum: bool = False,
 ) -> Dict[str, Dict[str, Any]]:
     """
     Computes per-detector feedback reliability assessment and whether the detector
@@ -216,12 +230,26 @@ def compute_deprioritization_map(
     Safety invariant: a detector marked `deprioritize` is ONLY flagged for skipping
     when at least one other eligible detector sharing its modality is NOT
     marked `deprioritize` (so modality coverage never collapses to zero).
+    When `require_primary_quorum=True`, decisive spatial/primary detectors
+    (`video-classifier`, `detector_image`, `detector_text`, `aasist`) cannot be
+    deprioritized based on secondary proxies OR non-spatial cross-modal helpers
+    like `syncnet`.
     """
+    _NON_SUBSTITUTABLE_PRIMARY = {
+        "video-classifier",
+        "detector_image",
+        "image",
+        "detector_text",
+        "aasist",
+    }
     assessments: Dict[str, Dict[str, Any]] = {}
     for m in eligible:
         name = m["detector_name"]
         info = assess_manifest_condition_reliability(m, active_conditions)
         info["modalities"] = set(m.get("modality", []))
+        info["authority_tier"] = str(
+            m.get("authority_tier") or _CANONICAL_AUTHORITY_TIERS.get(name, "secondary_proxy")
+        )
         info["should_deprioritize"] = False
         assessments[name] = info
 
@@ -230,15 +258,37 @@ def compute_deprioritization_map(
         info = assessments[name]
         if info["status"] != "deprioritize":
             continue
+        if require_primary_quorum and name in _NON_SUBSTITUTABLE_PRIMARY:
+            # Look only for another true non-proxy primary in the same core modality
+            # (never substitute video-classifier with secondary rppg or audio-sync syncnet).
+            has_peer_primary = any(
+                other_name != name
+                and assessments[other_name]["status"] != "deprioritize"
+                and assessments[other_name]["authority_tier"] == "primary"
+                and other_name != "syncnet"
+                and bool(info["modalities"] & assessments[other_name]["modalities"])
+                for other_name in assessments
+            )
+            if not has_peer_primary:
+                info["quorum_protected"] = True
+                continue
         my_mods = info["modalities"]
+        my_tier = info["authority_tier"]
         has_reliable_alt = any(
             other_name != name
             and assessments[other_name]["status"] != "deprioritize"
             and bool(my_mods & assessments[other_name]["modalities"])
+            and (
+                not require_primary_quorum
+                or my_tier != "primary"
+                or assessments[other_name]["authority_tier"] == "primary"
+            )
             for other_name in assessments
         )
         if has_reliable_alt:
             info["should_deprioritize"] = True
+        elif require_primary_quorum and my_tier == "primary":
+            info["quorum_protected"] = True
 
     return assessments
 
