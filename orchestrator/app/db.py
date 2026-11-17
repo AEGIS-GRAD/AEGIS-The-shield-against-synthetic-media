@@ -7,7 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 # Pin to the directory this file lives in so the DB is always found at the
 # same absolute path regardless of where uvicorn is launched from.
 _HERE = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(_HERE, "flight_recorder.db")
+DB_PATH = os.getenv("AEGIS_DB_PATH") or os.path.join(_HERE, "flight_recorder.db")
 
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -266,7 +266,7 @@ def build_model(resume: Optional[Path], device: str) -> nn.Module:
         if not resume.exists():
             log.error("--resume path does not exist: %s", resume)
             sys.exit(1)
-        state = torch.load(resume, map_location=device)
+        state = torch.load(resume, map_location=device, weights_only=True)
         if isinstance(state, dict) and "state_dict" in state:
             state = state["state_dict"]
         elif isinstance(state, dict) and "model" in state:

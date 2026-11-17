@@ -6,6 +6,7 @@ Exposes POST /detect and GET /health conformant with AEGIS API contracts.
 import os
 import time
 import base64
+import hashlib
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -44,6 +45,24 @@ MODEL_VERSION = "aasist-v1.0"
 # Weights live at the detector root (AASIST.pth), NOT in a weights/ subdir.
 # This can be overridden at runtime via MODEL_WEIGHTS_PATH env var.
 DEFAULT_WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "AASIST.pth")
+DEFAULT_WEIGHTS_SHA256 = "51d2d9cf0738172f61e2a384ec50a54a55363240f67c971ed55a92435bc1a1c0"
+
+
+def _verify_weights_sha256(weights_path: str, expected_sha256: str) -> None:
+    """Validates SHA-256 checksum of AASIST weights before torch deserialization."""
+    digest = hashlib.sha256()
+    with open(weights_path, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    actual = digest.hexdigest().lower()
+    if actual != expected_sha256.lower():
+        raise RuntimeError(
+            f"AASIST weights integrity check failed for {weights_path}: "
+            f"expected {expected_sha256}, got {actual}"
+        )
 
 # Set AASIST_DEBUG=1 to enable per-request diagnostic logging
 DEBUG_MODE = os.getenv("AASIST_DEBUG", "0") == "1"
@@ -67,9 +86,15 @@ def load_model(weights_path: str = DEFAULT_WEIGHTS_PATH):
             "Service will not start with random weights."
         )
 
+    expected_sha256 = os.getenv("AASIST_WEIGHTS_SHA256", "").strip().lower()
+    if not expected_sha256 and os.path.abspath(weights_path) == os.path.abspath(DEFAULT_WEIGHTS_PATH):
+        expected_sha256 = DEFAULT_WEIGHTS_SHA256
+    if expected_sha256:
+        _verify_weights_sha256(weights_path, expected_sha256)
+
     model = Model(AASIST_CONFIG)
-    logger.info(f"Loading weights from: {weights_path}")
-    state_dict = torch.load(weights_path, map_location=device)
+    logger.info(f"Loading weights safely (weights_only=True) from: {weights_path}")
+    state_dict = torch.load(weights_path, map_location=device, weights_only=True)
     model.load_state_dict(state_dict)
     logger.info("Weights loaded successfully — model_loaded = True.")
 

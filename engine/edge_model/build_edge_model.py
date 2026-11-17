@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 from pathlib import Path
@@ -18,6 +19,20 @@ except Exception as exc:
 logger = logging.getLogger(__name__)
 
 DEFAULT_WEIGHTS_PATH = Path(__file__).parent / "mobilenetv3_small_ffpp.pth"
+DEFAULT_WEIGHTS_SHA256 = "789ae9b3345d6dfb606fd711a6df3d9af22a787e15f97a9a4fb8fa614f31c176"
+
+
+def _verify_weights_sha256(weights_path: Path, expected_sha256: str) -> None:
+    digest = hashlib.sha256()
+    with weights_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    actual = digest.hexdigest().lower()
+    if actual != expected_sha256.lower():
+        raise RuntimeError(
+            f"Edge checkpoint SHA-256 mismatch for {weights_path}: "
+            f"expected {expected_sha256}, got {actual}"
+        )
 
 
 def get_mobilenet_v3_small_model(
@@ -67,8 +82,13 @@ def get_mobilenet_v3_small_model(
 
     weights_file = Path(checkpoint_path or DEFAULT_WEIGHTS_PATH)
     if weights_file.exists():
-        logger.info(f"Loading MobileNetV3-Small checkpoint from {weights_file}")
-        state_dict = torch.load(weights_file, map_location=target_device)
+        expected_sha256 = os.getenv("EDGE_MODEL_SHA256", "").strip().lower()
+        if not expected_sha256 and weights_file.resolve() == DEFAULT_WEIGHTS_PATH.resolve():
+            expected_sha256 = DEFAULT_WEIGHTS_SHA256
+        if expected_sha256:
+            _verify_weights_sha256(weights_file, expected_sha256)
+        logger.info(f"Loading MobileNetV3-Small checkpoint safely from {weights_file}")
+        state_dict = torch.load(weights_file, map_location=target_device, weights_only=True)
         if isinstance(state_dict, dict) and "state_dict" in state_dict:
             state_dict = state_dict["state_dict"]
         model.load_state_dict(state_dict)

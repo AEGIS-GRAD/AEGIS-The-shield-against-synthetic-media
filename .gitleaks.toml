@@ -1,0 +1,18 @@
+title = "AEGIS Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore local untracked toolchains, build caches, ephemeral dev certs, and verified placeholder examples."
+paths = [
+  '''(^|/|\\)venv[/\\]''',
+  '''(^|/|\\)web[/\\]node_modules[/\\]''',
+  '''(^|/|\\)web[/\\]\.next[/\\]''',
+  '''(^|/|\\)security[/\\]transport[/\\]certs[/\\].*\.(key|pem)$''',
+  '''(^|/|\\)\.env\.example$''',
+  '''(^|/|\\)security[/\\]supply_chain[/\\]reports[/\\]''',
+]
+regexes = [
+  '''aegis-secret-key-change-in-prod''',
+]

@@ -1,5 +1,5 @@
-opencv-python>=4.11.0
-cryptography>=44.0.0
-PyWavelets>=1.4.1
-scipy>=1.10.1
-respx>=0.22.0
+opencv-python==5.1.0.95
+cryptography==50.0.2
+PyWavelets==1.9.0
+scipy==1.17.1
+respx==0.23.1

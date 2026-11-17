@@ -17,6 +17,7 @@ AEGIS Task 3 — Live Webcam & Video Analysis Service
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import shutil
@@ -150,6 +151,18 @@ def extract_forehead_roi(frame_bgr: np.ndarray, box: tuple) -> Optional[Tuple[np
 # ──────────────────────────────────────────────────────────────────────────────
 _mobilenet_model = None
 _efficientnet_model = None
+_MOBILENET_SHA256 = "789ae9b3345d6dfb606fd711a6df3d9af22a787e15f97a9a4fb8fa614f31c176"
+_EFFICIENTNET_SHA256 = "5622d78b079927a84a86f8d8545ac76e11130e6d3cbaf7c517ac90e2740f271a"
+
+
+def _verify_sha256(path: Path, expected: str) -> None:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    actual = digest.hexdigest().lower()
+    if actual != expected.lower():
+        raise RuntimeError(f"Checksum mismatch for {path}: expected {expected}, got {actual}")
 
 
 def get_mobilenet_model():
@@ -161,7 +174,8 @@ def get_mobilenet_model():
         in_feat = m.classifier[3].in_features
         m.classifier[3] = nn.Linear(in_feat, 2)
         if MOBILENET_PATH.exists():
-            st = torch.load(MOBILENET_PATH, map_location="cpu")
+            _verify_sha256(MOBILENET_PATH, _MOBILENET_SHA256)
+            st = torch.load(MOBILENET_PATH, map_location="cpu", weights_only=True)
             if isinstance(st, dict) and "state_dict" in st:
                 st = st["state_dict"]
             elif isinstance(st, dict) and "model" in st:
@@ -187,7 +201,8 @@ def get_efficientnet_model():
         in_feat = m.classifier[1].in_features
         m.classifier[1] = nn.Linear(in_feat, 2)
         if EFFICIENTNET_PATH.exists():
-            st = torch.load(EFFICIENTNET_PATH, map_location="cpu")
+            _verify_sha256(EFFICIENTNET_PATH, _EFFICIENTNET_SHA256)
+            st = torch.load(EFFICIENTNET_PATH, map_location="cpu", weights_only=True)
             if isinstance(st, dict) and "state_dict" in st:
                 st = st["state_dict"]
             elif isinstance(st, dict) and "model" in st:

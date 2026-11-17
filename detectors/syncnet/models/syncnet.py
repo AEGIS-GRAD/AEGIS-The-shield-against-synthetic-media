@@ -5,6 +5,7 @@ Based on Joon Son Chung & Andrew Zisserman:
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import urllib.request
@@ -146,10 +147,18 @@ def load_syncnet_model(
     model = SyncNetModel()
 
     loaded = False
+    expected_sha256 = os.getenv("SYNCNET_WEIGHTS_SHA256", "").strip().lower()
     if os.path.exists(weights_path):
         try:
-            logger.info(f"Loading SyncNet weights from: {weights_path}")
-            state_dict = torch.load(weights_path, map_location=device)
+            if expected_sha256:
+                digest = hashlib.sha256()
+                with open(weights_path, "rb") as f:
+                    for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                if digest.hexdigest().lower() != expected_sha256:
+                    raise RuntimeError(f"SyncNet SHA-256 mismatch for {weights_path}")
+            logger.info(f"Loading SyncNet weights safely (weights_only=True) from: {weights_path}")
+            state_dict = torch.load(weights_path, map_location=device, weights_only=True)
             if isinstance(state_dict, dict) and "state_dict" in state_dict:
                 state_dict = state_dict["state_dict"]
             model.load_state_dict(state_dict, strict=True)
@@ -160,10 +169,19 @@ def load_syncnet_model(
 
     if not loaded and allow_download and DEFAULT_WEIGHTS_URL:
         try:
+            if not expected_sha256:
+                raise RuntimeError("Refusing unverified SyncNet download without SYNCNET_WEIGHTS_SHA256")
             os.makedirs(os.path.dirname(weights_path), exist_ok=True)
             logger.info(f"Downloading SyncNet weights from {DEFAULT_WEIGHTS_URL} to {weights_path}...")
             urllib.request.urlretrieve(DEFAULT_WEIGHTS_URL, weights_path)
-            state_dict = torch.load(weights_path, map_location=device)
+            digest = hashlib.sha256()
+            with open(weights_path, "rb") as f:
+                for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            if digest.hexdigest().lower() != expected_sha256:
+                os.remove(weights_path)
+                raise RuntimeError("Downloaded SyncNet checkpoint failed SHA-256 verification")
+            state_dict = torch.load(weights_path, map_location=device, weights_only=True)
             model.load_state_dict(state_dict, strict=True)
             logger.info("SyncNet weights downloaded and loaded successfully.")
             loaded = True

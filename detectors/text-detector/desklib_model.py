@@ -2,10 +2,28 @@
 Desklib AI Text Detector Architecture definition & inference loader.
 Follows the official Desklib architecture: DeBERTa-v3-large backbone + Mean Pooling + Linear(1024, 1) head.
 """
+import hashlib
 import os
 import torch
 import torch.nn as nn
 from transformers import AutoTokenizer, AutoConfig, AutoModel, PreTrainedModel
+
+DESKLIB_HF_REVISION = "5fdea974cd4287c61674951ec78803aa274e2fb7"
+DESKLIB_BASE_SAFETENSORS_SHA256 = "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265"
+DESKLIB_LORA_SAFETENSORS_SHA256 = "dba5608b7f771fa38dce1c8148f874d46bc5d1bde6fb2e8a780f525c5044d93b"
+
+
+def _verify_sha256(file_path: str, expected_sha256: str) -> None:
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    actual = digest.hexdigest().lower()
+    if actual != expected_sha256.lower():
+        raise RuntimeError(
+            f"Text detector weights integrity check failed for {file_path}: "
+            f"expected {expected_sha256}, got {actual}"
+        )
 
 class DesklibAIDetectionModel(PreTrainedModel):
     config_class = AutoConfig
@@ -64,14 +82,30 @@ def load_desklib(model_dir=None, device=None, use_finetuned=True):
         from download_desklib import download_desklib
         download_desklib(model_dir)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = DesklibAIDetectionModel.from_pretrained(model_dir)
+    base_safetensors = os.path.join(str(model_dir), "model.safetensors")
+    if (
+        not is_hf_repo_id
+        and os.path.exists(base_safetensors)
+        and os.getenv("AEGIS_ALLOW_UNVERIFIED_WEIGHTS", "0") != "1"
+    ):
+        expected_base = os.getenv("DESKLIB_BASE_SHA256", DESKLIB_BASE_SAFETENSORS_SHA256).strip()
+        if expected_base:
+            _verify_sha256(base_safetensors, expected_base)
+
+    hf_kwargs = {"trust_remote_code": False}
+    if is_hf_repo_id:
+        hf_kwargs["revision"] = DESKLIB_HF_REVISION
+    tokenizer = AutoTokenizer.from_pretrained(model_dir, **hf_kwargs)
+    model = DesklibAIDetectionModel.from_pretrained(model_dir, use_safetensors=True, **hf_kwargs)
 
     # Automatically load fine-tuned LoRA adapter if present
     adapter_dir = os.path.join(os.path.dirname(__file__), "models", "desklib-finetuned", "lora_adapter")
     if use_finetuned and os.path.exists(os.path.join(adapter_dir, "adapter_config.json")):
         try:
             from peft import PeftModel
+            adapter_safetensors = os.path.join(adapter_dir, "adapter_model.safetensors")
+            if os.path.exists(adapter_safetensors) and os.getenv("AEGIS_ALLOW_UNVERIFIED_WEIGHTS", "0") != "1":
+                _verify_sha256(adapter_safetensors, DESKLIB_LORA_SAFETENSORS_SHA256)
             print(f"[*] Loading fine-tuned LoRA adapter from {adapter_dir}...")
             model.model = PeftModel.from_pretrained(model.model, adapter_dir)
             print("[+] Fine-tuned LoRA adapter successfully attached.")
