@@ -145,7 +145,7 @@ export function PerSentenceHighlightView({
               Sentence #{selectedSentence + 1} Inspector
             </span>
             <p className="text-foreground line-clamp-2 italic">
-              "{sentences[selectedSentence].text}"
+              &ldquo;{sentences[selectedSentence].text}&rdquo;
             </p>
           </div>
           <div className="shrink-0 text-right font-mono">
