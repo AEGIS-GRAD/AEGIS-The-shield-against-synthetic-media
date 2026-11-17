@@ -107,6 +107,7 @@ def make_cache_key(
     degraded_detectors: Optional[List[str]] = None,
     condition_tags: Optional[List[str]] = None,
     reliability_sig: Optional[str] = None,
+    cost_weight: float = 0.0,
 ) -> str:
     """
     Constructs a discrete cache key based on modality, audio presence,
@@ -145,6 +146,8 @@ def make_cache_key(
         key += f"|cond={','.join(sorted(condition_tags))}"
     if reliability_sig:
         key += f"|rel={reliability_sig}"
+    if cost_weight > 0.0:
+        key += f"|cost_w={cost_weight:.2f}"
     return key
 
 
@@ -169,6 +172,7 @@ class PlanningResult:
     planning_latency_s: float = 0.0
     eligible_detectors: List[str] = field(default_factory=list)
     excluded_detectors: List[Dict[str, Any]] = field(default_factory=list)
+    cost_weight: float = 0.0
 
 
 def resolve_planner_mode(mode_override: Optional[str] = None) -> str:
@@ -224,16 +228,18 @@ def _simulate_reference_plan(
     telemetry: Optional[Dict[str, Any]] = None,
     budget_s: float = 15.0,
     active_conditions: Optional[List[str]] = None,
+    cost_weight: float = 0.0,
 ) -> Dict[str, Any]:
     """
     Deterministic reference planning engine for mock / offline environments.
     Adheres strictly to the prompt schema, telemetry load constraints, and
     manifest-grounded historical reliability feedback.
+    Supports cost-penalty optimization under specification gaming analysis.
     """
     conds = active_conditions or ["nominal"]
     dep_map = compute_deprioritization_map(eligible, conds)
 
-    skipped: List[Dict[str, str]] = []
+    skipped: List[Dict[str, Any]] = []
     coverage_warnings: List[str] = []
     run_detectors: List[str] = []
 
@@ -247,7 +253,14 @@ def _simulate_reference_plan(
         tier_rank = _AUTHORITY_ORDER.get(name, 2)
         rr = info.get("rolling_reliability")
         rr_sort = -(rr if isinstance(rr, (int, float)) else 0.8)
-        return (is_degraded, is_caution, tier_rank, rr_sort, name)
+
+        # Cost penalty sort component
+        perf = m.get("performance", {}) or {}
+        avg_lat = perf.get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("avg", 1000.0)
+        cost_norm = min(1.0, float(avg_lat) / 1500.0)
+        cost_penalty_sort = cost_weight * cost_norm
+
+        return (is_degraded, is_caution, cost_penalty_sort, tier_rank, rr_sort, name)
 
     candidates = sorted(eligible, key=_sort_key)
 
@@ -277,6 +290,32 @@ def _simulate_reference_plan(
             continue
 
         latency_s, status = _detector_latency_s(m, telemetry)
+
+        # 1.5 Cost-driven specification gaming penalty
+        if cost_weight > 0.0:
+            perf = m.get("performance", {}) or {}
+            avg_lat = perf.get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("avg", 1000.0)
+            cost_norm = min(1.0, float(avg_lat) / 1500.0)
+            cost_score = cost_weight * cost_norm
+            cheaper_available = any(
+                other["detector_name"] != name and
+                ((other.get("performance", {}) or {}).get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(other["detector_name"], {}).get("avg", 1000.0)) < avg_lat
+                for other in candidates
+            )
+            if cost_score >= 0.40 and (len(run_detectors) >= 1 or cheaper_available):
+                skipped.append({
+                    "detector_name": name,
+                    "reason": (
+                        f"cost-penalty optimization: latency {avg_lat:.0f}ms (cost_norm={cost_norm:.2f}) "
+                        f"deprioritized under cost_weight={cost_weight:.2f}"
+                    ),
+                    "cost_norm": round(cost_norm, 3),
+                    "cost_weight": cost_weight,
+                })
+                coverage_warnings.append(
+                    f"{name} skipped due to cost-penalty optimization (cost_weight={cost_weight:.2f})."
+                )
+                continue
 
         if status == "degraded" and (cumulative_sum_s + latency_s > budget_s):
             skipped.append({
@@ -567,6 +606,7 @@ def plan_detectors(
     budget_s: Optional[float] = None,
     mock_llm: bool = False,
     manifests_dir: Optional[Path] = None,
+    cost_weight: float = 0.0,
 ) -> PlanningResult:
     """
     Executes the planning phase for an incoming media request.
@@ -591,6 +631,7 @@ def plan_detectors(
             model_used=None,
             planning_latency_s=0.0,
             eligible_detectors=rule_detectors,
+            cost_weight=cost_weight,
         )
 
     # 2. LLM-Driven Planning Mode
@@ -667,6 +708,7 @@ def plan_detectors(
             degraded_detectors=degraded_list,
             condition_tags=active_conditions,
             reliability_sig=rel_sig,
+            cost_weight=cost_weight,
         )
         + f"|mock={int(bool(mock_llm))}"
         + (f"|mdir={manifests_dir}" if manifests_dir is not None else "")
@@ -711,6 +753,7 @@ def plan_detectors(
         telemetry,
         compute_budget,
         active_conditions=active_conditions,
+        cost_weight=cost_weight,
     )
     plan, model_or_err, llm_latency = call_llm(
         prompt=prompt,
@@ -768,6 +811,7 @@ def plan_detectors(
         planning_latency_s=total_latency,
         eligible_detectors=eligible_names,
         excluded_detectors=excluded,
+        cost_weight=cost_weight,
     )
 
     if PLANNER_CACHE_ENABLED:

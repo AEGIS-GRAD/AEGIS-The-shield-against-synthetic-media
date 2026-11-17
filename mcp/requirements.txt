@@ -1,5 +1,5 @@
 # AEGIS MCP Server Dependencies
-mcp[cli]==2.3.0
+mcp==1.30.0
 pydantic==2.14.3
 httpx==0.28.1
 pytest==9.2.0
