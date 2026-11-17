@@ -3,8 +3,8 @@ FROM node:22.23.5-alpine
 
 WORKDIR /app
 
-# Install curl for healthcheck probe
-RUN apk add --no-cache curl
+# Update Alpine packages and install curl for healthcheck probe
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
 # Install dependencies cleanly from lockfile
 COPY --chown=node:node package*.json ./

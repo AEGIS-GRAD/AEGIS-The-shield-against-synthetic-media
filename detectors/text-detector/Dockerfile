@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 WORKDIR /app
 
 # curl is used exclusively by the container healthcheck
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/* && \
     groupadd --gid 10001 appuser && \
@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Optional override allows slim CPU wheel builds in constrained CI runners
 ARG TORCH_INDEX_URL=""
 COPY requirements.txt .
-RUN if [ -n "$TORCH_INDEX_URL" ]; then \
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
+    if [ -n "$TORCH_INDEX_URL" ]; then \
         pip install --no-cache-dir torch==2.14.1 --index-url "$TORCH_INDEX_URL"; \
     fi && \
     pip install --no-cache-dir -r requirements.txt

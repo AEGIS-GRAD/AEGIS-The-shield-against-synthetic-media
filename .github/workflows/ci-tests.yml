@@ -34,7 +34,7 @@ jobs:
           pip install -r /tmp/engine_reqs.txt
           pip install -r security/gateway/validator/requirements.txt
           pip install -r security/requirements.txt
-          pip install pyyaml==6.0.3 prometheus-client==0.26.0 psutil==7.2.2 requests==2.34.2 sqlalchemy==2.1.9 uvicorn[standard]==0.54.0
+          pip install pyyaml==6.0.3 prometheus-client==0.26.0 psutil==7.2.2 requests==2.34.2 sqlalchemy==2.1.9 uvicorn[standard]==0.54.0 huggingface-hub==2.4.0
 
       - name: Generate ephemeral mTLS PKI certificates
         run: python security/transport/generate_certs.py

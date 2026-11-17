@@ -5,14 +5,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/* && \
     groupadd --gid 10001 appuser && \
     useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
 COPY requirements.txt .
-RUN grep -vE "^(torch|#)" requirements.txt > /tmp/reqs.txt \
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 \
+    && grep -vE "^(torch|#)" requirements.txt > /tmp/reqs.txt \
     && pip install --no-cache-dir -r /tmp/reqs.txt \
     && rm /tmp/reqs.txt
 

@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     libsndfile1 \
     curl \
     && rm -rf /var/lib/apt/lists/* && \
@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
 # CPU-only PyTorch + torchaudio (matching pinned versions in requirements.txt)
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
+    pip install --no-cache-dir \
     torch==2.14.1 torchaudio==2.11.0 \
     --extra-index-url https://download.pytorch.org/whl/cpu
 

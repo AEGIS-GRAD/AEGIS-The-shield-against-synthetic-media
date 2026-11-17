@@ -12,7 +12,7 @@ WORKDIR /app
 # curl     : healthcheck probe
 # sqlite3  : CLI access to the decision audit log
 # ffmpeg   : provides ffprobe for modality, audio track, and resolution inspection
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     curl \
     sqlite3 \
     ffmpeg \
@@ -21,7 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy entire orchestrator source into /app
 COPY --chown=appuser:appuser . /app

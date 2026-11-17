@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     ffmpeg \
@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     groupadd --gid 10001 appuser && \
     useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
+    pip install --no-cache-dir \
     torch==2.14.1 torchvision==0.29.1 \
     --extra-index-url https://download.pytorch.org/whl/cpu
 

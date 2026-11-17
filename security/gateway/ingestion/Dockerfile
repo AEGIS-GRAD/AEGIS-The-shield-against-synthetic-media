@@ -5,14 +5,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 curl \
     && rm -rf /var/lib/apt/lists/* && \
     groupadd --gid 10001 appuser && \
     useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
 COPY security/gateway/ingestion/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 \
+    && pip install --no-cache-dir -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
 
 COPY --chown=appuser:appuser security /app/security
 RUN chown -R appuser:appuser /app

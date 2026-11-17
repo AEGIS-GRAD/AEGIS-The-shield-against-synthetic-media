@@ -9,7 +9,10 @@ from typing import Any, List, Optional, Union
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from huggingface_hub import hf_hub_download
+try:
+    from huggingface_hub import hf_hub_download
+except ImportError:  # Allow local checkpoint loading when huggingface_hub is omitted
+    hf_hub_download = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +73,8 @@ def load_model(
     if resolved_ckpt_path is None:
         logger.info(f"Fetching model checkpoint '{filename}' (rev={DEFAULT_REVISION}) from HuggingFace repo '{repo_id}'...")
         try:
+            if hf_hub_download is None:
+                raise ImportError("huggingface_hub is not installed")
             resolved_ckpt_path = hf_hub_download(repo_id=repo_id, filename=filename, revision=DEFAULT_REVISION)
             if repo_id == "Xicor9/efficientnet-b0-ffpp-c23" and filename == DEFAULT_FILENAME:
                 _verify_sha256(resolved_ckpt_path, DEFAULT_HF_SHA256)
