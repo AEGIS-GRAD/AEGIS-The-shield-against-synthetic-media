@@ -15,6 +15,9 @@ The **AEGIS Debate & Arbitration Model Context Protocol (MCP) Server** exposes t
 - [Tool Specifications](#tool-specifications)
   - [`capabilities()`](#1-capabilities)
   - [`arbitrate_evidence(claims, operating_conditions)`](#2-arbitrate_evidenceclaims-operating_conditions)
+  - [`verify_media(file_path, ...)`](#3-verify_mediafile_path-modality-planner_mode-)
+  - [`get_report(job_id)`](#4-get_reportjob_id)
+  - [`check_stream_integrity(...)`](#5-check_stream_integrity)
 - [Edge Cases & Fallbacks](#edge-cases--fallbacks)
 - [Verification with MCP Inspector](#verification-with-mcp-inspector)
 - [Example External Client](#example-external-client)
@@ -242,6 +245,61 @@ Evaluates multi-detector evidence through the 3-round debate protocol and output
     "report": { ... }
   }
   ```
+
+---
+
+### 3. `verify_media(file_path, modality, planner_mode, risk_profile, compute_budget_s)`
+
+Submits an arbitrary media file (video, audio, image, text) to the full AEGIS verification pipeline asynchronously. Returns immediately with a `job_id` so external agents are not blocked during multi-second model inference.
+
+- **Parameters:**
+  - `file_path` (string, required): Path to media file on disk.
+  - `modality` (string, optional): `"video"`, `"image"`, `"audio"`, or `"text"`.
+  - `planner_mode` (string, optional): `"rule_based"` (default) or `"llm"`.
+  - `risk_profile` (string, optional): `"low"`, `"standard"` (default), or `"high"`.
+  - `compute_budget_s` (number, optional): Latency ceiling in seconds.
+- **Returns:**
+  ```json
+  {
+    "status": "pending",
+    "job_id": "mcp-a1b2c3d4e5f6",
+    "message": "Verification job submitted successfully. Use get_report(job_id) to poll for results.",
+    "file_path": "/path/to/media.mp4"
+  }
+  ```
+
+---
+
+### 4. `get_report(job_id)`
+
+Polls for the forensic report of a previously submitted verification job.
+
+- **Parameters:**
+  - `job_id` (string, required): Job identifier returned by `verify_media`.
+- **Returns (when completed):**
+  ```json
+  {
+    "status": "completed",
+    "job_id": "mcp-a1b2c3d4e5f6",
+    "verdict": "SYNTHETIC",
+    "calibrated_score": 0.88,
+    "siem_alert_tier": "P1_CRITICAL",
+    "forensic_justification": "CONSENSUS RULING: Detectors operate in alignment...",
+    "evidence_bundle_ref": "aegis://evidence-vault/mcp-a1b2c3d4e5f6",
+    "evidence_bundle_path": "/path/to/vault/bundles/mcp-a1b2c3d4e5f6.zip",
+    "debate_transcript_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "report": { ... }
+  }
+  ```
+
+---
+
+### 5. `check_stream_integrity(job_id, video_path, manifest_path)`
+
+Validates cryptographic integrity and provenance for either live video streams or completed verification ledger records.
+
+- **Mode A (Stream Frame Hash-Chain):** When `video_path` and `manifest_path` are provided, re-calculates frame-by-frame SHA-256 chain and compares against camera manifest to detect splicing or frame drops.
+- **Mode B (Vault Ledger Audit):** When `job_id` is provided, verifies that the verification record is immutably sealed in the append-only `UnifiedEvidenceVault` ledger and has not been tampered with.
 
 ---
 
