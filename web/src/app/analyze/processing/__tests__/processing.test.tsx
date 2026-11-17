@@ -111,12 +111,14 @@ describe("ProcessingPage Job Polling & Dispatch (W10)", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("renders Month 2 preset mode and skipped unbuilt modality notices when preset param is set", () => {
+  it("renders Month 2 preset mode with all multimodal detectors scheduled when preset param is set", () => {
     setMockSearchParams({ file: "clean_interview.mp4", preset: "clean_baseline" });
     render(<ProcessingPage />);
 
     expect(screen.getByText(/Month 2 Milestone Demo Preset: CLEAN BASELINE/i)).toBeInTheDocument();
-    expect(screen.getByText(/Model not built yet \(under calibration\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Model not built yet \(Phase 3 training\)/i)).toBeInTheDocument();
+    expect(screen.getByText("Image Detector")).toBeInTheDocument();
+    expect(screen.getByText("Community Forensics")).toBeInTheDocument();
+    expect(screen.getByText("Text Detector")).toBeInTheDocument();
+    expect(screen.getByText("Desklib DeBERTa-v3")).toBeInTheDocument();
   });
 });

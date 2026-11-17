@@ -23,6 +23,7 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get inst
 ARG TORCH_INDEX_URL=""
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
+    rm -rf /usr/local/lib/python3.*/ensurepip && \
     if [ -n "$TORCH_INDEX_URL" ]; then \
         pip install --no-cache-dir torch==2.14.1 --index-url "$TORCH_INDEX_URL"; \
     fi && \
