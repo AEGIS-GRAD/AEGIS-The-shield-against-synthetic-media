@@ -74,8 +74,8 @@ export function StatusPill({ status, label }: { status: Health; label?: string }
 }
 
 export function ModalityIcon({ m, className }: { m: Modality; className?: string }) {
-  const I = { video: Video, audio: AudioLines, image: ImageIcon, text: FileText }[m];
-  return <I className={cn("size-4 text-muted-foreground", className)} aria-label={m} />;
+  const I = ({ video: Video, audio: AudioLines, image: ImageIcon, text: FileText } as any)[m] || Video;
+  return <I className={cn("size-4 text-muted-foreground", className)} aria-label={m || "media"} />;
 }
 
 export function Panel({ title, subtitle, action, children, className }: {
@@ -214,11 +214,11 @@ export function DemoBadge({ className, label = "Demo data" }: { className?: stri
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 font-mono font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-amber-500/15 text-amber-500 border-amber-500/30 shrink-0",
+        "inline-flex items-center gap-1 font-mono font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border bg-amber-500/15 text-amber-900 border-amber-500/40 dark:text-amber-200 shrink-0",
         className
       )}
     >
-      <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+      <span className="size-1.5 rounded-full bg-amber-600 animate-pulse" />
       {label}
     </span>
   );
@@ -237,7 +237,7 @@ export function DemoBanner({
     <div
       role="status"
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300",
+        "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200",
         className
       )}
     >
@@ -248,7 +248,7 @@ export function DemoBanner({
       {onDisable && (
         <button
           onClick={onDisable}
-          className="font-medium underline hover:text-amber-800 dark:hover:text-amber-200 cursor-pointer"
+          className="font-semibold underline text-amber-950 hover:text-amber-900 dark:text-amber-200 cursor-pointer"
         >
           Switch to live data
         </button>
@@ -270,7 +270,7 @@ export function DemoSwitch({
 }) {
   return (
     <div className={cn("inline-flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs", className)}>
-      <span className={cn("font-medium", checked ? "text-amber-500 font-semibold" : "text-muted-foreground")}>
+      <span className={cn("font-medium", checked ? "text-amber-800 font-semibold dark:text-amber-300" : "text-muted-foreground")}>
         {label}
       </span>
       <Toggle checked={checked} onChange={onChange} label={label} />

@@ -19,7 +19,7 @@ const DEMO_PRESETS = [
     tier: "TIER_1_LOW",
     file: "clean_interview_broadcast.mp4",
     desc: "Unedited broadcast video & natural speech. All modalities corroborate authentic.",
-    badgeClass: "border-emerald-500/30 text-emerald-400 bg-emerald-500/10",
+    badgeClass: "border-emerald-500/30 text-emerald-800 bg-emerald-500/10 dark:text-emerald-300",
   },
   {
     id: "voice_clone",
@@ -28,7 +28,7 @@ const DEMO_PRESETS = [
     tier: "TIER_3_CRITICAL",
     file: "synthetic_voice_clone_scam.wav",
     desc: "AASIST flags vocoder artifacts. Bypasses video models safely.",
-    badgeClass: "border-rose-500/30 text-rose-400 bg-rose-500/10",
+    badgeClass: "border-rose-500/30 text-rose-800 bg-rose-500/10 dark:text-rose-300",
   },
   {
     id: "silent_video",
@@ -37,7 +37,7 @@ const DEMO_PRESETS = [
     tier: "TIER_1_LOW",
     file: "surveillance_silent_clip.mp4",
     desc: "Zero-audio stream. Manifest safely bypasses acoustic detectors.",
-    badgeClass: "border-cyan-500/30 text-cyan-400 bg-cyan-500/10",
+    badgeClass: "border-cyan-500/30 text-cyan-800 bg-cyan-500/10 dark:text-cyan-300",
   },
   {
     id: "cross_modal_conflict",
@@ -46,7 +46,7 @@ const DEMO_PRESETS = [
     tier: "TIER_3_CRITICAL",
     file: "dubbed_speech_conflict.mp4",
     desc: "Authentic face + cloned voice. Guard 1 prevents false-authentic default.",
-    badgeClass: "border-amber-500/30 text-amber-400 bg-amber-500/10",
+    badgeClass: "border-amber-500/30 text-amber-900 bg-amber-500/10 dark:text-amber-300",
   },
 ];
 
