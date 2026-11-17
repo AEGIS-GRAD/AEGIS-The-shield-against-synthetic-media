@@ -37,6 +37,7 @@ class DetectorResult(BaseModel):
 
 
 class OrchestrationResponse(BaseModel):
+    job_id: Optional[str] = None
     input_file: str
     metadata: InputMetadata
     detectors_called: List[str]

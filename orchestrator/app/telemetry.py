@@ -72,8 +72,35 @@ ORCHESTRATOR_REQUESTS_TOTAL = Counter(
     ["modality", "status", "verdict"],
 )
 
+# 6. Closed-Loop Reliability Feedback Metrics (Task 5 / RQ2)
+DETECTOR_OVERRULES_TOTAL = Counter(
+    "aegis_detector_overrules_total",
+    "Total detector claims overruled or materially discounted by the Judge Agent",
+    ["detector", "condition"],
+)
+DETECTOR_CONFIRMED_WRONG_TOTAL = Counter(
+    "aegis_detector_confirmed_wrong_total",
+    "Total overruled detector claims subsequently confirmed wrong by ground truth",
+    ["detector", "condition"],
+)
+DETECTOR_ROLLING_RELIABILITY = Gauge(
+    "aegis_detector_rolling_reliability",
+    "Rolling reliability score per detector and operating condition",
+    ["detector", "condition"],
+)
+
 # Prometheus ASGI app for mounting on FastAPI
 metrics_app = make_asgi_app()
+
+
+def update_reliability_metrics(reliability_summary: dict) -> None:
+    """Reflects updated rolling reliability metrics into Prometheus gauges."""
+    for det, payload in (reliability_summary or {}).items():
+        by_cond = payload.get("by_condition") or {}
+        for cond, stats in by_cond.items():
+            rr = stats.get("rolling_reliability")
+            if isinstance(rr, (int, float)):
+                DETECTOR_ROLLING_RELIABILITY.labels(detector=det, condition=cond).set(float(rr))
 
 
 def update_circuit_breaker_metrics(breakers_dict: dict):

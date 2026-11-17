@@ -1,3 +1,23 @@
+_OBSERVED_RELIABILITY_ENTRY_SCHEMA = {
+    "type": "object",
+    "required": ["sample_count", "rolling_reliability", "status"],
+    "properties": {
+        "sample_count": {"type": "integer", "minimum": 0},
+        "correct_count": {"type": "integer", "minimum": 0},
+        "wrong_count": {"type": "integer", "minimum": 0},
+        "overruled_count": {"type": "integer", "minimum": 0},
+        "confirmed_overrule_count": {"type": "integer", "minimum": 0},
+        "raw_accuracy": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
+        "rolling_reliability": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "confirmed_overrule_rate": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
+        "status": {
+            "type": "string",
+            "enum": ["reliable", "caution", "deprioritize", "insufficient_data"],
+        },
+        "last_updated": {"type": ["string", "null"]},
+    },
+}
+
 DETECTOR_MANIFEST_SCHEMA = {
     "type": "object",
     "required": [
@@ -46,6 +66,19 @@ DETECTOR_MANIFEST_SCHEMA = {
                 }
             }
         },
-        "reliability_notes": {"type": "string"}
+        "reliability_notes": {"type": "string"},
+        "observed_reliability": {
+            "type": "object",
+            "properties": {
+                "updated_at": {"type": ["string", "null"]},
+                "window_size": {"type": "integer", "minimum": 1},
+                "revision": {"type": "integer", "minimum": 0},
+                "overall": _OBSERVED_RELIABILITY_ENTRY_SCHEMA,
+                "by_condition": {
+                    "type": "object",
+                    "additionalProperties": _OBSERVED_RELIABILITY_ENTRY_SCHEMA,
+                },
+            },
+        },
     }
 }

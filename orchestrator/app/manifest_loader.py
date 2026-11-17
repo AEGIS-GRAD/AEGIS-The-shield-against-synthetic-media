@@ -57,6 +57,25 @@ except Exception:
         from Schema import DETECTOR_MANIFEST_SCHEMA  # type: ignore[import]
     except Exception:
         # Fallback embedded schema ensures module import never fails regardless of working directory
+        _obs_entry_schema = {
+            "type": "object",
+            "required": ["sample_count", "rolling_reliability", "status"],
+            "properties": {
+                "sample_count": {"type": "integer", "minimum": 0},
+                "correct_count": {"type": "integer", "minimum": 0},
+                "wrong_count": {"type": "integer", "minimum": 0},
+                "overruled_count": {"type": "integer", "minimum": 0},
+                "confirmed_overrule_count": {"type": "integer", "minimum": 0},
+                "raw_accuracy": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
+                "rolling_reliability": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                "confirmed_overrule_rate": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
+                "status": {
+                    "type": "string",
+                    "enum": ["reliable", "caution", "deprioritize", "insufficient_data"],
+                },
+                "last_updated": {"type": ["string", "null"]},
+            },
+        }
         DETECTOR_MANIFEST_SCHEMA = {
             "type": "object",
             "required": [
@@ -105,7 +124,20 @@ except Exception:
                         }
                     }
                 },
-                "reliability_notes": {"type": "string"}
+                "reliability_notes": {"type": "string"},
+                "observed_reliability": {
+                    "type": "object",
+                    "properties": {
+                        "updated_at": {"type": ["string", "null"]},
+                        "window_size": {"type": "integer", "minimum": 1},
+                        "revision": {"type": "integer", "minimum": 0},
+                        "overall": _obs_entry_schema,
+                        "by_condition": {
+                            "type": "object",
+                            "additionalProperties": _obs_entry_schema,
+                        },
+                    },
+                },
             }
         }
 
@@ -176,6 +208,33 @@ def validate_manifest(data: dict) -> None:
         raise ManifestValidationError(detector, exc.message) from exc
 
 
+def _reliability_overlay_dir(create: bool = False) -> Optional[Path]:
+    """
+    Optional writable overlay dir for `observed_reliability` when the primary
+    manifests directory is mounted read-only (e.g. Docker `:ro` volume).
+    """
+    override = os.environ.get("AEGIS_RELIABILITY_OVERLAY_DIR")
+    if override:
+        p = Path(override)
+        if create:
+            p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    for candidate in (Path("/app/reliability_overlay"),):
+        if candidate.is_dir():
+            return candidate
+        if create and candidate.parent.is_dir() and os.access(candidate.parent, os.W_OK):
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate
+
+    if create:
+        import tempfile
+        p = Path(tempfile.gettempdir()) / "aegis_reliability_overlay"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    return None
+
+
 def _load_single_file(path: Path) -> dict:
     """Load, parse, and validate one manifest file.  Returns the dict."""
     try:
@@ -183,6 +242,21 @@ def _load_single_file(path: Path) -> dict:
             data = json.load(fh)
     except json.JSONDecodeError as exc:
         raise ManifestError(f"Malformed JSON in {path}: {exc}") from exc
+
+    overlay_dir = _reliability_overlay_dir()
+    if overlay_dir is not None:
+        overlay_path = overlay_dir / path.name
+        if overlay_path.is_file():
+            try:
+                with open(overlay_path, "r", encoding="utf-8") as ofh:
+                    overlay_data = json.load(ofh)
+                if isinstance(overlay_data, dict) and "observed_reliability" in overlay_data:
+                    base_rev = int((data.get("observed_reliability") or {}).get("revision", 0))
+                    ov_rev = int((overlay_data.get("observed_reliability") or {}).get("revision", 0))
+                    if ov_rev >= base_rev:
+                        data["observed_reliability"] = overlay_data["observed_reliability"]
+            except Exception:
+                pass
 
     validate_manifest(data)
     return data
@@ -298,6 +372,25 @@ def _render_performance(perf: dict) -> str:
     )
 
 
+def _render_observed_reliability(obs: Optional[dict]) -> str:
+    """Format rolling condition-level reliability stats if present on the manifest."""
+    if not isinstance(obs, dict):
+        return ""
+    by_cond = obs.get("by_condition") or {}
+    if not by_cond:
+        return ""
+    parts = []
+    for cond in sorted(by_cond.keys()):
+        entry = by_cond[cond]
+        rel = entry.get("rolling_reliability")
+        n = entry.get("sample_count", 0)
+        status = entry.get("status", "unknown")
+        overruled = entry.get("confirmed_overrule_count", 0)
+        rel_str = f"{rel:.2f}" if isinstance(rel, (int, float)) else "?"
+        parts.append(f"{cond}={rel_str} [{status}, n={n}, conf_overruled={overruled}]")
+    return "  observed_rel    : " + "; ".join(parts)
+
+
 def render_manifest_text(manifest: dict) -> str:
     """
     Convert one validated manifest dict into a plain-text block that a
@@ -309,6 +402,7 @@ def render_manifest_text(manifest: dict) -> str:
     - Observed performance figures (or "pending" where null)
     - All known failure modes with their conditions and effects
     - The reliability notes summary
+    - Rolling observed per-condition reliability (when populated by feedback loop)
 
     Parameters
     ----------
@@ -340,8 +434,9 @@ def render_manifest_text(manifest: dict) -> str:
     perf_str = _render_performance(manifest.get("performance", {}))
     failure_modes_str = _render_failure_modes(manifest.get("known_failure_modes", []))
     reliability_notes = manifest.get("reliability_notes", "")
+    observed_line = _render_observed_reliability(manifest.get("observed_reliability"))
 
-    return (
+    text = (
         f"[{name} v{version}]\n"
         f"  modalities      : {modalities}\n"
         f"  description     : {description}\n"
@@ -352,6 +447,9 @@ def render_manifest_text(manifest: dict) -> str:
         f"  failure_modes:\n{failure_modes_str}\n"
         f"  reliability     : {reliability_notes}"
     )
+    if observed_line:
+        text += f"\n{observed_line}"
+    return text
 
 
 def render_registry_text(manifests: list[dict]) -> str:

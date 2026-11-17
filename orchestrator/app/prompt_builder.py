@@ -32,7 +32,15 @@ from debate.prompt_security import (
     wrap_untrusted_evidence,
 )
 
-PROMPT_VERSION = "planner-v3.1-compact"
+try:
+    from eligibility import assess_manifest_condition_reliability, extract_input_condition_tags
+except ImportError:  # pragma: no cover
+    from orchestrator.app.eligibility import (
+        assess_manifest_condition_reliability,
+        extract_input_condition_tags,
+    )
+
+PROMPT_VERSION = "planner-v3.1-compact-rf"
 
 # Fallback latency figures from eval/reports/week_benchmark_report.md
 # (Month 1, 120-sample full-pipeline run), used only when live telemetry
@@ -87,8 +95,13 @@ def _format_failure_modes(manifest: dict) -> str:
     return "; ".join(f"{m['condition']} → {m['effect']}" for m in modes)
 
 
-def _format_eligible_table(eligible: list[dict], telemetry: Optional[dict] = None) -> str:
+def _format_eligible_table(
+    eligible: list[dict],
+    telemetry: Optional[dict] = None,
+    active_conditions: Optional[list[str]] = None,
+) -> str:
     rows = []
+    conds = active_conditions or ["nominal"]
     for m in eligible:
         avg_ms, p95_ms, source = _latency_for(m, telemetry)
         latency_str = (
@@ -97,12 +110,24 @@ def _format_eligible_table(eligible: list[dict], telemetry: Optional[dict] = Non
             else "unknown"
         )
 
+        rel_info = assess_manifest_condition_reliability(m, conds)
+        rel_line = ""
+        if rel_info["status"] != "no_history":
+            rr = rel_info["rolling_reliability"]
+            rr_str = f"{rr:.2f}" if isinstance(rr, (int, float)) else "n/a"
+            rel_line = (
+                f"\n  historical_reliability: {rel_info['status'].upper()} under "
+                f"{rel_info['condition']} (rolling={rr_str}, n={rel_info['sample_count']}, "
+                f"conf_overruled={rel_info['confirmed_overrule_count']})"
+            )
+
         rows.append(
             f"- detector_name: {m['detector_name']}\n"
             f"  description: {m.get('description', '')}\n"
             f"  latency: {latency_str}\n"
             f"  known_failure_modes: {_format_failure_modes(m)}\n"
             f"  reliability_notes: {m.get('reliability_notes', '')}"
+            f"{rel_line}"
         )
     return "\n".join(rows) if rows else "(none eligible)"
 
@@ -151,6 +176,9 @@ def _sanitize_input_summary(input_summary: dict) -> dict:
             clean_tags, _ = sanitize_exif_metadata(val)
             if clean_tags:
                 safe[key] = clean_tags
+        elif key == "operating_conditions" and isinstance(val, (list, tuple)):
+            allowed = {"low_light", "short_clip", "dubbed_audio", "nominal"}
+            safe[key] = [str(v).strip().lower() for v in val if str(v).strip().lower() in allowed]
         elif isinstance(val, str) and key not in ("modality",):
             safe[key] = sanitize_untrusted_text(val, max_len=100, source=f"planner_input:{key}").sanitized
         else:
@@ -165,12 +193,14 @@ def build_planning_prompt(
     risk_profile: str,
     budget_s: float,
     telemetry: Optional[dict] = None,
+    active_conditions: Optional[list[str]] = None,
 ) -> str:
     safe_risk = risk_profile.strip().lower() if isinstance(risk_profile, str) else "standard"
     if safe_risk not in ("low", "standard", "high"):
         safe_risk = "standard"
 
     safe_summary = _sanitize_input_summary(input_summary)
+    conds = active_conditions or extract_input_condition_tags(safe_summary)
     framed_summary, boundary = wrap_untrusted_evidence(safe_summary)
 
     prompt = f"""# 1. ROLE AND OBJECTIVE
@@ -206,7 +236,7 @@ given compute budget.
 {_format_telemetry_section(telemetry)}
 
 # 6. ELIGIBLE DETECTORS
-{_format_eligible_table(eligible, telemetry)}
+{_format_eligible_table(eligible, telemetry, active_conditions=conds)}
 
 # 7. EXCLUDED DETECTORS
 {_format_excluded_table(excluded)}
@@ -223,6 +253,9 @@ given compute budget.
 - If the input summary matches a detector's known_failure_modes, treat that
   detector as low-value evidence — either skip it and say why, or note the
   caveat in coverage_warnings.
+- Historical Feedback: If a detector's historical_reliability is DEPRIORITIZE for
+  the active condition and another reliable detector covers the modality, skip it
+  and record the reliability reason in "skipped" and "coverage_warnings".
 
 # 9. OUTPUT SCHEMA
 Respond with JSON ONLY. No markdown fences, no commentary outside the JSON.
