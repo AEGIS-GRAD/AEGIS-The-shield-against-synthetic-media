@@ -203,8 +203,41 @@ async def run_client_session(session: ClientSession) -> None:
     for line in justification.splitlines():
         print(f"  {line}")
 
+    # 6. Demonstrate Pipeline Tools (Task 2): check_stream_integrity & verify_media
+    print("\n" + "=" * 70)
+    print(" [6] PIPELINE TOOLS (verify_media / get_report / check_stream_integrity)")
     print("=" * 70)
-    print(" Arbitration completed successfully.")
+
+    # Demonstrate check_stream_integrity
+    integrity_resp = await session.call_tool("check_stream_integrity", {"job_id": "test-job-e2e-001"})
+    int_data = _parse_tool_result(integrity_resp)
+    print(f"Check Stream Integrity status: {int_data.get('status')}")
+
+    # Demonstrate verify_media on a sample text file
+    sample_txt = Path(__file__).resolve().parent / "sample_verification.txt"
+    sample_txt.write_text("Artificial intelligence generated text evaluation sample.", encoding="utf-8")
+    try:
+        vm_raw = await session.call_tool(
+            "verify_media",
+            {
+                "file_path": str(sample_txt),
+                "modality": "text",
+                "planner_mode": "rule_based",
+            },
+        )
+        vm_data = _parse_tool_result(vm_raw)
+        print(f"verify_media submitted: job_id={vm_data.get('job_id')}, status={vm_data.get('status')}")
+
+        if vm_data.get("job_id"):
+            rep_raw = await session.call_tool("get_report", {"job_id": vm_data["job_id"]})
+            rep_data = _parse_tool_result(rep_raw)
+            print(f"get_report initial poll: status={rep_data.get('status')}")
+    finally:
+        if sample_txt.exists():
+            sample_txt.unlink()
+
+    print("=" * 70)
+    print(" Arbitration and Pipeline workflow completed successfully.")
     print("=" * 70)
 
 
