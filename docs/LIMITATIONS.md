@@ -306,7 +306,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 - [ ] **Mitigate Judge Agent Over-Abstention & False-Alerts (M2-L11)** — Refine consensus thresholds to reduce 65% `INTEGRITY_UNKNOWN` rate and fix false-synthetic classifications.
 - [ ] **Regenerate Clean Benchmark Fixtures (M2-L12, M2-L13)** — Replace random-weight Month 1 fixtures and commit authentic tampered stream datasets.
 - [ ] **Resolve LLM Planner Latency SLA (M2-L14)** — Transition from high-latency shared free endpoints (21.8s–365s) to dedicated low-latency inference.
-- [ ] **End-to-End Multi-Feed AI Inference Load Testing (M2-L15)** — Benchmark concurrent live streaming with active neural model execution, not just transport sockets.
+- [x] **End-to-End Multi-Feed AI Inference Load Testing (M2-L15)** — Benchmark concurrent live streaming with active neural model execution, not just transport sockets. *Done in Week 10 Task 6: real limit 2 feeds at 25 FPS on a 16-thread CPU (contention-bound); 60-min soak PASS/WATCH. See [live_inference_load_test_report.md](../eval/reports/live_inference_load_test_report.md).*
 
 ---
 
@@ -489,6 +489,7 @@ The three guardrails implemented in Week 3 (duration, luminance, occlusion) exis
 | **Current mitigation** | Validates gateway asyncio connection management and DoS resilience. |
 | **Residual risk** | Live deployment assuming 32 concurrent feeds will suffer catastrophic GPU/CPU starvation once neural inference is enabled. |
 | **Debate-layer / System implication** | Re-run multi-feed load tests with edge neural inference actively processing every sliding window. |
+| **Status (Week 10 Task 6)** | Re-run with MobileNetV3 INT8 + streaming rPPG + fusion in the gateway loop (`AEGIS_LIVE_INFERENCE=1`): limit **2 feeds @ 25 FPS**, 4 feeds backlog (p95 4.5 s), 8+ feeds drop frames. Report: [live_inference_load_test_report.md](../eval/reports/live_inference_load_test_report.md). |
 | **Evidence** | [eval/reports/streaming_load_test_report.md:L51-L54](../eval/reports/streaming_load_test_report.md#L51-L54). |
 
 ---
