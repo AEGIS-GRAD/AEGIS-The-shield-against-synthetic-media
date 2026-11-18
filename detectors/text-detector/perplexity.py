@@ -99,12 +99,16 @@ class PerplexityScorer:
         dtype = torch.float16 if (resolved_device.startswith("cuda") and self.use_fp16) else torch.float32
 
         logger.info("Loading perplexity model '%s' on %s (%s)", source, resolved_device, dtype)
-        self.tokenizer = AutoTokenizer.from_pretrained(source)
+        gpt2_revision = "607a30d783dfa663caf39e06633721c8d4cfcd7e" if source == self.model_id else None
+        hf_kwargs = {"trust_remote_code": False}
+        if gpt2_revision:
+            hf_kwargs["revision"] = gpt2_revision
+        self.tokenizer = AutoTokenizer.from_pretrained(source, **hf_kwargs)
         if self.tokenizer.pad_token is None and self.tokenizer.eos_token is not None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model = AutoModelForCausalLM.from_pretrained(source, torch_dtype=dtype).to(
-            resolved_device
-        )
+        self.model = AutoModelForCausalLM.from_pretrained(
+            source, torch_dtype=dtype, **hf_kwargs
+        ).to(resolved_device)
         self.model.eval()
         self.device = resolved_device
 

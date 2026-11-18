@@ -78,16 +78,16 @@ describe("AnalyzePage Upload Workstation (W7)", () => {
     expect(dest).toContain("file=clip.mp4");
   });
 
-  it("displays explicit modality roadmap notices when switching to Image and Text tabs", async () => {
+  it("enables Image and Text upload workflows when switching tabs", async () => {
     const user = userEvent.setup();
     render(<AnalyzePage />);
 
-    await user.click(screen.getByRole("button", { name: /^Image\s*Planned$/i }));
-    expect(screen.getByText("Image Deepfake Classifier (UnivFD CLIP)")).toBeInTheDocument();
-    expect(screen.getByText("NOT YET TRAINED")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Image$/i }));
+    expect(screen.getByText("Drag & drop your photograph or digital image")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Browse image files/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /^Text\s*Planned$/i }));
-    expect(screen.getByText("Text Perplexity Detector (Binoculars)")).toBeInTheDocument();
-    expect(screen.getByText("UNDER CALIBRATION")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Text$/i }));
+    expect(screen.getByRole("button", { name: /Load AI Essay/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Load Human Text/i })).toBeInTheDocument();
   });
 });

@@ -1,0 +1,141 @@
+name: Security & Supply-Chain CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+jobs:
+  secrets-scan:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan git history and working tree
+        run: |
+          gitleaks detect --source . --config .gitleaks.toml --redact --report-format json --report-path gitleaks-report.json --exit-code 1
+
+      - name: Upload Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          if-no-files-found: ignore
+
+  dependency-audit:
+    name: Python & npm Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: "./web/package-lock.json"
+
+      - name: Audit pinned Python requirements (pip-audit)
+        run: |
+          pip install --no-cache-dir pip-audit
+          mkdir -p reports
+          status=0
+          for req in $(find . -maxdepth 4 -name "requirements*.txt" ! -path "*/Community-Forensics/*" ! -path "*/venv/*" | sort); do
+            echo "=== Auditing $req ==="
+            out="reports/pip_audit_$(echo "$req" | tr '/.' '__').json"
+            if ! pip-audit -r "$req" --no-deps --disable-pip --format json --output "$out"; then
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: Audit web runtime dependencies (npm audit)
+        working-directory: ./web
+        run: |
+          npm ci
+          npm audit --omit=dev --json > ../reports/npm_audit_prod.json || true
+          npm audit --omit=dev --audit-level=critical
+
+      - name: Upload dependency audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-reports
+          path: reports/
+
+  trivy-and-sbom:
+    name: Trivy Misconfig, Container Scan & CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: v0.76.2
+
+      - name: Scan Dockerfiles and Compose manifests (Trivy config)
+        run: |
+          mkdir -p reports
+          trivy config . --severity HIGH,CRITICAL --format json --output reports/trivy-config.json
+          trivy config . --severity HIGH,CRITICAL --exit-code 1
+
+      - name: Scan repo filesystems and generate CycloneDX SBOM
+        run: |
+          trivy fs . --scanners vuln --skip-dirs detectors/image/Community-Forensics --skip-dirs web/node_modules --severity CRITICAL --exit-code 1 --format json --output reports/trivy-fs.json
+          trivy fs . --skip-dirs detectors/image/Community-Forensics --skip-dirs web/node_modules --format cyclonedx --output reports/aegis-sbom.cdx.json
+
+      - name: Build and scan core hardened images (Trivy image)
+        run: |
+          docker build -t aegis-validator:ci ./security/gateway/validator
+          docker build -t aegis-ingestion:ci -f ./security/gateway/ingestion/Dockerfile .
+          docker build -t aegis-rtsp-bridge:ci ./security/gateway/rtsp_bridge
+          docker build -t aegis-orchestrator:ci ./orchestrator
+          for img in aegis-validator:ci aegis-ingestion:ci aegis-rtsp-bridge:ci aegis-orchestrator:ci; do
+            echo "=== Scanning $img ==="
+            trivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 "$img"
+          done
+
+      - name: Upload Trivy & SBOM artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sbom-artifacts
+          path: reports/
+
+  model-integrity-tests:
+    name: Checkpoint Safety & Container Policy Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install minimal test dependencies
+        run: |
+          pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
+            "torch==2.14.1" "torchvision==0.29.1" "huggingface-hub==2.4.0" "pyyaml==6.0.3" "pytest==9.2.0"
+
+      - name: Run Task 5 supply-chain & safe-loading tests
+        env:
+          PYTHONPATH: "."
+        run: pytest security/tests/test_supply_chain_hardening.py -v

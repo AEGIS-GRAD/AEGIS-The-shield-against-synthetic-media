@@ -1,6 +1,6 @@
-opencv-python>=4.11.0,<5  # OpenCV 5 removed cv2.CascadeClassifier (used by the live inference stage)
-cryptography>=44.0.0
-PyWavelets>=1.4.1
-scipy>=1.10.1
-respx>=0.22.0
-asn1crypto>=1.5.1  # RFC 3161 trusted timestamps (security/forensics/timestamping.py)
+opencv-python==4.14.0.94  # OpenCV <5 required for cv2.CascadeClassifier
+cryptography==50.0.2
+PyWavelets==1.9.0
+scipy==1.17.1
+respx==0.23.1
+asn1crypto==1.5.1  # RFC 3161 trusted timestamps (security/forensics/timestamping.py)

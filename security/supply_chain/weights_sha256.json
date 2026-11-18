@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "description": "SHA-256 integrity manifest and pinned revisions for AEGIS model weights and adapters.",
+  "artifacts": {
+    "detectors/aasist/AASIST.pth": {
+      "modality": "audio",
+      "source_type": "tracked_git",
+      "format": "pytorch_weights_only",
+      "size_bytes": 1281532,
+      "sha256": "51d2d9cf0738172f61e2a384ec50a54a55363240f67c971ed55a92435bc1a1c0"
+    },
+    "detectors/image/weights/model.safetensors": {
+      "modality": "image",
+      "source_type": "huggingface_hub",
+      "repo_id": "OwensLab/commfor-model-384",
+      "revision": "6076002bf0d9dd37537f965ee2f06f826c333b61",
+      "filename": "model.safetensors",
+      "format": "safetensors",
+      "size_bytes": 87262324,
+      "sha256": "b89f36275f3bf5e2b040eee36597a8f19db051bff9a473a9cf7b2466284fb387"
+    },
+    "detectors/text-detector/models/desklib-base/model.safetensors": {
+      "modality": "text",
+      "source_type": "huggingface_hub",
+      "repo_id": "desklib/ai-text-detector-v1.01",
+      "revision": "5fdea974cd4287c61674951ec78803aa274e2fb7",
+      "filename": "model.safetensors",
+      "format": "safetensors",
+      "size_bytes": 1736100972,
+      "sha256": "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265"
+    },
+    "detectors/text-detector/models/desklib-finetuned/lora_adapter/adapter_model.safetensors": {
+      "modality": "text",
+      "source_type": "tracked_git",
+      "format": "safetensors",
+      "size_bytes": 3159288,
+      "sha256": "dba5608b7f771fa38dce1c8148f874d46bc5d1bde6fb2e8a780f525c5044d93b"
+    },
+    "detectors/text-detector/models/gpt2/model.safetensors": {
+      "modality": "text",
+      "source_type": "huggingface_hub",
+      "repo_id": "openai-community/gpt2",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "filename": "model.safetensors",
+      "format": "safetensors",
+      "size_bytes": 548105171,
+      "sha256": "248dfc3911869ec493c76e65bf2fcf7f615828b0254c12b473182f0f81d3a707"
+    },
+    "detectors/video-classifier/models/efficientnet_b0_ffpp_finetuned.pth": {
+      "modality": "video",
+      "source_type": "tracked_git",
+      "format": "pytorch_weights_only",
+      "size_bytes": 16347222,
+      "sha256": "5622d78b079927a84a86f8d8545ac76e11130e6d3cbaf7c517ac90e2740f271a"
+    },
+    "detectors/video-classifier/models/efficientnet_b0_ffpp_ckpt_ep10.pth": {
+      "modality": "video",
+      "source_type": "tracked_git",
+      "format": "pytorch_ckpt_safe_globals",
+      "size_bytes": 48623425,
+      "sha256": "b193f32b4bd4b492bce6b4fe72fe39d2e24608315e368f08987bb64cbf1b586e"
+    },
+    "detectors/video-classifier/models/efficientnet_b0_ffpp_c23.pth": {
+      "modality": "video",
+      "source_type": "huggingface_hub",
+      "repo_id": "Xicor9/efficientnet-b0-ffpp-c23",
+      "revision": "21aebf2d1c8a7ba85eb61734884c50c877c38ea3",
+      "filename": "efficientnet_b0_ffpp_c23.pth",
+      "format": "pytorch_weights_only",
+      "size_bytes": 16339854,
+      "sha256": "2a7963b787ece2594a79160f20e53d6bc621f6bfe34ee21d139efa81bcb70c84"
+    },
+    "engine/edge_model/mobilenetv3_small_ffpp.pth": {
+      "modality": "video_edge",
+      "source_type": "tracked_git",
+      "format": "pytorch_weights_only",
+      "size_bytes": 6216850,
+      "sha256": "789ae9b3345d6dfb606fd711a6df3d9af22a787e15f97a9a4fb8fa614f31c176"
+    },
+    "engine/edge_model/mobilenetv3_small_fp32.onnx": {
+      "modality": "video_edge",
+      "source_type": "tracked_git",
+      "format": "onnx",
+      "size_bytes": 6089255,
+      "sha256": "7a4de0d4d28f186fbdce7ec7d6f89b5be08ff4e28ff922d5fbbfa7e457711bd4"
+    },
+    "engine/edge_model/mobilenetv3_small_int8.onnx": {
+      "modality": "video_edge",
+      "source_type": "tracked_git",
+      "format": "onnx",
+      "size_bytes": 1721530,
+      "sha256": "ba3d6dcf922586150aadb7ada993619f419a0161e87eacbe602f52eff0a54420"
+    }
+  }
+}

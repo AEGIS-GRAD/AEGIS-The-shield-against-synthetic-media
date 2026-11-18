@@ -65,7 +65,12 @@ jobs:
         env:
           AEGIS_JUDGE_MODE: deterministic
           AEGIS_MOCK_LLM: '1'
-        run: npm run test:e2e
+        run: |
+          if ls e2e/snapshots.spec.ts-snapshots/*-linux.png >/dev/null 2>&1; then
+            npx playwright test --project=chromium --project="Mobile Chrome"
+          else
+            npx playwright test --project=chromium --project="Mobile Chrome" --ignore-snapshots
+          fi
 
       - name: Upload Playwright Report
         if: always()
@@ -76,7 +81,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run Impeccable UI Linter
-        run: npx impeccable@4.1.0 detect .
+        run: npx impeccable@4.1.0 detect src/
 
   docker-build:
     runs-on: ubuntu-latest

@@ -49,6 +49,7 @@ import os
 import random
 import sys
 import time
+from contextlib import nullcontext
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -287,7 +288,14 @@ def build_model(resume: Optional[Path], device: str) -> nn.Module:
         if not resume.exists():
             log.error("--resume path does not exist: %s", resume)
             sys.exit(1)
-        state = torch.load(str(resume), map_location=device)
+        import pathlib as _pathlib
+        safe_ctx = (
+            torch.serialization.safe_globals([_pathlib.WindowsPath, _pathlib.PosixPath])
+            if hasattr(torch.serialization, "safe_globals")
+            else nullcontext()
+        )
+        with safe_ctx:
+            state = torch.load(str(resume), map_location=device, weights_only=True)
         if isinstance(state, dict):
             # Full checkpoint dict (from our own checkpoint saving)
             if "model_state_dict" in state:

@@ -1,16 +1,16 @@
 # API Microservice Framework
-fastapi>=0.115.0
-uvicorn[standard]>=0.34.0
-python-multipart>=0.0.20
-httpx>=0.28.0
+fastapi==0.163.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.34
+httpx==0.28.1
 
 # Testing & Validation
-pytest>=7.0.0
-pytest-asyncio>=0.24.0
-respx>=0.22.0
+pytest==9.2.0
+pytest-asyncio==1.5.0
+respx==0.23.1
 
 # PRNU Hardware Fingerprinting
-opencv-python-headless>=4.8.0
-PyWavelets>=1.4.1
-scipy>=1.10.1
-numpy>=1.26.0
+opencv-python-headless==4.14.0.94
+PyWavelets==1.9.0
+scipy==1.17.1
+numpy==2.4.6

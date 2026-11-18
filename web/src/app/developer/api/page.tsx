@@ -12,7 +12,7 @@ const keys = [
 ];
 
 const sample = `curl -X POST http://localhost:8081/orchestrate \\
-  -H "X-Internal-API-Key: aegis-secret-key-change-in-prod" \\
+  -H "X-Internal-API-Key: <YOUR_INTERNAL_API_KEY>" \\
   -F "file=@press_briefing.mp4" \\
   -F "detectors=auto" -F "explain=true"`;
 

@@ -1,43 +1,38 @@
 # ── AASIST Audio Deepfake Detector ─────────────────────────────────────────────
-# Detects audio spoofing / voice cloning using a Graph-Attention network.
-# Runs CPU-only inference (no GPU required for stub/dev; swap torch index for CUDA in prod).
-FROM python:3.11-slim
+FROM python:3.11.18-slim
 
-# Prevent interactive prompts during apt installs
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# ── System dependencies ────────────────────────────────────────────────────────
-# libsndfile1  : required by soundfile / librosa for audio I/O
-# curl         : used by docker-compose healthcheck
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     libsndfile1 \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 10001 appuser && \
+    useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
-# ── Python dependencies (layered for cache efficiency) ─────────────────────────
-# 1. Upgrade pip first (cheap, cached separately)
-RUN pip install --no-cache-dir --upgrade pip
-
-# 2. CPU-only PyTorch — largest layer, cached until requirements change
-RUN pip install --no-cache-dir \
-    torch==2.2.2+cpu torchaudio==2.2.2+cpu \
+# CPU-only PyTorch + torchaudio (matching pinned versions in requirements.txt)
+RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
+    rm -rf /usr/local/lib/python3.*/ensurepip && \
+    find /usr -path "*/pip/_vendor/bom.cdx.json" -delete && \
+    pip install --no-cache-dir \
+    torch==2.14.1 torchaudio==2.11.0 \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
-# 3. App requirements (excluding torch lines already installed above)
 COPY requirements.txt .
 RUN grep -vE "^(torch|#)" requirements.txt > /tmp/reqs.txt \
     && pip install --no-cache-dir -r /tmp/reqs.txt \
     && rm /tmp/reqs.txt
 
-# ── Application source ─────────────────────────────────────────────────────────
-# AASIST.pth model weights live at the detector root and are included here.
-COPY . /app
+COPY --chown=appuser:appuser . /app
+RUN chown -R appuser:appuser /app
 
+USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -fs http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

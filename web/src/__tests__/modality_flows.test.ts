@@ -5,8 +5,7 @@
  * Run with: npm test
  */
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -23,70 +22,70 @@ function fileExists(...parts: string[]): boolean {
 
 describe("Task 1: Image and Text Modality UI & Flows", () => {
   it("FrequencySpectrumView component exists and exports correctly", () => {
-    assert.ok(
+    expect(
       fileExists("components", "aegis", "FrequencySpectrumView.tsx"),
       "FrequencySpectrumView.tsx must exist"
-    );
+    ).toBe(true);
     const code = readSrc("components", "aegis", "FrequencySpectrumView.tsx");
-    assert.ok(
+    expect(
       code.includes("export function FrequencySpectrumView"),
       "Must export FrequencySpectrumView"
-    );
-    assert.ok(
+    ).toBe(true);
+    expect(
       code.includes("frequency_anomaly") && code.includes("exif_missing"),
       "Must display frequency_anomaly and exif_missing signals"
-    );
+    ).toBe(true);
   });
 
   it("PerSentenceHighlightView component exists and exports correctly", () => {
-    assert.ok(
+    expect(
       fileExists("components", "aegis", "PerSentenceHighlightView.tsx"),
       "PerSentenceHighlightView.tsx must exist"
-    );
+    ).toBe(true);
     const code = readSrc("components", "aegis", "PerSentenceHighlightView.tsx");
-    assert.ok(
+    expect(
       code.includes("export function PerSentenceHighlightView"),
       "Must export PerSentenceHighlightView"
-    );
-    assert.ok(
+    ).toBe(true);
+    expect(
       code.includes("low_sentence_length_variation") && code.includes("low_vocabulary_diversity"),
       "Must display stylometric variation and lexical diversity signals"
-    );
+    ).toBe(true);
   });
 
   it("UploadPage enables Image and Text tabs and removes ComingSoon barriers", () => {
     const code = readSrc("app", "analyze", "page.tsx");
-    assert.ok(
+    expect(
       code.includes("FrequencySpectrumView") && code.includes("PerSentenceHighlightView"),
       "Analyze page must import and render frequency and per-sentence components"
-    );
-    assert.ok(
+    ).toBe(true);
+    expect(
       !code.includes("Planned"),
       "Hardcoded 'Planned' disabled tab badge should be removed"
-    );
-    assert.ok(
+    ).toBe(true);
+    expect(
       code.includes("Load AI Essay") && code.includes("Load Human Text"),
       "Must provide quick-load sample actions for text analysis"
-    );
+    ).toBe(true);
   });
 
   it("Mock detectors catalog registers Community Forensics and Desklib models", () => {
     const code = readSrc("lib", "mock.ts");
-    assert.ok(
+    expect(
       code.includes("Community Forensics"),
       "Image detector model must be Community Forensics"
-    );
-    assert.ok(
+    ).toBe(true);
+    expect(
       code.includes("Desklib DeBERTa-v3"),
       "Text detector model must be Desklib DeBERTa-v3"
-    );
+    ).toBe(true);
   });
 
   it("Processing page orchestrator plan includes image and text execution", () => {
     const code = readSrc("app", "analyze", "processing", "page.tsx");
-    assert.ok(
+    expect(
       !code.includes("Model not built yet"),
       "Processing plan must no longer mark image or text as 'Model not built yet'"
-    );
+    ).toBe(true);
   });
 });

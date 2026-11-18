@@ -21,3 +21,5 @@ build/
 docs/
 *.md
 !CLAUDE.md
+security/supply_chain/aegis_sbom.cdx.json
+security/supply_chain/reports/

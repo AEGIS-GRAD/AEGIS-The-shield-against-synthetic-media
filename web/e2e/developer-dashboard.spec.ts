@@ -8,17 +8,18 @@ test.describe("Developer Console & Operations Tabs", () => {
     await expect(page.locator("h1")).toContainText("Engineering & operations");
     await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
 
-    // Check model inventory or detector presence
-    await expect(page.getByText(/Detector|Models|Inventory|Status/i).first()).toBeVisible();
-    await expect(page.getByText(/Video Classifier|AASIST|rPPG/i).first()).toBeVisible();
+    // Check model inventory or detector presence within main content (ignore hidden mobile chrome nav)
+    const main = page.locator("main");
+    await expect(main.getByText(/Detector|Models|Inventory|Status/i).first()).toBeVisible();
+    await expect(main.getByText(/Video Classifier|AASIST|rPPG/i).first()).toBeVisible();
   });
 
   test("13. Security tab (/developer/security) renders gateway policies and mTLS configuration", async ({ page }) => {
     await page.goto("/developer/security");
 
-    // Verify Security header / content
+    // Verify Security header / content within main content
     await expect(page.getByRole("link", { name: "Security", exact: true })).toBeVisible();
-    await expect(page.getByText(/Security|mTLS|Gateway|Token|Access/i).first()).toBeVisible();
+    await expect(page.locator("main").getByText(/Security|mTLS|Gateway|Token|Access/i).first()).toBeVisible();
   });
 
   test("14. Logs tab (/developer/logs) renders system audit log stream", async ({ page }) => {

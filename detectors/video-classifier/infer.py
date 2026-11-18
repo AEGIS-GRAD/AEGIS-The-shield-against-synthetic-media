@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 from pathlib import Path
@@ -8,13 +9,35 @@ from typing import Any, List, Optional, Union
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from huggingface_hub import hf_hub_download
+try:
+    from huggingface_hub import hf_hub_download
+except ImportError:  # Allow local checkpoint loading when huggingface_hub is omitted
+    hf_hub_download = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_REPO_ID = os.getenv("MODEL_CHECKPOINT_REPO", "Xicor9/efficientnet-b0-ffpp-c23")
+DEFAULT_REVISION = os.getenv("MODEL_CHECKPOINT_REVISION", "21aebf2d1c8a7ba85eb61734884c50c877c38ea3")
 DEFAULT_FILENAME = "efficientnet_b0_ffpp_c23.pth"
+DEFAULT_HF_SHA256 = "2a7963b787ece2594a79160f20e53d6bc621f6bfe34ee21d139efa81bcb70c84"
 DEFAULT_LOCAL_CHECKPOINT = Path(__file__).resolve().parent / "models" / "efficientnet_b0_ffpp_finetuned.pth"
+DEFAULT_LOCAL_SHA256 = "5622d78b079927a84a86f8d8545ac76e11130e6d3cbaf7c517ac90e2740f271a"
+
+
+def _verify_sha256(file_path: str | Path, expected_sha256: str) -> None:
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    actual = digest.hexdigest().lower()
+    if actual != expected_sha256.lower():
+        raise RuntimeError(
+            f"Video classifier weights integrity check failed for {file_path}: "
+            f"expected {expected_sha256}, got {actual}"
+        )
 
 
 def load_model(
@@ -48,15 +71,20 @@ def load_model(
             logger.warning(f"Specified local checkpoint path does not exist: {explicit_local}")
 
     if resolved_ckpt_path is None:
-        logger.info(f"Fetching model checkpoint '{filename}' from HuggingFace repo '{repo_id}'...")
+        logger.info(f"Fetching model checkpoint '{filename}' (rev={DEFAULT_REVISION}) from HuggingFace repo '{repo_id}'...")
         try:
-            resolved_ckpt_path = hf_hub_download(repo_id=repo_id, filename=filename)
+            if hf_hub_download is None:
+                raise ImportError("huggingface_hub is not installed")
+            resolved_ckpt_path = hf_hub_download(repo_id=repo_id, filename=filename, revision=DEFAULT_REVISION)
+            if repo_id == "Xicor9/efficientnet-b0-ffpp-c23" and filename == DEFAULT_FILENAME:
+                _verify_sha256(resolved_ckpt_path, DEFAULT_HF_SHA256)
             logger.info(f"Loaded checkpoint file path: {resolved_ckpt_path}")
         except Exception as exc:
             if allow_fallback and DEFAULT_LOCAL_CHECKPOINT.is_file():
                 resolved_ckpt_path = str(DEFAULT_LOCAL_CHECKPOINT)
+                _verify_sha256(resolved_ckpt_path, DEFAULT_LOCAL_SHA256)
                 logger.info(
-                    f"HuggingFace unavailable ({exc}); using local fine-tuned fallback checkpoint: {resolved_ckpt_path}"
+                    f"HuggingFace unavailable ({exc}); using verified local fallback checkpoint: {resolved_ckpt_path}"
                 )
             else:
                 logger.warning(
@@ -75,11 +103,13 @@ def load_model(
     model.classifier[1] = nn.Linear(in_features, 2)
 
     if resolved_ckpt_path and os.path.exists(resolved_ckpt_path):
-        # Load state dict safely across PyTorch versions
-        try:
-            state_dict = torch.load(resolved_ckpt_path, map_location=target_device, weights_only=True)
-        except Exception:
-            state_dict = torch.load(resolved_ckpt_path, map_location=target_device, weights_only=False)
+        expected_ckpt_sha = os.getenv("VIDEO_CLASSIFIER_SHA256", "").strip().lower()
+        if not expected_ckpt_sha and Path(resolved_ckpt_path).resolve() == DEFAULT_LOCAL_CHECKPOINT.resolve():
+            expected_ckpt_sha = DEFAULT_LOCAL_SHA256
+        if expected_ckpt_sha:
+            _verify_sha256(resolved_ckpt_path, expected_ckpt_sha)
+        # Strictly enforce safe tensor deserialization (no arbitrary pickle deserialization fallback)
+        state_dict = torch.load(resolved_ckpt_path, map_location=target_device, weights_only=True)
 
         # Handle state dict wrapped under keys like "state_dict" or "model"
         if isinstance(state_dict, dict):
