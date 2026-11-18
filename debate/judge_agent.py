@@ -40,6 +40,7 @@ from debate.disagreement import (
 from debate.judge_prompt import JUDGE_PROMPT_VERSION, build_judge_prompt
 from debate.llm_client import call_judge_llm
 from debate.manifest_reliability import ManifestReliabilityEngine
+from debate.poisoning_guards import apply_verdict_guards, guards_enabled, harden_claims
 from debate.prompt_security import (
     MAX_FORENSIC_CLAIM_LEN,
     sanitize_claim_text,
@@ -151,6 +152,11 @@ class JudgeAgent:
     ) -> JudgeReport:
         rounds: List[DebateRound] = []
 
+        # Week 11 Cyber Task 2: poisoning guards (claim hygiene before arbitration).
+        poisoning_notes: List[str] = []
+        if guards_enabled():
+            claims, conditions, poisoning_notes = harden_claims(claims, conditions)
+
         # Round 1: Claim Submissions (defense-in-depth sanitization for direct judge_claims calls)
         round_1_entries = []
         for c in claims:
@@ -200,6 +206,11 @@ class JudgeAgent:
             claims=claims,
             conditions=conditions,
         )
+        if guards_enabled():
+            guarded_verdict, downgrades, info_notes = apply_verdict_guards(guarded_verdict, claims)
+            # Downgrades are guards; claim-hygiene and outlier notes are warnings.
+            guards_applied = guards_applied + downgrades
+            guarded_verdict.coverage_warnings = list(guarded_verdict.coverage_warnings) + poisoning_notes + info_notes
 
         # Step 3 of Round 3: Adjudication Narrative & Explainability Mode
         llm_model: Optional[str] = None

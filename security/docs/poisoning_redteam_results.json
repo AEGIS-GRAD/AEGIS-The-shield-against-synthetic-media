@@ -1,0 +1,398 @@
+{
+  "generated_utc": "2026-11-16T19:39:30.016001+00:00",
+  "judge": [
+    {
+      "id": "J0a",
+      "category": "control",
+      "description": "Honest deepfake evidence",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "-",
+      "guards_off": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "succeeded_off": null,
+      "succeeded_on": null
+    },
+    {
+      "id": "J0b",
+      "category": "control",
+      "description": "Honest genuine evidence",
+      "ground_truth": "AUTHENTIC",
+      "attacker_goal": "-",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.168,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "AUTHENTIC",
+        "score": 0.168,
+        "guards": []
+      },
+      "succeeded_off": null,
+      "succeeded_on": null
+    },
+    {
+      "id": "J1",
+      "category": "single compromised detector",
+      "description": "Hide a deepfake: video-classifier reports AUTHENTIC at 0.01",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.225,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.36,
+        "guards": [
+          "POISONING GUARD QG1 (dissent veto): ['rppg'] credibly report SYNTHETIC and no precedence rule explains it; AUTHENTIC cannot be certified."
+        ]
+      },
+      "succeeded_off": true,
+      "succeeded_on": false
+    },
+    {
+      "id": "J2",
+      "category": "single compromised detector",
+      "description": "Frame a genuine clip: video-classifier reports SYNTHETIC at 0.99",
+      "ground_truth": "AUTHENTIC",
+      "attacker_goal": "SYNTHETIC",
+      "guards_off": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "succeeded_off": true,
+      "succeeded_on": true
+    },
+    {
+      "id": "J3",
+      "category": "two colluding detectors",
+      "description": "Hide a deepfake: video-classifier and syncnet both report AUTHENTIC",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "INTEGRITY_UNKNOWN",
+        "score": 0.155,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "INTEGRITY_UNKNOWN",
+        "score": 0.155,
+        "guards": []
+      },
+      "succeeded_off": false,
+      "succeeded_on": false
+    },
+    {
+      "id": "J4",
+      "category": "miscalibration",
+      "description": "Frame a genuine clip: the secondary audio detector reports SYNTHETIC at 0.999",
+      "ground_truth": "AUTHENTIC",
+      "attacker_goal": "SYNTHETIC",
+      "guards_off": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "succeeded_off": true,
+      "succeeded_on": true
+    },
+    {
+      "id": "J5",
+      "category": "polarity/confidence inconsistency",
+      "description": "video-classifier says AUTHENTIC but confidence P(synthetic)=0.97",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.442,
+        "guards": []
+      },
+      "succeeded_off": false,
+      "succeeded_on": false
+    },
+    {
+      "id": "J6",
+      "category": "self-serving flags",
+      "description": "Hide a deepfake: rPPG flags itself low_light and syncnet flags silent_video, video-classifier compromised",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.173,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.36,
+        "guards": [
+          "POISONING GUARD QG1 (dissent veto): ['rppg'] credibly report SYNTHETIC and no precedence rule explains it; AUTHENTIC cannot be certified."
+        ]
+      },
+      "succeeded_off": true,
+      "succeeded_on": false
+    },
+    {
+      "id": "J7",
+      "category": "spoofed operating conditions",
+      "description": "Hide a deepfake: conditions claim darkness, no face, 1.5 s clip; video-classifier compromised",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.22,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.36,
+        "guards": [
+          "POISONING GUARD QG1 (dissent veto): ['rppg'] credibly report SYNTHETIC and no precedence rule explains it; AUTHENTIC cannot be certified."
+        ]
+      },
+      "succeeded_off": true,
+      "succeeded_on": false
+    },
+    {
+      "id": "J8",
+      "category": "domain spoofing",
+      "description": "Hide a deepfake: video-classifier claims the physiological domain",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.229,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.36,
+        "guards": [
+          "POISONING GUARD QG1 (dissent veto): ['rppg'] credibly report SYNTHETIC and no precedence rule explains it; AUTHENTIC cannot be certified."
+        ]
+      },
+      "succeeded_off": true,
+      "succeeded_on": false
+    },
+    {
+      "id": "J9",
+      "category": "sybil / duplicate claims",
+      "description": "Hide a deepfake: five duplicate AUTHENTIC claims from one compromised detector",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.096,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "UNCERTAIN",
+        "score": 0.36,
+        "guards": [
+          "POISONING GUARD QG1 (dissent veto): ['rppg'] credibly report SYNTHETIC and no precedence rule explains it; AUTHENTIC cannot be certified."
+        ]
+      },
+      "succeeded_off": true,
+      "succeeded_on": false
+    },
+    {
+      "id": "J10",
+      "category": "self-reported attenuation",
+      "description": "Frame a genuine clip: honest detectors' claims carry attenuation 0.0 (poisoned wrapper), one compromised SYNTHETIC",
+      "ground_truth": "AUTHENTIC",
+      "attacker_goal": "SYNTHETIC",
+      "guards_off": {
+        "verdict": "SYNTHETIC",
+        "score": 0.655,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "SYNTHETIC",
+        "score": 0.85,
+        "guards": []
+      },
+      "succeeded_off": true,
+      "succeeded_on": true
+    },
+    {
+      "id": "J11",
+      "category": "abstention",
+      "description": "Hide a deepfake: compromised video-classifier abstains, rPPG fooled by donor pulse",
+      "ground_truth": "SYNTHETIC",
+      "attacker_goal": "AUTHENTIC",
+      "guards_off": {
+        "verdict": "AUTHENTIC",
+        "score": 0.329,
+        "guards": []
+      },
+      "guards_on": {
+        "verdict": "AUTHENTIC",
+        "score": 0.329,
+        "guards": []
+      },
+      "succeeded_off": true,
+      "succeeded_on": true
+    }
+  ],
+  "planner": {
+    "guards_off": [
+      {
+        "id": "P0",
+        "category": "control",
+        "description": "Healthy telemetry, video with audio",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": null
+      },
+      {
+        "id": "P1",
+        "category": "telemetry spoofing",
+        "description": "Spoofed Prometheus series marks video-classifier down",
+        "detectors": [
+          "fusion",
+          "streaming-rppg"
+        ],
+        "attack_succeeded": true
+      },
+      {
+        "id": "P2",
+        "category": "telemetry spoofing",
+        "description": "Everything but rPPG (fooled by donor pulse) marked down",
+        "detectors": [
+          "fusion",
+          "streaming-rppg"
+        ],
+        "attack_succeeded": true
+      },
+      {
+        "id": "P3",
+        "category": "cache persistence",
+        "description": "Plan made under spoofed 'down' telemetry reused after recovery",
+        "detectors": [
+          "fusion",
+          "streaming-rppg"
+        ],
+        "attack_succeeded": true
+      },
+      {
+        "id": "P4",
+        "category": "metadata spoofing",
+        "description": "Audio track hidden from ffprobe (has_audio=False) on a voice-cloned clip",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": true,
+        "note": "aasist/syncnet are not scheduled even with audio under the default 3 s budget, so hiding the audio track changes nothing the attacker needs; audio coverage is already missing (see log)."
+      },
+      {
+        "id": "P5",
+        "category": "telemetry spoofing",
+        "description": "Spoofed 60 s p95 latency makes the planner drop video-classifier to save budget",
+        "detectors": [
+          "fusion",
+          "streaming-rppg"
+        ],
+        "attack_succeeded": true
+      }
+    ],
+    "guards_on": [
+      {
+        "id": "P0",
+        "category": "control",
+        "description": "Healthy telemetry, video with audio",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": null
+      },
+      {
+        "id": "P1",
+        "category": "telemetry spoofing",
+        "description": "Spoofed Prometheus series marks video-classifier down",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": false
+      },
+      {
+        "id": "P2",
+        "category": "telemetry spoofing",
+        "description": "Everything but rPPG (fooled by donor pulse) marked down",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": false
+      },
+      {
+        "id": "P3",
+        "category": "cache persistence",
+        "description": "Plan made under spoofed 'down' telemetry reused after recovery",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": false
+      },
+      {
+        "id": "P4",
+        "category": "metadata spoofing",
+        "description": "Audio track hidden from ffprobe (has_audio=False) on a voice-cloned clip",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": true,
+        "note": "aasist/syncnet are not scheduled even with audio under the default 3 s budget, so hiding the audio track changes nothing the attacker needs; audio coverage is already missing (see log)."
+      },
+      {
+        "id": "P5",
+        "category": "telemetry spoofing",
+        "description": "Spoofed 60 s p95 latency makes the planner drop video-classifier to save budget",
+        "detectors": [
+          "fusion",
+          "streaming-rppg",
+          "video-classifier"
+        ],
+        "attack_succeeded": false
+      }
+    ]
+  }
+}

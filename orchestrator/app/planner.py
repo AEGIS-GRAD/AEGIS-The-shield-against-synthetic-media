@@ -54,6 +54,10 @@ from eligibility import filter_detectors, apply_telemetry_constraints
 from prompt_builder import build_planning_prompt, PROMPT_VERSION
 from telemetry_client import get_telemetry_snapshot, DetectorTelemetry, BASELINE_LATENCIES_MS
 try:
+    import planner_guards
+except ImportError:
+    from orchestrator.app import planner_guards
+try:
     from mesh_tls import MeshTLSConfigError, llm_tls_kwargs
 except ImportError:
     from orchestrator.app.mesh_tls import MeshTLSConfigError, llm_tls_kwargs
@@ -489,9 +493,16 @@ def plan_detectors(
 
     # Step C: Live telemetry grounding & down-detector constraints
     telemetry: Optional[Dict[str, DetectorTelemetry]] = None
+    poisoning_notes: List[str] = []
+    telemetry_excluded: List[str] = []
     try:
         telemetry = get_telemetry_snapshot()
+        eligible_static = list(eligible)
         eligible, excluded = apply_telemetry_constraints(eligible, excluded, telemetry)
+        if planner_guards.guards_enabled():
+            eligible, excluded, poisoning_notes, telemetry_excluded = planner_guards.reinstate_unconfirmed(
+                metadata.modality, eligible_static, eligible, excluded, telemetry
+            )
     except Exception as tel_exc:
         logger.warning(f"Telemetry retrieval warning: {tel_exc}. Proceeding with static eligibility.")
 
@@ -511,8 +522,11 @@ def plan_detectors(
         duration_seconds=metadata.duration_seconds,
         risk_profile=risk_profile,
         budget_s=compute_budget,
-        degraded_detectors=degraded_list,
+        # PL3: telemetry-driven exclusions are part of the key, so a plan shaped by
+        # (possibly spoofed) "down" telemetry is never served once telemetry changes.
+        degraded_detectors=degraded_list + [f"down:{n}" for n in telemetry_excluded],
     )
+    telemetry_shaped = bool(poisoning_notes or telemetry_excluded or degraded_list)
 
     now = time.time()
     if PLANNER_CACHE_ENABLED:
@@ -587,6 +601,13 @@ def plan_detectors(
             if det not in detectors_to_call and det in eligible_ids:
                 detectors_to_call.append(det)
 
+    if planner_guards.guards_enabled():
+        detectors_to_call, primary_notes = planner_guards.ensure_primary(metadata.modality, detectors_to_call, eligible_ids)
+        poisoning_notes += primary_notes
+        if poisoning_notes:
+            plan = dict(plan)
+            plan["coverage_warnings"] = list(plan.get("coverage_warnings", [])) + [f"POISONING GUARD {n}" for n in poisoning_notes]
+
     total_latency = round(time.time() - start_time, 3)
     logger.info(f"LLM Planner successfully generated plan using {model_or_err}: {detectors_to_call} ({total_latency}s)")
 
@@ -602,7 +623,7 @@ def plan_detectors(
         excluded_detectors=excluded,
     )
 
-    if PLANNER_CACHE_ENABLED:
+    if PLANNER_CACHE_ENABLED and not (planner_guards.guards_enabled() and telemetry_shaped):
         _PLAN_CACHE[cache_key] = (time.time(), res)
 
     return res
