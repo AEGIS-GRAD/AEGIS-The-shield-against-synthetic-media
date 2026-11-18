@@ -54,6 +54,17 @@ from debate.schemas import (
     OperatingConditions,
 )
 
+# ── Hardening (Week 11 Cyber Task 1): auth, scopes, rate limits, validation, audit ──
+from hardening import (  # noqa: E402
+    SCOPE_ARBITRATE,
+    SCOPE_CAPABILITIES,
+    UNTRUSTED_NOTICE,
+    HardeningError,
+    build_sse_app,
+    guarded_tool,
+    validate_claims_payload,
+)
+
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
@@ -113,6 +124,7 @@ def _report_to_dict(report: JudgeReport) -> Dict[str, Any]:
 
 # ── Tool 1: arbitrate_evidence ───────────────────────────────────────────────
 @mcp_server.tool()
+@guarded_tool("arbitrate_evidence", SCOPE_ARBITRATE)
 def arbitrate_evidence(
     claims: Union[List[Dict[str, Any]], str],
     operating_conditions: Optional[Union[Dict[str, Any], str]] = None,
@@ -174,6 +186,18 @@ def arbitrate_evidence(
                 "verdict": None,
                 "report": None,
             }
+
+        # Structural limits, detector allowlist, one claim per detector, finite numbers,
+        # prompt-injection redaction and URL neutralisation (raises HardeningError).
+        cond_for_check = operating_conditions
+        if isinstance(cond_for_check, str):
+            try:
+                cond_for_check = json.loads(cond_for_check)
+            except Exception:
+                cond_for_check = None  # reported below by the original parser
+        parsed_claims, _, security_notes = validate_claims_payload(
+            parsed_claims, cond_for_check if isinstance(cond_for_check, dict) else None
+        )
 
         # Handle empty claims gracefully (Edge Case 1)
         if len(parsed_claims) == 0:
@@ -267,8 +291,12 @@ def arbitrate_evidence(
             "calibrated_score": verdict_dict["calibrated_score"],
             "forensic_justification": verdict_dict["forensic_justification"],
             "arbitration_mode": verdict_dict["arbitration_mode"],
+            "security_notes": security_notes,
+            "untrusted_content_notice": UNTRUSTED_NOTICE,
         }
 
+    except HardeningError:
+        raise  # handled (and audited) by guarded_tool
     except Exception as exc:
         logger.error("arbitrate_evidence failed: %s\n%s", exc, traceback.format_exc())
         return {
@@ -281,6 +309,7 @@ def arbitrate_evidence(
 
 # ── Tool 2: capabilities ─────────────────────────────────────────────────────
 @mcp_server.tool()
+@guarded_tool("capabilities", SCOPE_CAPABILITIES)
 def capabilities() -> Dict[str, Any]:
     """Return detector capability manifests and reliability metrics.
 
@@ -360,14 +389,20 @@ def main():
         default="127.0.0.1",
         help="Host for SSE transport (default: 127.0.0.1)",
     )
+    parser.add_argument("--ssl-certfile", default=None, help="TLS certificate for the SSE transport")
+    parser.add_argument("--ssl-keyfile", default=None, help="TLS private key for the SSE transport")
     args = parser.parse_args()
 
     logger.info("Starting AEGIS MCP server (transport=%s)", args.transport)
 
     if args.transport == "sse":
-        mcp_server.settings.port = args.port
-        mcp_server.settings.host = args.host
-        mcp_server.run(transport="sse")
+        import uvicorn
+
+        app = build_sse_app(mcp_server)  # refuses to start without bearer tokens
+        if args.host not in ("127.0.0.1", "localhost", "::1") and not args.ssl_certfile:
+            logger.warning("SSE bound to %s without TLS: bearer tokens will cross the network in clear text.", args.host)
+        uvicorn.run(app, host=args.host, port=args.port, log_level="warning",
+                    ssl_certfile=args.ssl_certfile, ssl_keyfile=args.ssl_keyfile)
     else:
         mcp_server.run(transport="stdio")
 

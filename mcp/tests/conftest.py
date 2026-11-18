@@ -4,11 +4,16 @@ Pytest configuration and shared fixtures for the AEGIS MCP test suite.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
+
+# Keep per-call MCP audit records out of the shared security/vault during tests.
+os.environ.setdefault("AEGIS_MCP_AUDIT_VAULT_DIR", tempfile.mkdtemp(prefix="aegis_mcp_audit_"))
 
 # Ensure repo root and mcp dir are on sys.path
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

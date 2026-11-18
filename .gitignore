@@ -67,3 +67,6 @@ detectors/detector_image/models/
 detectors/detector_image/community_forensics/
 
 
+
+# MCP bearer-token registry (hashes only, but deployment-specific)
+mcp/tokens.json

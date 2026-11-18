@@ -509,6 +509,68 @@ class SurveillanceEvidenceVault:
         logger.info(f"Sealed verification {verification_id} ({modality}) at ledger index {new_index} (hash={record_hash[:8]}...)")
         return record
 
+    def store_audit_event(
+        self,
+        event_type: str,
+        actor: str,
+        details: Dict[str, Any],
+        payload_bytes: bytes = b"",
+    ) -> Dict[str, Any]:
+        """Appends a tamper-evident audit event (e.g. one MCP tool call) to the ledger.
+
+        The raw request payload is stored content-addressed (so the audit proves exactly
+        what was asked), the event manifest is hash-chained, HMAC'd and, with a sealer,
+        Ed25519-sealed and timestamped like any other evidence record.
+        """
+        blob = self.store_blob(payload_bytes or b"{}", format_ext="json")
+        now_dt = datetime.now(timezone.utc)
+        audit_id = f"AUD-{now_dt.strftime('%Y%m%d')}-{event_type.lower()[:24]}-{uuid.uuid4().hex[:12]}"
+        audit_dir = self.vault_dir / "audit"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        with self._lock, _interprocess_lock(self.lock_path):
+            last_index, last_hash = self._get_latest_ledger_state()
+            new_index = last_index + 1
+            record: Dict[str, Any] = {
+                "audit_id": audit_id,
+                "created_at_utc": now_dt.isoformat(),
+                "event_type": event_type,
+                "actor": actor,
+                "details": details,
+                "payload_blob": asdict(blob),
+                "record_index": new_index,
+                "prev_record_hash": last_hash,
+                "record_hash": "",
+                "signature": "",
+            }
+            manifest_digest = hashlib.sha256(json.dumps(record, sort_keys=True).encode("utf-8")).hexdigest()
+            chain_input = f"{last_hash}:{audit_id}:{record['created_at_utc']}:{manifest_digest}".encode("utf-8")
+            record_hash = hashlib.sha256(chain_input).hexdigest()
+            signature = hmac.new(self.signing_key, record_hash.encode("utf-8"), hashlib.sha256).hexdigest()
+            record["record_hash"], record["signature"] = record_hash, signature
+            _write_new_manifest(audit_dir / f"{audit_id}.json", record)
+            ledger_entry = {
+                "record_index": new_index,
+                "record_type": "AUDIT",
+                "incident_id": audit_id,
+                "event_type": event_type,
+                "created_at_utc": record["created_at_utc"],
+                "primary_frame_sha256": blob.sha256,
+                "blob_relpath": blob.blob_relpath,
+                "manifest_digest": manifest_digest,
+                "prev_record_hash": last_hash,
+                "record_hash": record_hash,
+                "signature": signature,
+            }
+            if self.sealer is not None:
+                ledger_entry["seal"] = self.sealer.seal(audit_id, record_hash)
+            with open(self.ledger_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(ledger_entry) + "\n")
+        return record
+
+    def get_audit_event(self, audit_id: str) -> Optional[Dict[str, Any]]:
+        path = self.vault_dir / "audit" / f"{audit_id}.json"
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
     def get_verification(self, verification_id: str) -> Optional[VerificationRecord]:
         """Retrieves a verification record by verification_id."""
         manifest_path = self.verifications_dir / f"{verification_id}.json"
@@ -670,6 +732,8 @@ class SurveillanceEvidenceVault:
                 rec_type = entry.get("record_type", "INCIDENT")
                 if rec_type == "VERIFICATION":
                     manifest_path = self.verifications_dir / f"{inc_id}.json"
+                elif rec_type == "AUDIT":
+                    manifest_path = self.vault_dir / "audit" / f"{inc_id}.json"
                 else:
                     manifest_path = self.incidents_dir / f"{inc_id}.json"
 
