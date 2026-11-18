@@ -14,6 +14,7 @@ Features:
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -24,7 +25,7 @@ import logging
 import os
 from pathlib import Path
 import threading
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 import uuid
 import zipfile
 
@@ -32,7 +33,66 @@ logger = logging.getLogger("aegis.forensics.vault")
 
 GENESIS_HASH = hashlib.sha256(b"AEGIS_SURVEILLANCE_VAULT_GENESIS_V1").hexdigest()
 DEFAULT_VAULT_DIR = Path(__file__).resolve().parent.parent / "vault"
+# Legacy HMAC integrity key. It is public (committed to the repo), so it only
+# detects accidental corruption, never deliberate tampering. Authenticity comes
+# from Ed25519 seals (sealing.py). Override with AEGIS_VAULT_SIGNING_KEY.
 DEFAULT_SIGNING_KEY = b"aegis_surveillance_node_secret_key_v1"
+
+
+def _resolve_hmac_key(explicit: Optional[bytes]) -> bytes:
+    if explicit:
+        return explicit
+    env_key = os.environ.get("AEGIS_VAULT_SIGNING_KEY")
+    if env_key:
+        return env_key.encode("utf-8")
+    return DEFAULT_SIGNING_KEY
+
+
+def _write_new_manifest(path: Path, data: Dict[str, Any]) -> None:
+    """Append-only manifest write: refuses to overwrite an existing record."""
+    with open(path, "x", encoding="utf-8") as fh:
+        fh.write(json.dumps(data, indent=2))
+
+
+@contextlib.contextmanager
+def _interprocess_lock(lock_path: Path) -> Iterator[None]:
+    """Exclusive lock shared by every vault instance and process on this vault_dir.
+
+    Without it, two writers (e.g. the ingestion gateway and the alert router,
+    which each open their own vault instance) can read the same ledger head and
+    append two records with the same ``prev_record_hash``, forking the chain.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fh = open(lock_path, "a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            while True:
+                try:
+                    fh.seek(0)
+                    msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    continue
+        else:
+            import fcntl
+
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                fh.seek(0)
+                msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+        finally:
+            fh.close()
 
 
 @dataclass
@@ -100,6 +160,9 @@ class VerificationRecord:
     model_versions: Dict[str, str] = field(default_factory=dict)
     calibration_version: str = "aegis-calibrator-v1.0"
     judge_transcript: Dict[str, Any] = field(default_factory=dict)
+    # SHA-256 of the weight files that produced the detector outputs. A version
+    # string alone does not prove which weights ran (they can be swapped on disk).
+    model_fingerprints: Dict[str, str] = field(default_factory=dict)
     record_index: int = 0
     prev_record_hash: str = ""
     record_hash: str = ""
@@ -159,6 +222,10 @@ class VaultAuditResult:
     missing_blobs: List[str] = field(default_factory=list)
     corrupted_blobs: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    sealed_records: int = 0
+    unsealed_records: int = 0
+    checkpoints_verified: int = 0
+    warnings: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
         status = "PASSED (TAMPER-FREE)" if self.is_valid else "FAILED (INTEGRITY BREACH)"
@@ -166,6 +233,8 @@ class VaultAuditResult:
             f"Vault Audit Result: {status}\n"
             f"  Total Records: {self.total_records}\n"
             f"  Verified Records: {self.verified_records}\n"
+            f"  Sealed / Unsealed Records: {self.sealed_records} / {self.unsealed_records}\n"
+            f"  Checkpoints Verified: {self.checkpoints_verified}\n"
             f"  Broken Chain Records: {len(self.broken_records)}\n"
             f"  Missing Blobs: {len(self.missing_blobs)}\n"
             f"  Corrupted Blobs: {len(self.corrupted_blobs)}\n"
@@ -183,14 +252,29 @@ class SurveillanceEvidenceVault:
         self,
         vault_dir: Optional[Path | str] = None,
         signing_key: Optional[bytes] = None,
+        sealer: Optional[Any] = None,
     ):
+        """
+        Args:
+            vault_dir: Vault root directory.
+            signing_key: Legacy HMAC key (integrity only; see DEFAULT_SIGNING_KEY).
+            sealer: Optional ``sealing.EvidenceSealer``. When set, every record and
+                checkpoint gets an Ed25519 seal with an RFC 3161 timestamp.
+        """
         self.vault_dir = Path(vault_dir or DEFAULT_VAULT_DIR).resolve()
-        self.signing_key = signing_key or DEFAULT_SIGNING_KEY
+        self.signing_key = _resolve_hmac_key(signing_key)
+        if sealer is None and os.environ.get("AEGIS_VAULT_KEYRING_DIR"):
+            from .sealing import sealer_from_env
+
+            sealer = sealer_from_env()
+        self.sealer = sealer
         self.blobs_dir = self.vault_dir / "blobs"
         self.incidents_dir = self.vault_dir / "incidents"
         self.verifications_dir = self.vault_dir / "verifications"
         self.mcp_audits_dir = self.vault_dir / "mcp_audits"
         self.ledger_path = self.vault_dir / "ledger.jsonl"
+        self.checkpoints_path = self.vault_dir / "checkpoints.jsonl"
+        self.lock_path = self.vault_dir / "ledger.lock"
         self._lock = threading.Lock()
 
         # Initialize vault directory tree
@@ -309,7 +393,7 @@ class SurveillanceEvidenceVault:
         short_id = uuid.uuid4().hex[:8]
         incident_id = f"INC-{date_str}-{camera_id}-SEQ{sequence_number}-{short_id}"
 
-        with self._lock:
+        with self._lock, _interprocess_lock(self.lock_path):
             last_index, last_hash = self._get_latest_ledger_state()
             new_index = last_index + 1
 
@@ -345,7 +429,7 @@ class SurveillanceEvidenceVault:
 
             # 3. Write individual manifest
             manifest_path = self.incidents_dir / f"{incident_id}.json"
-            manifest_path.write_text(json.dumps(incident.to_dict(), indent=2), encoding="utf-8")
+            _write_new_manifest(manifest_path, incident.to_dict())
 
             # 4. Append to ledger
             ledger_entry = {
@@ -360,6 +444,8 @@ class SurveillanceEvidenceVault:
                 "record_hash": record_hash,
                 "signature": signature,
             }
+            if self.sealer is not None:
+                ledger_entry["seal"] = self.sealer.seal(incident_id, record_hash)
             with open(self.ledger_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(ledger_entry) + "\n")
 
@@ -379,6 +465,7 @@ class SurveillanceEvidenceVault:
         calibration_version: str = "aegis-calibrator-v1.0",
         judge_transcript: Optional[Dict[str, Any]] = None,
         siem_alert_tier: str = "P4_INFORMATIONAL",
+        model_fingerprints: Optional[Dict[str, str]] = None,
     ) -> VerificationRecord:
         """
         Stores a complete, tamper-evident verification record for any modality
@@ -392,9 +479,12 @@ class SurveillanceEvidenceVault:
         now_dt = datetime.now(timezone.utc)
         iso_ts = now_dt.isoformat()
         date_str = now_dt.strftime("%Y%m%d")
-        verification_id = f"VER-{date_str}-{modality.lower()}-{job_id[:8]}"
+        # Random suffix: date + modality + job prefix alone collides when the same job
+        # is verified twice in a day, and the second write used to overwrite the first
+        # record's manifest (silently breaking the append-only guarantee).
+        verification_id = f"VER-{date_str}-{modality.lower()}-{job_id[:8]}-{uuid.uuid4().hex[:8]}"
 
-        with self._lock:
+        with self._lock, _interprocess_lock(self.lock_path):
             last_index, last_hash = self._get_latest_ledger_state()
             new_index = last_index + 1
 
@@ -413,6 +503,7 @@ class SurveillanceEvidenceVault:
                 model_versions=model_versions,
                 calibration_version=calibration_version,
                 judge_transcript=judge_transcript or {},
+                model_fingerprints=dict(model_fingerprints or {}),
                 record_index=new_index,
                 prev_record_hash=last_hash,
             )
@@ -428,7 +519,7 @@ class SurveillanceEvidenceVault:
             record.signature = signature
 
             manifest_path = self.verifications_dir / f"{verification_id}.json"
-            manifest_path.write_text(json.dumps(record.to_dict(), indent=2), encoding="utf-8")
+            _write_new_manifest(manifest_path, record.to_dict())
 
             ledger_entry = {
                 "record_index": new_index,
@@ -444,6 +535,8 @@ class SurveillanceEvidenceVault:
                 "record_hash": record_hash,
                 "signature": signature,
             }
+            if self.sealer is not None:
+                ledger_entry["seal"] = self.sealer.seal(verification_id, record_hash)
             with open(self.ledger_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(ledger_entry) + "\n")
 
@@ -611,21 +704,44 @@ class SurveillanceEvidenceVault:
             raise FileNotFoundError(f"Blob not found at {full_path}")
         return full_path.read_bytes()
 
-    def verify_vault_integrity(self) -> VaultAuditResult:
+    def verify_vault_integrity(
+        self,
+        trusted_keys: Optional[Any] = None,
+        tsa_trust: Optional[Sequence[Any]] = None,
+        checkpoints: Optional[List[Dict[str, Any]]] = None,
+        require_seals: Optional[bool] = None,
+        max_clock_skew_s: float = 120.0,
+    ) -> VaultAuditResult:
         """
         Audits the entire vault for cryptographic tamper-evidence:
           - Validates genesis link and unbroken hash chain continuity
-          - Validates HMAC node signatures for each entry
+          - Validates HMAC node signatures for each entry (legacy integrity check)
           - Verifies manifest existence and bitwise digest matching
           - Verifies content-addressed frame blob presence and SHA-256 match
+          - (trusted_keys) Verifies each record's Ed25519 seal and RFC 3161 time,
+            and flags records whose claimed time disagrees with the trusted time
+          - (checkpoints) Detects tail truncation or rewriting against signed
+            ledger checkpoints that were published outside the vault
+
+        Args:
+            trusted_keys: ``keyring.TrustedKeys`` (public keyring) — enables seal checks.
+            tsa_trust: Trusted TSA certificates for RFC 3161 tokens.
+            checkpoints: Externally retained checkpoints (e.g. from the SIEM). Defaults
+                to none; the local ``checkpoints.jsonl`` can be truncated by the same
+                attacker who truncates the ledger, so pass the external copy.
+            require_seals: Fail unsealed records (default: True when trusted_keys given).
         """
         audit = VaultAuditResult(
             is_valid=True,
             total_records=0,
             verified_records=0,
         )
+        if require_seals is None:
+            require_seals = trusted_keys is not None
+        heads: List[Tuple[str, str]] = []  # (record_hash, record_id) by ledger position
 
         if not self.ledger_path.exists() or self.ledger_path.stat().st_size == 0:
+            self._verify_checkpoints(audit, heads, checkpoints, trusted_keys, tsa_trust)
             return audit
 
         expected_prev_hash = GENESIS_HASH
@@ -637,6 +753,7 @@ class SurveillanceEvidenceVault:
                     continue
 
                 audit.total_records += 1
+                errors_before = len(audit.errors) + len(audit.missing_blobs)
 
                 try:
                     entry = json.loads(line_str)
@@ -679,6 +796,26 @@ class SurveillanceEvidenceVault:
                 if sig != expected_sig:
                     audit.is_valid = False
                     audit.errors.append(f"Record {rec_idx} ({inc_id}): Node signature mismatch.")
+
+                # 3b. Ed25519 seal + trusted timestamp (authenticity, non-repudiation)
+                seal = entry.get("seal")
+                if seal:
+                    audit.sealed_records += 1
+                else:
+                    audit.unsealed_records += 1
+                if trusted_keys is not None and (seal or require_seals):
+                    from .sealing import verify_record_seal
+
+                    chk = verify_record_seal(
+                        seal, inc_id, rec_hash, trusted_keys,
+                        tsa_trust=tsa_trust, require_timestamp=bool(tsa_trust),
+                        claimed_time=ts, max_clock_skew_s=max_clock_skew_s,
+                    )
+                    if not chk.ok:
+                        audit.is_valid = False
+                        audit.errors.append(f"Record {rec_idx} ({inc_id}): Seal verification failed: {chk.reason}")
+                    elif chk.warnings:
+                        audit.warnings.extend(f"Record {rec_idx} ({inc_id}): {w}" for w in chk.warnings)
 
                 # 4. Verify manifest file on disk (supports INCIDENT, VERIFICATION, and MCP_AUDIT records)
                 rec_type = entry.get("record_type", "INCIDENT")
@@ -729,12 +866,96 @@ class SurveillanceEvidenceVault:
                         audit.corrupted_blobs.append(primary_sha256)
                         audit.errors.append(f"Record {rec_idx} ({inc_id}): Primary frame blob corrupted/tampered.")
 
-                if audit.is_valid or rec_idx not in audit.broken_records:
+                if len(audit.errors) + len(audit.missing_blobs) == errors_before:
                     audit.verified_records += 1
 
+                heads.append((rec_hash, inc_id))
                 expected_prev_hash = rec_hash
 
+        self._verify_checkpoints(audit, heads, checkpoints, trusted_keys, tsa_trust)
         return audit
+
+    # ── Signed ledger checkpoints (truncation / rewrite detection) ─────────────
+    def _read_ledger_entries(self) -> List[Dict[str, Any]]:
+        entries: List[Dict[str, Any]] = []
+        if self.ledger_path.exists():
+            with open(self.ledger_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entries.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            entries.append({})
+        return entries
+
+    def get_ledger_entry(self, record_id: str) -> Optional[Dict[str, Any]]:
+        for entry in self._read_ledger_entries():
+            if entry.get("incident_id") == record_id:
+                return entry
+        return None
+
+    def create_checkpoint(self) -> Dict[str, Any]:
+        """Commits to the current ledger head (size + head hash), sealed and timestamped.
+
+        Publish the returned checkpoint outside the vault host (SIEM, write-once
+        storage, a witness log, or a newspaper-of-record style transparency log).
+        An attacker who deletes records from the end of the ledger cannot also
+        delete the copies the verifier already holds.
+        """
+        with self._lock, _interprocess_lock(self.lock_path):
+            entries = self._read_ledger_entries()
+            head = entries[-1] if entries else {}
+            cp: Dict[str, Any] = {
+                "v": 1,
+                "ledger_size": len(entries),
+                "head_record_id": head.get("incident_id", ""),
+                "head_hash": head.get("record_hash", GENESIS_HASH),
+                "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            }
+            if self.sealer is not None:
+                cp["seal"] = self.sealer.seal_checkpoint(cp["ledger_size"], cp["head_hash"], cp["head_record_id"])
+            with open(self.checkpoints_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(cp) + "\n")
+        return cp
+
+    def load_checkpoints(self) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        if self.checkpoints_path.exists():
+            for line in self.checkpoints_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    out.append(json.loads(line))
+        return out
+
+    def _verify_checkpoints(self, audit: VaultAuditResult, heads: List[Tuple[str, str]],
+                            checkpoints: Optional[List[Dict[str, Any]]], trusted_keys, tsa_trust) -> None:
+        for cp in checkpoints or []:
+            size = int(cp.get("ledger_size", 0))
+            if trusted_keys is not None:
+                from .sealing import verify_checkpoint_seal
+
+                chk = verify_checkpoint_seal(cp, trusted_keys, tsa_trust=tsa_trust, require_timestamp=bool(tsa_trust))
+                if not chk.ok:
+                    audit.is_valid = False
+                    audit.errors.append(f"Checkpoint @{size}: seal invalid: {chk.reason}")
+                    continue
+            if size == 0:
+                audit.checkpoints_verified += 1
+                continue
+            if size > len(heads):
+                audit.is_valid = False
+                audit.errors.append(
+                    f"Ledger truncated: checkpoint attests {size} records "
+                    f"(head {cp.get('head_record_id')}) but only {len(heads)} remain."
+                )
+            elif heads[size - 1] != (cp.get("head_hash"), cp.get("head_record_id")):
+                audit.is_valid = False
+                audit.errors.append(
+                    f"Ledger rewritten: record #{size} no longer matches the checkpointed head "
+                    f"{cp.get('head_record_id')} ({str(cp.get('head_hash'))[:12]}...)."
+                )
+            else:
+                audit.checkpoints_verified += 1
 
     def export_incident_package(
         self,
@@ -944,6 +1165,10 @@ if __name__ == "__main__":
         else:
             verifier_code = "# See security/forensics/verify_bundle.py\n"
 
+        ledger_entry = self.get_ledger_entry(canonical_id) or {}
+        seal = ledger_entry.get("seal")
+        checkpoint = self.create_checkpoint() if self.sealer is not None else None
+
         with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("report.md", report_md)
             zf.writestr("evidence.json", evidence_json_str)
@@ -951,6 +1176,13 @@ if __name__ == "__main__":
             zf.writestr("bundle_signature.sig", sig_doc)
             zf.writestr(payload_rel, payload_bytes)
             zf.writestr("verify_bundle.py", verifier_code)
+            # Ed25519 seal (+ RFC 3161 token) over this record; self-authenticating,
+            # verified against the published trusted keyring, not anything in the bundle.
+            if seal:
+                zf.writestr("seal.json", json.dumps(
+                    {"record_id": canonical_id, "record_hash": record.record_hash, "seal": seal}, indent=2))
+            if checkpoint is not None:
+                zf.writestr("checkpoint.json", json.dumps(checkpoint, indent=2))
 
         logger.info(f"Exported signed offline-verifiable bundle to {out_path}")
         return out_path
