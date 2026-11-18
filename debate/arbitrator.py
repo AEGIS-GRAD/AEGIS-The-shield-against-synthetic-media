@@ -26,6 +26,13 @@ from debate.manifest_reliability import (
     ConditionReliabilityAssessment,
     ManifestReliabilityEngine,
 )
+from debate.poisoning_guard import (
+    PoisoningMitigationConfig,
+    apply_adjudication_mitigations,
+    check_corroboration_quorum,
+    detect_outlier_detectors,
+    inspect_claim_miscalibration,
+)
 from debate.schemas import (
     ClaimAdjudication,
     ClaimPolarity,
@@ -88,11 +95,15 @@ class JudgeArbitrator:
         reliability_engine: Optional[ManifestReliabilityEngine] = None,
         calibrator_registry: Optional[CalibratorRegistry] = None,
         apply_calibrated_video_checkpoint: bool = False,
+        mitigate_poisoning: bool = False,
+        poisoning_config: Optional[PoisoningMitigationConfig] = None,
     ):
         self._custom_weights = weights is not None
         self.weights = weights or DEFAULT_DETECTOR_WEIGHTS.copy()
         self.reliability_engine = reliability_engine or ManifestReliabilityEngine()
         self.apply_calibrated_video_checkpoint = apply_calibrated_video_checkpoint
+        self.mitigate_poisoning = mitigate_poisoning
+        self.poisoning_config = poisoning_config or PoisoningMitigationConfig()
         self.calibrator_registry = calibrator_registry or CalibratorRegistry(
             apply_calibrated_video_checkpoint=apply_calibrated_video_checkpoint
         )
@@ -124,8 +135,23 @@ class JudgeArbitrator:
                 manifest=manifest,
             )
             cal_for_eval = cal_out.calibrated_confidence if cal_out.calibrator_applied else None
+            claim_for_eval = c
+            if self.mitigate_poisoning and conditions is not None and c.flags:
+                filtered_flags = list(c.flags)
+                if conditions.mean_luminance is not None and conditions.mean_luminance >= 55.0:
+                    filtered_flags = [
+                        fl for fl in filtered_flags
+                        if fl not in ("low_light_attenuation", "insufficient_lighting")
+                    ]
+                if conditions.duration_seconds is not None and conditions.duration_seconds >= 5.0:
+                    filtered_flags = [
+                        fl for fl in filtered_flags
+                        if fl not in ("short_clip_attenuation", "marginal_duration")
+                    ]
+                if filtered_flags != c.flags:
+                    claim_for_eval = c.model_copy(update={"flags": filtered_flags})
             assess = self.reliability_engine.evaluate_claim(
-                c,
+                claim_for_eval,
                 conditions=conditions,
                 is_coverage_gap=gap,
                 calibrated_confidence=cal_for_eval,
@@ -303,9 +329,33 @@ class JudgeArbitrator:
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
 
-        # Multi-signal corroboration boost in consensus
-        has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
-        has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
+        rejected_detectors: set[str] = set()
+        if self.mitigate_poisoning:
+            calibrated_score, pg_report = apply_adjudication_mitigations(
+                active_claims=active_claims,
+                adjudications=adjudications,
+                cfg=self.poisoning_config,
+            )
+            rejected_detectors = set(pg_report.rejected_detectors)
+            notes.extend(pg_report.notes)
+            has_img_corrob = check_corroboration_quorum(
+                active_claims,
+                ("image-mirror", "detector_image"),
+                ("image-frequency",),
+                ("frequency_anomaly",),
+                rejected_detectors=rejected_detectors,
+            )
+            has_txt_corrob = check_corroboration_quorum(
+                active_claims,
+                ("text-desklib", "detector_text"),
+                ("text-stylometry", "text-perplexity"),
+                ("uniform_low_perplexity", "stylometry_synthetic"),
+                rejected_detectors=rejected_detectors,
+            )
+        else:
+            # Multi-signal corroboration boost in consensus
+            has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
+            has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
 
         if has_img_corrob:
             calibrated_score = max(calibrated_score, 0.90)
@@ -434,6 +484,25 @@ class JudgeArbitrator:
                 return 0.5
             return assessments[cl.detector_id].adjusted_confidence
 
+        active_claims_pre = [c for c in claims if not is_coverage_gap(c)]
+        blocked_poisoned_ids: set[str] = set()
+        if self.mitigate_poisoning and active_claims_pre:
+            if self.poisoning_config.enable_outlier_rejection:
+                pre_outliers, _, _ = detect_outlier_detectors(
+                    active_claims_pre,
+                    {c.detector_id: assessments[c.detector_id].adjusted_confidence for c in active_claims_pre},
+                    self.poisoning_config,
+                )
+                blocked_poisoned_ids.update(pre_outliers)
+            if self.poisoning_config.enable_reliability_caps:
+                for cl in active_claims_pre:
+                    is_bad, _ = inspect_claim_miscalibration(cl, self.poisoning_config)
+                    if is_bad:
+                        blocked_poisoned_ids.add(cl.detector_id)
+
+        def _trusted(cl: Optional[ForensicClaim]) -> bool:
+            return cl is not None and not is_coverage_gap(cl) and cl.detector_id not in blocked_poisoned_ids
+
         vc_conf = _conf(vc_claim)
         rppg_conf = _conf(rppg_claim)
         sync_conf = _conf(sync_claim)
@@ -444,6 +513,8 @@ class JudgeArbitrator:
         rppg_rule7_mode: Optional[str] = None  # "7A_uncertain" or "7B_calibrated"
         if rppg_claim and not is_coverage_gap(rppg_claim):
             has_low_light_flag = "low_light_attenuation" in rppg_claim.flags or "insufficient_lighting" in rppg_claim.flags
+            if self.mitigate_poisoning and conditions and conditions.mean_luminance is not None and conditions.mean_luminance >= 55.0:
+                has_low_light_flag = False
             if mean_lum < 40.0 or has_low_light_flag:
                 if rppg_claim.confidence > 0.60:
                     rppg_discounted = True
@@ -454,7 +525,10 @@ class JudgeArbitrator:
 
         # ── Precedence Rule 2: Short Clip on rPPG (< 2.0s) ────────────────────
         if rppg_claim and not is_coverage_gap(rppg_claim) and not rppg_discounted:
-            if duration_s < 2.0 or "short_clip_attenuation" in rppg_claim.flags:
+            has_short_flag = "short_clip_attenuation" in rppg_claim.flags
+            if self.mitigate_poisoning and conditions and conditions.duration_seconds is not None and conditions.duration_seconds >= 5.0:
+                has_short_flag = False
+            if duration_s < 2.0 or has_short_flag:
                 rppg_discounted = True
                 discount_reasons.append(
                     f"Rule 2 Applied (Short Duration): rPPG signal discounted (duration {duration_s:.1f}s < 2.0s "
@@ -463,7 +537,7 @@ class JudgeArbitrator:
 
         # ── Precedence Rule 3: Face-Swap Pulse Preservation ───────────────────
         face_swap_case = False
-        if vc_claim and rppg_claim and not is_coverage_gap(vc_claim) and not is_coverage_gap(rppg_claim):
+        if _trusted(vc_claim) and rppg_claim and not is_coverage_gap(rppg_claim):
             if vc_conf >= 0.70 and rppg_conf <= 0.35 and not rppg_discounted:
                 face_swap_case = True
                 discount_reasons.append(
@@ -484,7 +558,7 @@ class JudgeArbitrator:
                 if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_conf <= 0.35:
                     other_authentic.append(aasist_claim)
 
-                if len(other_authentic) >= 1:
+                if len(other_authentic) >= 1 and (not self.mitigate_poisoning or len(other_authentic) >= 2 or len(active_claims_pre) <= 2):
                     dubbing_case = True
                     discount_reasons.append(
                         "Rule 4 Applied (Audio Dubbing): SyncNet lip-desync discounted as post-production translation "
@@ -493,7 +567,7 @@ class JudgeArbitrator:
 
         # ── Precedence Rule 5: Synthetic Voice / Audio Clone Injection ────────
         voice_clone_case = False
-        if aasist_claim and not is_coverage_gap(aasist_claim):
+        if _trusted(aasist_claim):
             if aasist_conf >= 0.70:
                 visual_authentic = []
                 if vc_claim and not is_coverage_gap(vc_claim) and vc_conf <= 0.35:
@@ -511,7 +585,7 @@ class JudgeArbitrator:
 
         # ── Precedence Rule 6: Visual Tampering Over Authentic Audio ─────────
         visual_tampering_case = False
-        if vc_claim and not is_coverage_gap(vc_claim) and vc_conf >= 0.70:
+        if _trusted(vc_claim) and vc_conf >= 0.70:
             if aasist_claim and not is_coverage_gap(aasist_claim) and aasist_conf <= 0.35:
                 visual_tampering_case = True
                 discount_reasons.append(
@@ -578,7 +652,7 @@ class JudgeArbitrator:
                 )
 
         # 7B: Deepfake spatial artifacts override intact camera EXIF (forged / pasted metadata)
-        if mirror_claim and not is_coverage_gap(mirror_claim) and mirror_claim.confidence >= 0.70:
+        if _trusted(mirror_claim) and mirror_claim.confidence >= 0.70:
             if exif_claim and exif_claim.confidence <= 0.35:
                 exif_discounted = True
                 discount_reasons.append(
@@ -649,7 +723,7 @@ class JudgeArbitrator:
                 )
 
         # 8C: Paraphrased / Polished AI Text (Neural Precedence Over Stylometric Burstiness)
-        if desklib_claim and not is_coverage_gap(desklib_claim) and desklib_claim.confidence >= 0.70:
+        if _trusted(desklib_claim) and desklib_claim.confidence >= 0.70:
             if stylo_claim is not None and stylo_claim.confidence <= 0.35:
                 stylo_discounted = True
                 discount_reasons.append(
@@ -758,9 +832,37 @@ class JudgeArbitrator:
 
         calibrated_score = round(weighted_conf_sum / max(total_weight, 1e-6), 4)
 
-        # Multi-signal corroboration boost in consensus
-        has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
-        has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
+        rejected_detectors: set[str] = set()
+        if self.mitigate_poisoning:
+            calibrated_score, pg_report = apply_adjudication_mitigations(
+                active_claims=active_claims,
+                adjudications=adjudications,
+                cfg=self.poisoning_config,
+            )
+            rejected_detectors = set(pg_report.rejected_detectors) | set(blocked_poisoned_ids)
+            discount_reasons.extend(pg_report.notes)
+            has_img_corrob = check_corroboration_quorum(
+                active_claims,
+                ("image-mirror", "detector_image"),
+                ("image-frequency",),
+                ("frequency_anomaly",),
+                rejected_detectors=rejected_detectors,
+            )
+            has_txt_corrob = check_corroboration_quorum(
+                active_claims,
+                ("text-desklib", "detector_text"),
+                ("text-stylometry", "text-perplexity"),
+                ("uniform_low_perplexity", "stylometry_synthetic"),
+                rejected_detectors=rejected_detectors,
+            )
+            if not has_img_corrob:
+                image_corroborated_synthetic = False
+            if not has_txt_corrob:
+                text_corroborated_synthetic = False
+        else:
+            # Multi-signal corroboration boost in consensus
+            has_img_corrob = any(c.detector_id in ("image-mirror", "detector_image") and c.confidence >= 0.70 for c in active_claims) and any("frequency_anomaly" in c.flags or (c.detector_id == "image-frequency" and c.confidence >= 0.70) for c in active_claims)
+            has_txt_corrob = any(c.detector_id in ("text-desklib", "detector_text") and c.confidence >= 0.70 for c in active_claims) and any("uniform_low_perplexity" in c.flags or "stylometry_synthetic" in c.flags or (c.detector_id in ("text-stylometry", "text-perplexity") and c.confidence >= 0.70) for c in active_claims)
 
         if has_img_corrob:
             calibrated_score = max(calibrated_score, 0.90)
@@ -786,6 +888,7 @@ class JudgeArbitrator:
         # Secondary proxy authority safeguard inside dispute resolution
         non_gap_primary_synth = any(
             not assessments[c.detector_id].cannot_solely_certify_synthetic
+            and c.detector_id not in rejected_detectors
             and assessments[c.detector_id].adjusted_confidence >= SYNTHETIC_POLARITY_THRESHOLD
             for c in active_claims
         )

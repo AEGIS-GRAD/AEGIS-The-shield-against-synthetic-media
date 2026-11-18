@@ -32,13 +32,47 @@ from typing import Any, Dict, List, Optional, Union
 _THIS_DIR = Path(__file__).resolve().parent          # <repo>/mcp
 _REPO_ROOT = _THIS_DIR.parent                        # <repo>
 
-# Ensure repo root and mcp dir are on sys.path
-for p in [str(_REPO_ROOT), str(_THIS_DIR)]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
+# Temporarily exclude repo root & CWD entries so `<repo>/mcp/` does not shadow the
+# installed `mcp` SDK package during import, then append `_REPO_ROOT` at the end.
+for p in ["", ".", str(_THIS_DIR), str(_REPO_ROOT)]:
+    while p in sys.path:
+        sys.path.remove(p)
 
-# ── MCP SDK imports ──────────────────────────────────────────────────────────
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+    _HAS_MCP_SDK = True
+except ModuleNotFoundError:
+    _HAS_MCP_SDK = False
+
+    class FastMCP:  # type: ignore[no-redef]
+        """Minimal fallback when optional `mcp` SDK package is unavailable."""
+
+        def __init__(self, name: str, instructions: str = "") -> None:
+            self.name = name
+            self.instructions = instructions
+            self.settings = argparse.Namespace(host="127.0.0.1", port=8000)
+            self._tools: Dict[str, Any] = {}
+
+        def tool(self):
+            def _decorator(fn):
+                self._tools[fn.__name__] = fn
+                return fn
+
+            return _decorator
+
+        def run(self, transport: str = "stdio") -> None:
+            raise RuntimeError(
+                f"Cannot run MCP transport '{transport}': 'mcp' SDK is not installed. "
+                "Install with: pip install -r mcp/requirements.txt"
+            )
+
+sys.path.insert(0, str(_THIS_DIR))
+sys.path.append(str(_REPO_ROOT))
+from mcp_security import (
+    MCPInputValidator,
+    MCPSecurityError,
+    get_security_gateway,
+)
 
 # ── Debate layer imports ─────────────────────────────────────────────────────
 from debate.judge_agent import JudgeAgent
@@ -116,6 +150,7 @@ def _report_to_dict(report: JudgeReport) -> Dict[str, Any]:
 def arbitrate_evidence(
     claims: Union[List[Dict[str, Any]], str],
     operating_conditions: Optional[Union[Dict[str, Any], str]] = None,
+    auth_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Arbitrate conflicting detector claims using the AEGIS Forensic Debate Protocol.
 
@@ -123,40 +158,19 @@ def arbitrate_evidence(
     along with optional operating conditions, routes them through the full 3-round
     structured debate (Claim Submission -> Cross-Examination -> Adjudication), and
     returns a structured court-admissible verdict with forensic justification.
-
-    Args:
-        claims: List of detector claim dicts (or a JSON-encoded string thereof).
-            Each claim dict must include:
-            - detector_id (str): e.g. "video-classifier", "rppg", "syncnet", "aasist",
-              "detector_image", "detector_text"
-            - job_id (str): Job identifier
-            - model_version (str): Model version string
-            - domain (str): Evidence domain (e.g. "spatial_pixel", "physiological_bvp")
-            - polarity (str): "AUTHENTIC", "SYNTHETIC", "INCONCLUSIVE", or "NOT_APPLICABLE"
-            - confidence (float): P(synthetic) in [0.0, 1.0]
-            - claim (str): Human-readable forensic claim text
-        operating_conditions: Optional dict (or JSON string) with environmental context:
-            - duration_seconds (float): Media duration
-            - mean_luminance (float): Average brightness [0-255]
-            - face_detected (bool): Whether a face was found
-            - audio_present (bool): Whether audio track exists
-            - video_bitrate_kbps (float): Video bitrate
-
-    Returns:
-        Dict containing:
-            - status: "ok" or "error"
-            - verdict: The full CourtAdmissibleVerdict object
-            - report: The complete JudgeReport with 3-round debate transcript
-            - final_verdict: Verdict string ("AUTHENTIC", "SYNTHETIC", "INTEGRITY_UNKNOWN", "UNCERTAIN")
-            - calibrated_score: Ensemble calibrated synthetic probability
-            - forensic_justification: Forensic reasoning narrative
-            - arbitration_mode: "consensus_fast_path" or "expert_deterministic_judge"
-            - error: Error message if status is "error"
     """
-    try:
+    gateway = get_security_gateway()
+    raw_args = {
+        "claims": claims,
+        "operating_conditions": operating_conditions,
+        "auth_token": auth_token,
+    }
+
+    def _run(_principal, sec_flags: List[str]) -> Dict[str, Any]:
         # Handle JSON string inputs (e.g. from some MCP clients)
         parsed_claims = claims
         if isinstance(claims, str):
+            MCPInputValidator.check_no_ssrf(claims, "claims")
             try:
                 parsed_claims = json.loads(claims)
             except Exception as e:
@@ -175,8 +189,11 @@ def arbitrate_evidence(
                 "report": None,
             }
 
+        sanitized_claims, claim_flags = MCPInputValidator.sanitize_and_validate_claims(parsed_claims)
+        sec_flags.extend(claim_flags)
+
         # Handle empty claims gracefully (Edge Case 1)
-        if len(parsed_claims) == 0:
+        if len(sanitized_claims) == 0:
             judge = _get_judge()
             report = judge.judge_claims([], conditions=None)
             verdict_dict = _verdict_to_dict(report.verdict)
@@ -192,8 +209,9 @@ def arbitrate_evidence(
 
         # Build ForensicClaim objects (validating schemas)
         forensic_claims: List[ForensicClaim] = []
-        for i, raw_claim in enumerate(parsed_claims):
+        for i, raw_claim in enumerate(sanitized_claims):
             if isinstance(raw_claim, ForensicClaim):
+                MCPInputValidator.validate_job_id(raw_claim.job_id, f"claims[{i}].job_id")
                 forensic_claims.append(raw_claim)
                 continue
             if not isinstance(raw_claim, dict):
@@ -203,6 +221,8 @@ def arbitrate_evidence(
                     "verdict": None,
                     "report": None,
                 }
+            if isinstance(raw_claim.get("job_id"), str) and raw_claim.get("job_id"):
+                MCPInputValidator.validate_job_id(raw_claim["job_id"], f"claims[{i}].job_id")
             try:
                 fc = ForensicClaim(**raw_claim)
                 forensic_claims.append(fc)
@@ -218,6 +238,7 @@ def arbitrate_evidence(
         conditions: Optional[OperatingConditions] = None
         parsed_cond = operating_conditions
         if isinstance(operating_conditions, str):
+            MCPInputValidator.check_no_ssrf(operating_conditions, "operating_conditions")
             try:
                 parsed_cond = json.loads(operating_conditions)
             except Exception as e:
@@ -269,35 +290,16 @@ def arbitrate_evidence(
             "arbitration_mode": verdict_dict["arbitration_mode"],
         }
 
-    except Exception as exc:
-        logger.error("arbitrate_evidence failed: %s\n%s", exc, traceback.format_exc())
-        return {
-            "status": "error",
-            "error": f"Internal arbitration error: {exc}",
-            "verdict": None,
-            "report": None,
-        }
+    return gateway.execute_guarded("arbitrate_evidence", raw_args, auth_token, _run)
 
 
 # ── Tool 2: capabilities ─────────────────────────────────────────────────────
 @mcp_server.tool()
-def capabilities() -> Dict[str, Any]:
-    """Return detector capability manifests and reliability metrics.
+def capabilities(auth_token: Optional[str] = None) -> Dict[str, Any]:
+    """Return detector capability manifests and reliability metrics."""
+    gateway = get_security_gateway()
 
-    Reads the capability_manifests/*.json files and returns each detector's
-    manifest (input constraints, known failure modes, authority tier,
-    calibration config, condition-specific reliability rules) along with
-    the runtime default weights and authority tiers used by the arbitration engine.
-
-    Returns:
-        Dict containing:
-            - status: "ok" or "error"
-            - detectors: Dict mapping detector_id -> manifest data with runtime metrics
-            - default_weights: Default detector weight assignments
-            - authority_tiers: Default authority tier assignments
-            - total_detectors: Total count of active detectors in registry
-    """
-    try:
+    def _run(_principal, _sec_flags: List[str]) -> Dict[str, Any]:
         engine = _get_reliability_engine()
         manifests = dict(engine.manifests)
 
@@ -317,16 +319,7 @@ def capabilities() -> Dict[str, Any]:
             "total_detectors": len(detectors_out),
         }
 
-    except Exception as exc:
-        logger.error("capabilities failed: %s\n%s", exc, traceback.format_exc())
-        return {
-            "status": "error",
-            "error": f"Failed to load capabilities: {exc}",
-            "detectors": {},
-            "default_weights": {},
-            "authority_tiers": {},
-            "total_detectors": 0,
-        }
+    return gateway.execute_guarded("capabilities", {"auth_token": auth_token}, auth_token, _run)
 
 
 # ── Tool 3: verify_media ─────────────────────────────────────────────────────
@@ -338,84 +331,73 @@ def verify_media(
     risk_profile: str = "standard",
     compute_budget_s: Optional[float] = None,
     job_id: Optional[str] = None,
+    auth_token: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Submit a multimodal media file to the AEGIS verification pipeline.
+    """Submit a multimodal media file to the AEGIS verification pipeline."""
+    gateway = get_security_gateway()
+    raw_args = {
+        "file_path": file_path,
+        "modality": modality,
+        "planner_mode": planner_mode,
+        "risk_profile": risk_profile,
+        "compute_budget_s": compute_budget_s,
+        "job_id": job_id,
+        "auth_token": auth_token,
+    }
 
-    Asynchronously dispatches the file through metadata extraction, dynamic
-    planning, parallel detector execution, debate arbitration, and cryptographic
-    vault sealing. Returns an asynchronous job reference immediately.
+    def _run(principal, _sec_flags: List[str]) -> Dict[str, Any]:
+        clean_path = MCPInputValidator.validate_file_path(file_path, field_name="file_path")
+        clean_job_id = (
+            MCPInputValidator.validate_job_id(job_id, field_name="job_id")
+            if job_id is not None
+            else None
+        )
+        if modality is not None and modality not in {"video", "image", "audio", "text", "multimodal"}:
+            raise MCPSecurityError("INVALID_MODALITY", f"Unsupported modality: '{modality}'.")
+        if planner_mode not in {"rule_based", "rule", "rules", "baseline", "llm"}:
+            raise MCPSecurityError("INVALID_PLANNER_MODE", f"Unsupported planner_mode: '{planner_mode}'.")
+        if risk_profile not in {"low", "standard", "high"}:
+            raise MCPSecurityError("INVALID_RISK_PROFILE", f"Unsupported risk_profile: '{risk_profile}'.")
 
-    Args:
-        file_path: Path to the media file on disk (video, audio, image, text).
-        modality: Optional explicit modality override ("video", "image", "audio", "text").
-        planner_mode: Planning strategy ("rule_based" or "llm"). Default "rule_based".
-        risk_profile: Security risk sensitivity ("low", "standard", "high").
-        compute_budget_s: Maximum execution budget ceiling in seconds.
-        job_id: Optional custom job tracking identifier.
-
-    Returns:
-        Dict containing:
-            - status: "pending" or "error"
-            - job_id: Identifier used to poll via get_report(job_id)
-            - message: Guidance text
-            - file_path: Canonical resolved file path
-    """
-    try:
         from job_store import get_job_store
         store = get_job_store()
         return store.submit_job(
-            file_path=file_path,
+            file_path=clean_path,
             modality=modality,
             planner_mode=planner_mode,
             risk_profile=risk_profile,
             compute_budget_s=compute_budget_s,
-            job_id=job_id,
+            job_id=clean_job_id,
+            owner_principal=principal.principal_id,
         )
-    except Exception as exc:
-        logger.error("verify_media submission failed: %s\n%s", exc, traceback.format_exc())
-        return {
-            "status": "error",
-            "job_id": None,
-            "error": f"Failed to submit verification job: {exc}",
-        }
+
+    return gateway.execute_guarded("verify_media", raw_args, auth_token, _run)
 
 
 # ── Tool 4: get_report ───────────────────────────────────────────────────────
 @mcp_server.tool()
-def get_report(job_id: str) -> Dict[str, Any]:
-    """Poll for the forensic report of a media verification job.
+def get_report(
+    job_id: str,
+    auth_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Poll for the forensic report of a media verification job."""
+    gateway = get_security_gateway()
+    raw_args = {"job_id": job_id, "auth_token": auth_token}
 
-    Retrieves the status and result of a job submitted via verify_media().
-    When complete, returns the adjudicated verdict, calibrated synthetic score,
-    tamper-evident debate transcript hash, and evidence bundle references.
-
-    Args:
-        job_id: The job identifier returned by verify_media().
-
-    Returns:
-        Dict containing:
-            - status: "pending", "completed", or "error"
-            - job_id: The queried job ID
-            - verdict: Adjudicated verdict ("AUTHENTIC", "SYNTHETIC", "UNCERTAIN", "INTEGRITY_UNKNOWN")
-            - calibrated_score: Calibrated synthetic probability [0.0 - 1.0]
-            - siem_alert_tier: Security incident tier (e.g. "P1_CRITICAL", "P4_INFORMATIONAL")
-            - forensic_justification: Narrative explanation of the ruling
-            - evidence_bundle_ref: Tamper-evident URI reference (e.g. aegis://evidence-vault/{job_id})
-            - evidence_bundle_path: Path to exported offline-verifiable ZIP bundle if generated
-            - debate_transcript_hash: Tamper-evident SHA-256 over debate rounds
-            - report: Full verification details including raw detector outputs
-    """
-    try:
+    def _run(principal, sec_flags: List[str]) -> Dict[str, Any]:
+        clean_job_id = MCPInputValidator.validate_job_id(job_id, field_name="job_id")
         from job_store import get_job_store
         store = get_job_store()
-        return store.get_report(job_id=job_id)
-    except Exception as exc:
-        logger.error("get_report failed for %s: %s\n%s", job_id, exc, traceback.format_exc())
-        return {
-            "status": "error",
-            "job_id": job_id,
-            "error": f"Failed to retrieve report: {exc}",
-        }
+        res = store.get_report(
+            job_id=clean_job_id,
+            caller_principal=principal.principal_id,
+            is_admin=principal.is_admin,
+        )
+        if res.get("error_code") == "CONFUSED_DEPUTY_TENANT_MISMATCH":
+            sec_flags.extend(res.get("security_flags", ["confused_deputy_blocked"]))
+        return res
+
+    return gateway.execute_guarded("get_report", raw_args, auth_token, _run)
 
 
 # ── Tool 5: check_stream_integrity ───────────────────────────────────────────
@@ -424,42 +406,42 @@ def check_stream_integrity(
     job_id: Optional[str] = None,
     video_path: Optional[str] = None,
     manifest_path: Optional[str] = None,
+    auth_token: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Verify cryptographic hash-chain integrity for live streams or archived jobs.
+    """Verify cryptographic hash-chain integrity for live streams or archived jobs."""
+    gateway = get_security_gateway()
+    raw_args = {
+        "job_id": job_id,
+        "video_path": video_path,
+        "manifest_path": manifest_path,
+        "auth_token": auth_token,
+    }
 
-    Supports two verification modes:
-    1. Stream Frame Hash-Chain: Given a video_path and manifest_path generated by
-       the edge camera, verifies frame-by-frame SHA-256 continuity and detects
-       MitM frame-injection or splicing attacks.
-    2. Vault Ledger Provenance: Given a job_id, verifies the record's ledger hash
-       chain, cryptographic signature, and audit status in the UnifiedEvidenceVault.
-
-    Args:
-        job_id: Job identifier of a previous verification to audit.
-        video_path: Path to video stream file.
-        manifest_path: Path to camera frame hash-chain manifest JSON.
-
-    Returns:
-        Dict containing:
-            - status: "ok" or "error"
-            - check_type: "stream_frame_hash_chain" or "vault_verification_record"
-            - stream_intact / tamper_evident_ok: Boolean integrity verdict
-            - details / message: Diagnostic information
-    """
-    try:
+    def _run(_principal, _sec_flags: List[str]) -> Dict[str, Any]:
+        clean_job_id = (
+            MCPInputValidator.validate_job_id(job_id, field_name="job_id")
+            if job_id is not None
+            else None
+        )
+        clean_video = (
+            MCPInputValidator.validate_file_path(video_path, field_name="video_path")
+            if video_path is not None
+            else None
+        )
+        clean_manifest = (
+            MCPInputValidator.validate_file_path(manifest_path, field_name="manifest_path")
+            if manifest_path is not None
+            else None
+        )
         from job_store import get_job_store
         store = get_job_store()
         return store.check_stream_integrity(
-            job_id=job_id,
-            video_path=video_path,
-            manifest_path=manifest_path,
+            job_id=clean_job_id,
+            video_path=clean_video,
+            manifest_path=clean_manifest,
         )
-    except Exception as exc:
-        logger.error("check_stream_integrity failed: %s\n%s", exc, traceback.format_exc())
-        return {
-            "status": "error",
-            "error": f"Failed to verify stream integrity: {exc}",
-        }
+
+    return gateway.execute_guarded("check_stream_integrity", raw_args, auth_token, _run)
 
 
 # ── Attach to sys.modules["mcp.server"] for flexible import compatibility ────

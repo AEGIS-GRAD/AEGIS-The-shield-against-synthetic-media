@@ -83,6 +83,7 @@ class VerificationJobStore:
         compute_budget_s: Optional[float] = None,
         job_id: Optional[str] = None,
         sync: bool = False,
+        owner_principal: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Submits a verification job.
 
@@ -94,6 +95,7 @@ class VerificationJobStore:
             compute_budget_s: Optional budget ceiling in seconds.
             job_id: Optional predetermined job ID.
             sync: If True, execute synchronously (useful for test assertions).
+            owner_principal: Authenticated principal ID owning this job.
 
         Returns:
             Dict containing initial status and job_id.
@@ -123,6 +125,7 @@ class VerificationJobStore:
             "error": None,
             "evidence_bundle_ref": None,
             "evidence_bundle_path": None,
+            "owner_principal": owner_principal,
         }
 
         with self._lock:
@@ -280,12 +283,35 @@ class VerificationJobStore:
                     self._jobs[job_id]["error"] = str(exc)
                     self._jobs[job_id]["completed_at_utc"] = datetime.now(timezone.utc).isoformat()
 
-    def get_report(self, job_id: str) -> Dict[str, Any]:
-        """Polls for the report of a submitted job."""
+    def get_report(
+        self,
+        job_id: str,
+        caller_principal: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> Dict[str, Any]:
+        """Polls for the report of a submitted job with confused-deputy ownership checks."""
         with self._lock:
             job = self._jobs.get(job_id)
 
         if job is not None:
+            owner = job.get("owner_principal")
+            if (
+                owner
+                and owner not in {"local-default", "anonymous"}
+                and caller_principal
+                and not is_admin
+                and caller_principal != owner
+            ):
+                return {
+                    "status": "error",
+                    "error_code": "CONFUSED_DEPUTY_TENANT_MISMATCH",
+                    "job_id": job_id,
+                    "error": (
+                        f"Access denied: principal '{caller_principal}' is not authorized "
+                        f"to read job '{job_id}' owned by '{owner}'."
+                    ),
+                    "security_flags": ["confused_deputy_blocked"],
+                }
             status = job["status"]
             if status == "pending":
                 return {

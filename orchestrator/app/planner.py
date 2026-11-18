@@ -222,6 +222,15 @@ def _detector_latency_s(manifest: dict, telemetry: Optional[Dict[str, Any]]) -> 
     return latency_s, status
 
 
+_DECISIVE_PRIMARY_DETECTORS: Set[str] = {
+    "video-classifier",
+    "aasist",
+    "detector_image",
+    "image",
+    "detector_text",
+}
+
+
 def _simulate_reference_plan(
     eligible: List[dict],
     excluded: List[dict],
@@ -229,15 +238,21 @@ def _simulate_reference_plan(
     budget_s: float = 15.0,
     active_conditions: Optional[List[str]] = None,
     cost_weight: float = 0.0,
+    mitigate_poisoning: bool = False,
 ) -> Dict[str, Any]:
     """
     Deterministic reference planning engine for mock / offline environments.
     Adheres strictly to the prompt schema, telemetry load constraints, and
     manifest-grounded historical reliability feedback.
-    Supports cost-penalty optimization under specification gaming analysis.
+    Supports cost-penalty optimization under specification gaming analysis and
+    optional primary-authority poisoning mitigations.
     """
     conds = active_conditions or ["nominal"]
-    dep_map = compute_deprioritization_map(eligible, conds)
+    dep_map = compute_deprioritization_map(
+        eligible,
+        conds,
+        require_primary_quorum=mitigate_poisoning,
+    )
 
     skipped: List[Dict[str, Any]] = []
     coverage_warnings: List[str] = []
@@ -258,7 +273,8 @@ def _simulate_reference_plan(
         perf = m.get("performance", {}) or {}
         avg_lat = perf.get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("avg", 1000.0)
         cost_norm = min(1.0, float(avg_lat) / 1500.0)
-        cost_penalty_sort = cost_weight * cost_norm
+        effective_cost_w = 0.0 if (mitigate_poisoning and name in _DECISIVE_PRIMARY_DETECTORS) else cost_weight
+        cost_penalty_sort = effective_cost_w * cost_norm
 
         return (is_degraded, is_caution, cost_penalty_sort, tier_rank, rr_sort, name)
 
@@ -290,9 +306,21 @@ def _simulate_reference_plan(
             continue
 
         latency_s, status = _detector_latency_s(m, telemetry)
+        if mitigate_poisoning:
+            # Clamp spoofed telemetry latency spikes for healthy/up detectors;
+            # protect decisive primary detectors by bounding to verified benchmark baseline.
+            perf = m.get("performance", {}) or {}
+            base_p95_ms = perf.get("p95_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("p95", 2000.0)
+            base_p95_s = float(base_p95_ms) / 1000.0
+            max_plausible_s = max(base_p95_s, 1.0) if name in _DECISIVE_PRIMARY_DETECTORS else base_p95_s * 2.0
+            if latency_s > max_plausible_s:
+                latency_s = max_plausible_s
+                coverage_warnings.append(
+                    f"Telemetry latency anomaly clamped for {name} (capped at {max_plausible_s:.1f}s)."
+                )
 
         # 1.5 Cost-driven specification gaming penalty
-        if cost_weight > 0.0:
+        if cost_weight > 0.0 and not (mitigate_poisoning and name in _DECISIVE_PRIMARY_DETECTORS):
             perf = m.get("performance", {}) or {}
             avg_lat = perf.get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("avg", 1000.0)
             cost_norm = min(1.0, float(avg_lat) / 1500.0)
@@ -317,7 +345,11 @@ def _simulate_reference_plan(
                 )
                 continue
 
-        if status == "degraded" and (cumulative_sum_s + latency_s > budget_s):
+        if (
+            status == "degraded"
+            and (cumulative_sum_s + latency_s > budget_s)
+            and not (mitigate_poisoning and name in _DECISIVE_PRIMARY_DETECTORS)
+        ):
             skipped.append({
                 "detector_name": name,
                 "reason": f"live telemetry indicates latency degradation ({latency_s:.1f}s p95); deprioritized to preserve budget",
@@ -326,6 +358,12 @@ def _simulate_reference_plan(
             continue
 
         new_wall_s = max(parallel_wall_s, latency_s)
+        if mitigate_poisoning and name in _DECISIVE_PRIMARY_DETECTORS and new_wall_s > budget_s:
+            perf = m.get("performance", {}) or {}
+            avg_ms = perf.get("avg_latency_ms") or BASELINE_LATENCIES_MS.get(name, {}).get("avg", 2000.0)
+            if (float(avg_ms) / 1000.0) <= budget_s:
+                latency_s = min(latency_s, budget_s)
+                new_wall_s = max(parallel_wall_s, latency_s)
         if new_wall_s <= budget_s:
             run_detectors.append(name)
             parallel_wall_s = new_wall_s
@@ -607,6 +645,7 @@ def plan_detectors(
     mock_llm: bool = False,
     manifests_dir: Optional[Path] = None,
     cost_weight: float = 0.0,
+    mitigate_poisoning: bool = False,
 ) -> PlanningResult:
     """
     Executes the planning phase for an incoming media request.
@@ -688,7 +727,11 @@ def plan_detectors(
 
     eligible_ids = {m["detector_name"] for m in eligible}
     eligible_names = sorted(eligible_ids)
-    dep_map = compute_deprioritization_map(eligible, active_conditions)
+    dep_map = compute_deprioritization_map(
+        eligible,
+        active_conditions,
+        require_primary_quorum=mitigate_poisoning,
+    )
     rel_sig = reliability_signature(eligible, active_conditions)
 
     # Step D0: Check Decision Cache (keyed by modality, audio, duration bucket, risk, budget, degradation, condition, reliability)
@@ -710,7 +753,7 @@ def plan_detectors(
             reliability_sig=rel_sig,
             cost_weight=cost_weight,
         )
-        + f"|mock={int(bool(mock_llm))}"
+        + f"|mock={int(bool(mock_llm))}|mitp={int(bool(mitigate_poisoning))}"
         + (f"|mdir={manifests_dir}" if manifests_dir is not None else "")
     )
 
@@ -754,6 +797,7 @@ def plan_detectors(
         compute_budget,
         active_conditions=active_conditions,
         cost_weight=cost_weight,
+        mitigate_poisoning=mitigate_poisoning,
     )
     plan, model_or_err, llm_latency = call_llm(
         prompt=prompt,

@@ -118,6 +118,38 @@ class VerificationRecord:
 
 
 @dataclass
+class MCPAuditRecord:
+    """Immutable, hash-chained audit record for an MCP server tool invocation."""
+    audit_id: str
+    record_index: int
+    created_at_utc: str
+    tool_name: str
+    principal_id: str
+    scopes: List[str]
+    status: str  # ok | pending | completed | error | denied | rate_limited
+    args_sha256: str
+    result_sha256: str
+    security_flags: List[str] = field(default_factory=list)
+    error_code: Optional[str] = None
+    latency_ms: float = 0.0
+    payload_blob: Optional[FrameBlobMeta] = None
+    prev_record_hash: str = ""
+    record_hash: str = ""
+    signature: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> MCPAuditRecord:
+        data_copy = dict(data)
+        pb = data_copy.get("payload_blob")
+        if isinstance(pb, dict):
+            data_copy["payload_blob"] = FrameBlobMeta(**pb)
+        return cls(**data_copy)
+
+
+@dataclass
 class VaultAuditResult:
     """Audit report for the entire forensic vault."""
     is_valid: bool
@@ -157,6 +189,7 @@ class SurveillanceEvidenceVault:
         self.blobs_dir = self.vault_dir / "blobs"
         self.incidents_dir = self.vault_dir / "incidents"
         self.verifications_dir = self.vault_dir / "verifications"
+        self.mcp_audits_dir = self.vault_dir / "mcp_audits"
         self.ledger_path = self.vault_dir / "ledger.jsonl"
         self._lock = threading.Lock()
 
@@ -164,6 +197,7 @@ class SurveillanceEvidenceVault:
         self.blobs_dir.mkdir(parents=True, exist_ok=True)
         self.incidents_dir.mkdir(parents=True, exist_ok=True)
         self.verifications_dir.mkdir(parents=True, exist_ok=True)
+        self.mcp_audits_dir.mkdir(parents=True, exist_ok=True)
 
         self._ensure_ledger_initialized()
 
@@ -453,6 +487,123 @@ class SurveillanceEvidenceVault:
             logger.error(f"Failed to read incident {incident_id}: {exc}")
             return None
 
+    def store_mcp_audit(
+        self,
+        tool_name: str,
+        principal_id: str,
+        scopes: List[str],
+        status: str,
+        args_sha256: str,
+        result_sha256: str,
+        sanitized_args: Optional[Dict[str, Any]] = None,
+        security_flags: Optional[List[str]] = None,
+        error_code: Optional[str] = None,
+        latency_ms: float = 0.0,
+    ) -> MCPAuditRecord:
+        """
+        Records an immutable, tamper-evident MCP tool call audit entry in the vault ledger.
+        """
+        now_dt = datetime.now(timezone.utc)
+        iso_ts = now_dt.isoformat()
+        audit_id = f"MCP-{now_dt.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        payload_obj = {
+            "audit_id": audit_id,
+            "created_at_utc": iso_ts,
+            "tool_name": tool_name,
+            "principal_id": principal_id,
+            "scopes": sorted(set(scopes)),
+            "status": status,
+            "args_sha256": args_sha256,
+            "result_sha256": result_sha256,
+            "sanitized_args": sanitized_args or {},
+            "security_flags": list(security_flags or []),
+            "error_code": error_code,
+            "latency_ms": round(float(latency_ms), 3),
+        }
+        payload_bytes = json.dumps(payload_obj, sort_keys=True, default=str).encode("utf-8")
+        payload_blob = self.store_blob(payload_bytes, format_ext="json")
+
+        with self._lock:
+            last_index, last_hash = self._get_latest_ledger_state()
+            new_index = last_index + 1
+
+            record = MCPAuditRecord(
+                audit_id=audit_id,
+                record_index=new_index,
+                created_at_utc=iso_ts,
+                tool_name=tool_name,
+                principal_id=principal_id,
+                scopes=sorted(set(scopes)),
+                status=status,
+                args_sha256=args_sha256,
+                result_sha256=result_sha256,
+                security_flags=list(security_flags or []),
+                error_code=error_code,
+                latency_ms=round(float(latency_ms), 3),
+                payload_blob=payload_blob,
+                prev_record_hash=last_hash,
+            )
+
+            manifest_json = json.dumps(record.to_dict(), sort_keys=True)
+            manifest_digest = hashlib.sha256(manifest_json.encode("utf-8")).hexdigest()
+
+            chain_input = f"{last_hash}:{audit_id}:{iso_ts}:{manifest_digest}".encode("utf-8")
+            record_hash = hashlib.sha256(chain_input).hexdigest()
+            signature = hmac.new(self.signing_key, record_hash.encode("utf-8"), hashlib.sha256).hexdigest()
+
+            record.record_hash = record_hash
+            record.signature = signature
+
+            manifest_path = self.mcp_audits_dir / f"{audit_id}.json"
+            manifest_path.write_text(json.dumps(record.to_dict(), indent=2), encoding="utf-8")
+
+            ledger_entry = {
+                "record_index": new_index,
+                "record_type": "MCP_AUDIT",
+                "incident_id": audit_id,
+                "tool_name": tool_name,
+                "principal_id": principal_id,
+                "status": status,
+                "created_at_utc": iso_ts,
+                "primary_frame_sha256": payload_blob.sha256,
+                "blob_relpath": payload_blob.blob_relpath,
+                "manifest_digest": manifest_digest,
+                "prev_record_hash": last_hash,
+                "record_hash": record_hash,
+                "signature": signature,
+            }
+            with open(self.ledger_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(ledger_entry) + "\n")
+
+        return record
+
+    def get_mcp_audit(self, audit_id: str) -> Optional[MCPAuditRecord]:
+        """Retrieves an MCP audit record by audit_id."""
+        manifest_path = self.mcp_audits_dir / f"{audit_id}.json"
+        if not manifest_path.exists():
+            return None
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            return MCPAuditRecord.from_dict(data)
+        except Exception as exc:
+            logger.error(f"Failed to read MCP audit {audit_id}: {exc}")
+            return None
+
+    def list_mcp_audits(self) -> List[MCPAuditRecord]:
+        """Returns all MCP audit records ordered by record_index."""
+        if not self.mcp_audits_dir.exists():
+            return []
+        records: List[MCPAuditRecord] = []
+        for path in self.mcp_audits_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                records.append(MCPAuditRecord.from_dict(data))
+            except Exception:
+                continue
+        records.sort(key=lambda r: r.record_index)
+        return records
+
     def get_frame_bytes(self, blob_relpath: str) -> bytes:
         """Retrieves raw evidentiary frame bytes from the vault."""
         full_path = self.vault_dir / blob_relpath
@@ -529,10 +680,12 @@ class SurveillanceEvidenceVault:
                     audit.is_valid = False
                     audit.errors.append(f"Record {rec_idx} ({inc_id}): Node signature mismatch.")
 
-                # 4. Verify manifest file on disk (supports both INCIDENT and VERIFICATION records)
+                # 4. Verify manifest file on disk (supports INCIDENT, VERIFICATION, and MCP_AUDIT records)
                 rec_type = entry.get("record_type", "INCIDENT")
                 if rec_type == "VERIFICATION":
                     manifest_path = self.verifications_dir / f"{inc_id}.json"
+                elif rec_type == "MCP_AUDIT":
+                    manifest_path = self.mcp_audits_dir / f"{inc_id}.json"
                 else:
                     manifest_path = self.incidents_dir / f"{inc_id}.json"
 
