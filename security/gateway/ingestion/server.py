@@ -79,6 +79,19 @@ def set_security_profile(profile: str):
     global AEGIS_SECURITY_PROFILE
     AEGIS_SECURITY_PROFILE = profile.lower()
 
+# Live inference stage (Week 10 Task 6, closes M2-L15): when enabled, every
+# verified frame runs through MobileNetV3 + streaming rPPG and the resulting AI
+# score is fused with the integrity signals instead of the 0.10 placeholder.
+LIVE_INFERENCE_ENABLED = os.environ.get("AEGIS_LIVE_INFERENCE", "0") == "1"
+try:
+    from .live_inference import LiveInferenceStage, LiveMetricsSink
+except ImportError:
+    try:
+        from live_inference import LiveInferenceStage, LiveMetricsSink
+    except ImportError:
+        from security.gateway.ingestion.live_inference import LiveInferenceStage, LiveMetricsSink
+live_metrics = LiveMetricsSink.from_env()
+
 try:
     from .telemetry import telemetry_hub, telemetry_app, TELEMETRY_PORT
 except ImportError:
@@ -228,6 +241,12 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
 
     rate_limiter = StreamRateLimiter(max_fps=MAX_STREAM_FPS, burst_capacity=BURST_CAPACITY)
     fusion_engine = FeedFusionEngine()
+    inference_stage = None
+    if LIVE_INFERENCE_ENABLED:
+        try:
+            inference_stage = await asyncio.to_thread(LiveInferenceStage)
+        except Exception as inf_err:
+            logger.error(f"Live inference stage unavailable for {camera_id}: {inf_err}")
 
     try:
         while True:
@@ -515,19 +534,54 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "incident_id": incident_id,
                     })
             else:
-                proc_ms = (time.perf_counter() - t_frame_start) * 1000.0
-                if pce > 0:
-                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}, {proc_ms:.1f}ms) from {camera_id}.")
-                else:
-                    print(f"[OK] Frame {seq} mathematically verified ({proc_ms:.1f}ms) from {camera_id}.")
-                # Compute fused verdict (integrity intact, baseline clean content)
+                # AI content score: real edge-model + rPPG inference when enabled,
+                # otherwise the legacy 0.10 placeholder (transport-only mode).
+                ai_score = 0.10
+                inference = None
+                if inference_stage is not None:
+                    try:
+                        inference = await asyncio.to_thread(inference_stage.process, frame_bytes, width, height)
+                        ai_score = inference.ai_score
+                    except Exception as inf_err:
+                        logger.warning(f"Live inference failed on {camera_id} seq {seq}: {inf_err}")
+                # Compute fused verdict (integrity intact + AI content score)
                 fused = fusion_engine.fuse(
                     hash_chain_ok=True,
                     integrity_anomalies=[],
                     prnu_ok=True,
                     prnu_pce=pce if pce > 0 else 100.0,
-                    ai_score=0.10,
+                    ai_score=ai_score,
                 )
+                proc_ms = (time.perf_counter() - t_frame_start) * 1000.0
+                if pce > 0:
+                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}, {proc_ms:.1f}ms) from {camera_id}.")
+                else:
+                    print(f"[OK] Frame {seq} mathematically verified ({proc_ms:.1f}ms) from {camera_id}.")
+                if live_metrics.enabled:
+                    sent_at = payload.get("sent_at")
+                    done_at = time.time()
+                    row = {
+                        "stream": stream_id,
+                        "seq": seq,
+                        "done_at": round(done_at, 4),
+                        "proc_ms": round(proc_ms, 3),
+                        "e2e_ms": round((done_at - float(sent_at)) * 1000.0, 3) if isinstance(sent_at, (int, float)) else None,
+                        "ai_score": ai_score,
+                        "verdict": fused.verdict,
+                        "prnu_pce": round(pce, 2),
+                    }
+                    if inference is not None:
+                        row.update({
+                            "window_ran": inference.window_ran,
+                            "model_ms": inference.model_ms,
+                            "infer_ms": inference.total_ms,
+                            "face_ms": inference.face_ms,
+                            "face": inference.face_detected,
+                            "spatial": inference.spatial_score,
+                            "rppg": inference.rppg_score,
+                            "rppg_status": inference.rppg_status,
+                        })
+                    live_metrics.record(stream_id, row)
                 await telemetry_hub.broadcast({
                     "timestamp": time.time(),
                     "camera_id": camera_id,
@@ -543,11 +597,17 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                     "action": "FORWARDED",
                     "detail": f"Frame {seq} mathematically verified (Verdict: {fused.verdict})",
                     "processing_ms": round(proc_ms, 2),
+                    "ai_score": ai_score,
+                    "ai_source": "edge_inference" if inference is not None else "placeholder",
+                    "inference": inference.to_dict() if inference is not None else None,
                 })
             
     except Exception as e:
         print(f"[-] Connection error with {camera_id}: {e}")
     finally:
+        if inference_stage is not None:
+            inference_stage.close()
+        live_metrics.forget(stream_id)
         await connection_manager.release(stream_id, client_ip)
         print(f"[-] Closed connection to {camera_id} ({stream_id}). Active streams remaining: {len(connection_manager.active_streams)}")
         try:
