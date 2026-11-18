@@ -66,6 +66,32 @@ def connect_mtls_ingestion(host: str, port: int, ca_crt: Path, client_crt: Path,
     return tls_sock
 
 
+def negotiate_genesis(tls_sock: ssl.SSLSocket, timeout_s: float = 1.5) -> str:
+    """Session binding (mirrors security/transport/session_binding.py, inlined because
+    this container ships only bridge.py). If the gateway sends a session hello, the hash
+    chain starts from a nonce-bound genesis so a recording of this session cannot be
+    replayed into another one; otherwise the legacy constant genesis is used."""
+    old = tls_sock.gettimeout()
+    tls_sock.settimeout(timeout_s)
+    buf = b""
+    try:
+        while not buf.endswith(b"\n") and len(buf) < 4096:
+            chunk = tls_sock.recv(1)
+            if not chunk:
+                break
+            buf += chunk
+        hello = json.loads(buf.decode("utf-8")) if buf else None
+    except (socket.timeout, TimeoutError, OSError, ValueError):
+        hello = None
+    finally:
+        tls_sock.settimeout(old)
+    if isinstance(hello, dict) and hello.get("type") == "session_hello" and hello.get("binding") == "v1":
+        logger.info("Session binding active (nonce %s...).", str(hello["session_nonce"])[:8])
+        material = f"AEGIS_GENESIS|v1|{hello['camera_id']}|{hello['session_nonce']}".encode("utf-8")
+        return hashlib.sha256(material).hexdigest()
+    return GENESIS_HASH
+
+
 def open_rtsp_capture(rtsp_url: str) -> cv2.VideoCapture:
     """Opens RTSP stream with retry until the camera feed is publishing."""
     while True:
@@ -93,7 +119,7 @@ def run_bridge() -> None:
                 INGESTION_HOST, INGESTION_PORT, ca_crt, client_crt, client_key
             )
 
-            current_hash = GENESIS_HASH
+            current_hash = negotiate_genesis(tls_sock)
             seq = 1
             last_ts_ms = int(time.time() * 1000)
 

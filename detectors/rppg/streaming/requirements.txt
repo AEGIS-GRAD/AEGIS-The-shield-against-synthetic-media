@@ -2,7 +2,7 @@ numpy==2.4.6
 scipy==1.17.1
 fastapi==0.163.1
 uvicorn[standard]==0.54.0
-opencv-python==5.1.0.95
+opencv-python==4.14.0.94
 facenet-pytorch==2.5.3
 torch==2.14.1
 torchvision==0.29.1

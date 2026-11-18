@@ -1,7 +1,7 @@
 fastapi==0.163.1
 uvicorn[standard]==0.54.0
 python-multipart==0.0.34
-opencv-python-headless==5.1.0.95
+opencv-python-headless==4.14.0.94
 torch==2.14.1
 torchvision==0.29.1
 facenet-pytorch==2.5.3

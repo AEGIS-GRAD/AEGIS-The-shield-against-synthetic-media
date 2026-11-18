@@ -79,6 +79,28 @@ def set_security_profile(profile: str):
     global AEGIS_SECURITY_PROFILE
     AEGIS_SECURITY_PROFILE = profile.lower()
 
+# Live inference stage (Week 10 Task 6, closes M2-L15): when enabled, every
+# verified frame runs through MobileNetV3 + streaming rPPG and the resulting AI
+# score is fused with the integrity signals instead of the 0.10 placeholder.
+LIVE_INFERENCE_ENABLED = os.environ.get("AEGIS_LIVE_INFERENCE", "0") == "1"
+
+# Session binding / clock-skew enforcement (Week 11 Task 6). "off" keeps the legacy
+# protocol for existing clients; "enforce" is required to stop cross-session replay.
+SESSION_BINDING = os.environ.get("AEGIS_SESSION_BINDING", "off").lower()
+MAX_CLOCK_SKEW_MS = int(os.environ.get("AEGIS_MAX_CLOCK_SKEW_MS", "2000"))
+try:
+    from transport.session_binding import ClockCheck, new_session_hello
+except ImportError:
+    from security.transport.session_binding import ClockCheck, new_session_hello
+try:
+    from .live_inference import LiveInferenceStage, LiveMetricsSink
+except ImportError:
+    try:
+        from live_inference import LiveInferenceStage, LiveMetricsSink
+    except ImportError:
+        from security.gateway.ingestion.live_inference import LiveInferenceStage, LiveMetricsSink
+live_metrics = LiveMetricsSink.from_env()
+
 try:
     from .telemetry import telemetry_hub, telemetry_app, TELEMETRY_PORT
 except ImportError:
@@ -153,14 +175,69 @@ class StreamConnectionManager:
 # Global connection manager instance
 connection_manager = StreamConnectionManager()
 
+# stream_id -> (writer, peer certificate serial hex) for CRL-driven severing
+live_connections: Dict[str, Tuple[asyncio.StreamWriter, str]] = {}
+
+
+class CRLEnforcer:
+    """Loads the camera CRL into the gateway TLS context and hot-reloads it.
+
+    A revoked camera is refused at its next handshake, and any session it already
+    has open is closed as soon as the new CRL is seen (polling interval
+    ``AEGIS_CRL_POLL_S``, default 2 s). If the CRL expires, OpenSSL refuses every
+    camera: fail-closed, re-issue the CRL before its nextUpdate.
+    """
+
+    def __init__(self, path: str, poll_s: float = 2.0):
+        self.path = path
+        self.poll_s = poll_s
+        self._mtime: Optional[float] = None
+        self.revoked_serials: Set[str] = set()
+
+    def load(self, context: ssl.SSLContext) -> bool:
+        try:
+            mtime = os.path.getmtime(self.path)
+        except OSError:
+            return False
+        if self._mtime == mtime:
+            return False
+        context.load_verify_locations(cafile=self.path)
+        context.verify_flags |= ssl.VERIFY_CRL_CHECK_LEAF
+        self._mtime = mtime
+        try:
+            from cryptography import x509 as _x509
+
+            crl = _x509.load_pem_x509_crl(open(self.path, "rb").read())
+            self.revoked_serials = {f"{r.serial_number:x}" for r in crl}
+        except Exception as exc:
+            logger.warning(f"CRL parsed by OpenSSL but not by cryptography: {exc}")
+        print(f"[AEGIS GATEWAY] CRL loaded from {self.path} ({len(self.revoked_serials)} revoked camera certificates)")
+        return True
+
+    async def watch(self, context: ssl.SSLContext) -> None:
+        while True:
+            await asyncio.sleep(self.poll_s)
+            try:
+                if self.load(context):
+                    for sid, (w, serial) in list(live_connections.items()):
+                        if serial and serial in self.revoked_serials:
+                            print(f"[!] REVOKED CERTIFICATE: closing live session {sid} (serial {serial})")
+                            try:
+                                w.close()
+                            except Exception:
+                                pass
+            except Exception as exc:
+                logger.error(f"CRL reload failed: {exc}")
+
 
 class LiveHashChainValidator:
     """
     A live streaming adaptation of the offline FrameHashChain.
     It recalculates the cryptographic chain on the fly.
     """
-    def __init__(self):
-        self.current_hash = hashlib.sha256(b"AEGIS_GENESIS").hexdigest()
+    def __init__(self, genesis: Optional[str] = None):
+        # genesis is session-bound when AEGIS_SESSION_BINDING=enforce (anti cross-session replay)
+        self.current_hash = genesis or hashlib.sha256(b"AEGIS_GENESIS").hexdigest()
 
     def validate_frame(self, frame_bytes: bytes, expected_hash: str) -> bool:
         hasher = hashlib.sha256()
@@ -213,7 +290,21 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
 
     # Initialize validators and DoS rate limiter for this stream
     stream_validator = StreamValidator(fps=30)
-    hash_validator = LiveHashChainValidator()
+    # Session binding (Week 11 Task 6): fresh nonce -> session-bound chain genesis,
+    # plus absolute-clock checks, so a recording from another session cannot replay.
+    session_genesis_hash = None
+    clock_check = None
+    if SESSION_BINDING == "enforce":
+        hello, session_genesis_hash = new_session_hello(camera_id)
+        clock_check = ClockCheck(max_skew_ms=MAX_CLOCK_SKEW_MS)
+        try:
+            writer.write((json.dumps(hello) + "\n").encode("utf-8"))
+            await writer.drain()
+        except Exception:
+            pass
+    peer_serial = (peer_cert or {}).get("serialNumber", "").lower().lstrip("0")
+    live_connections[stream_id] = (writer, peer_serial)
+    hash_validator = LiveHashChainValidator(genesis=session_genesis_hash)
     prnu_validator = LivePRNUValidator(
         level=2,
         wavelet="db4",
@@ -228,6 +319,12 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
 
     rate_limiter = StreamRateLimiter(max_fps=MAX_STREAM_FPS, burst_capacity=BURST_CAPACITY)
     fusion_engine = FeedFusionEngine()
+    inference_stage = None
+    if LIVE_INFERENCE_ENABLED:
+        try:
+            inference_stage = await asyncio.to_thread(LiveInferenceStage)
+        except Exception as inf_err:
+            logger.error(f"Live inference stage unavailable for {camera_id}: {inf_err}")
 
     try:
         while True:
@@ -281,6 +378,26 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
             except Exception as e:
                 print(f"[-] Malformed payload from {camera_id}: {e}")
                 break
+
+            # 0. Absolute clock check (bound sessions only): camera clock skew or a
+            #    time-shifted replay. Integrity failure -> never AUTHENTIC.
+            if clock_check is not None:
+                skew_ms = clock_check.violation(ts)
+                if skew_ms is not None:
+                    detail = f"Camera timestamp off by {skew_ms:+d} ms (> {MAX_CLOCK_SKEW_MS} ms) at seq {seq}"
+                    action = "SOCKET_SEVERED" if AEGIS_SECURITY_PROFILE == "prod" else "AUDIT_LOGGED"
+                    print(f"[!] CLOCK SKEW on {camera_id}: {detail}")
+                    await telemetry_hub.broadcast({
+                        "timestamp": time.time(), "camera_id": camera_id, "seq": seq,
+                        "status": "COMPROMISED" if action == "SOCKET_SEVERED" else "AUDIT_WARNING",
+                        "threat_type": "CLOCK_SKEW", "profile": AEGIS_SECURITY_PROFILE,
+                        "action": action, "detail": detail, "verdict": "INTEGRITY_UNKNOWN",
+                    })
+                    if live_metrics.enabled:
+                        live_metrics.record(stream_id, {"stream": stream_id, "seq": seq, "event": "CLOCK_SKEW",
+                                                        "skew_ms": skew_ms, "camera": camera_id})
+                    if action == "SOCKET_SEVERED":
+                        break
 
             # 1. Validate Timestamp and Sequence (Catch Replay/Drop attacks)
             anomalies = stream_validator.check(seq, ts)
@@ -515,19 +632,54 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                         "incident_id": incident_id,
                     })
             else:
-                proc_ms = (time.perf_counter() - t_frame_start) * 1000.0
-                if pce > 0:
-                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}, {proc_ms:.1f}ms) from {camera_id}.")
-                else:
-                    print(f"[OK] Frame {seq} mathematically verified ({proc_ms:.1f}ms) from {camera_id}.")
-                # Compute fused verdict (integrity intact, baseline clean content)
+                # AI content score: real edge-model + rPPG inference when enabled,
+                # otherwise the legacy 0.10 placeholder (transport-only mode).
+                ai_score = 0.10
+                inference = None
+                if inference_stage is not None:
+                    try:
+                        inference = await asyncio.to_thread(inference_stage.process, frame_bytes, width, height)
+                        ai_score = inference.ai_score
+                    except Exception as inf_err:
+                        logger.warning(f"Live inference failed on {camera_id} seq {seq}: {inf_err}")
+                # Compute fused verdict (integrity intact + AI content score)
                 fused = fusion_engine.fuse(
                     hash_chain_ok=True,
                     integrity_anomalies=[],
                     prnu_ok=True,
                     prnu_pce=pce if pce > 0 else 100.0,
-                    ai_score=0.10,
+                    ai_score=ai_score,
                 )
+                proc_ms = (time.perf_counter() - t_frame_start) * 1000.0
+                if pce > 0:
+                    print(f"[OK] Frame {seq} verified (Cryptographic Hash + Sensor PCE={pce:.2f}, {proc_ms:.1f}ms) from {camera_id}.")
+                else:
+                    print(f"[OK] Frame {seq} mathematically verified ({proc_ms:.1f}ms) from {camera_id}.")
+                if live_metrics.enabled:
+                    sent_at = payload.get("sent_at")
+                    done_at = time.time()
+                    row = {
+                        "stream": stream_id,
+                        "seq": seq,
+                        "done_at": round(done_at, 4),
+                        "proc_ms": round(proc_ms, 3),
+                        "e2e_ms": round((done_at - float(sent_at)) * 1000.0, 3) if isinstance(sent_at, (int, float)) else None,
+                        "ai_score": ai_score,
+                        "verdict": fused.verdict,
+                        "prnu_pce": round(pce, 2),
+                    }
+                    if inference is not None:
+                        row.update({
+                            "window_ran": inference.window_ran,
+                            "model_ms": inference.model_ms,
+                            "infer_ms": inference.total_ms,
+                            "face_ms": inference.face_ms,
+                            "face": inference.face_detected,
+                            "spatial": inference.spatial_score,
+                            "rppg": inference.rppg_score,
+                            "rppg_status": inference.rppg_status,
+                        })
+                    live_metrics.record(stream_id, row)
                 await telemetry_hub.broadcast({
                     "timestamp": time.time(),
                     "camera_id": camera_id,
@@ -543,11 +695,18 @@ async def handle_camera_stream(reader: asyncio.StreamReader, writer: asyncio.Str
                     "action": "FORWARDED",
                     "detail": f"Frame {seq} mathematically verified (Verdict: {fused.verdict})",
                     "processing_ms": round(proc_ms, 2),
+                    "ai_score": ai_score,
+                    "ai_source": "edge_inference" if inference is not None else "placeholder",
+                    "inference": inference.to_dict() if inference is not None else None,
                 })
             
     except Exception as e:
         print(f"[-] Connection error with {camera_id}: {e}")
     finally:
+        live_connections.pop(stream_id, None)
+        if inference_stage is not None:
+            inference_stage.close()
+        live_metrics.forget(stream_id)
         await connection_manager.release(stream_id, client_ip)
         print(f"[-] Closed connection to {camera_id} ({stream_id}). Active streams remaining: {len(connection_manager.active_streams)}")
         try:
@@ -582,6 +741,16 @@ async def start_server():
 
     context.load_cert_chain(certfile=server_cert, keyfile=server_key)
     context.load_verify_locations(cafile=client_ca)
+    crl_enforcer = CRLEnforcer(
+        os.environ.get("AEGIS_CRL_PATH") or os.path.join(cert_dir, "crl.pem"),
+        poll_s=float(os.environ.get("AEGIS_CRL_POLL_S", "2.0")),
+    )
+    if crl_enforcer.load(context):
+        print("[AEGIS GATEWAY] Camera revocation enforced (VERIFY_CRL_CHECK_LEAF).")
+    else:
+        print("[AEGIS GATEWAY] WARNING: no camera CRL found; revoked cameras would still be accepted.")
+    crl_task = asyncio.create_task(crl_enforcer.watch(context))
+    print(f"[AEGIS GATEWAY] Session binding: {SESSION_BINDING} (max clock skew {MAX_CLOCK_SKEW_MS} ms)")
 
     server = await asyncio.start_server(
         handle_camera_stream, HOST, PORT, ssl=context, limit=1024 * 1024 * 10 # 10 MB limit for huge frame payloads

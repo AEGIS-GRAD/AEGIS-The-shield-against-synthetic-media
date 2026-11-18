@@ -461,3 +461,15 @@ python eval/scripts/task4_stage_audio.py dubbed                # after adding cl
 python eval/scripts/task4_validate_eval_sets.py                # writes eval/reports/task4_split_note.md
 ```
 Manifests include `sample_path, modality, true_label` as their first columns, matching `eval/data/eval_manifest.csv`, plus `generator`, `variant`, `parent_id`, `source`, `license`, `sha256`.
+
+---
+
+# Robustness Harness Data (Week 10 Cyber Task 2)
+
+Staged by hand on 2026-11-18 for `python -m eval.robustness.harness` (outputs in `eval/reports/robustness/`). All files live
+under the gitignored `eval/data/robustness/` and are used for evaluation only, never for training or redistribution.
+
+| Set | Local path | Source | Selection | Notes |
+|---|---|---|---|---|
+| Images, real vs AI | `eval/data/robustness/images/` + `image_manifest.json` | Hugging Face `Hemg/AI-Generated-vs-Real-Images-Datasets` (ungated; `AiArtData/` = AI, `RealArt/` = real) | 100 + 100, `random.Random(1116)` over files of 30 KB–2 MB | Web-scraped AI art vs real photos/art: no per-image license, labels are the uploader's. OpenFake (the Task 4 source) is manual/gated, so it was not used here. |
+| Text, human vs GPT-4 (+ GPT-4 paraphrase) | `eval/data/robustness/text/test_ood_set_gpt*.csv` | Hugging Face `yaful/MAGE` (`test_ood_set_gpt.csv`, `test_ood_set_gpt_para.csv`), same source as `detectors/text-detector/eval/build_interim_textset.py` | 60 per class (human / gpt4 / gpt4_para), 80–450 words, seed 1116 | MAGE labels: `1` = human, `0` = machine; the harness maps them to AEGIS `1` = synthetic. |

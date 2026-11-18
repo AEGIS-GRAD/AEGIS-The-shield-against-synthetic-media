@@ -2,5 +2,5 @@
 pytest==9.2.0
 
 # Integration tests only: generating tampered streams
-opencv-python-headless==5.1.0.95
+opencv-python-headless==4.14.0.94
 numpy==2.4.6
