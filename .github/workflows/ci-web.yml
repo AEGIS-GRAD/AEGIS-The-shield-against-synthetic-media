@@ -81,7 +81,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run Impeccable UI Linter
-        run: npx impeccable@4.1.0 detect .
+        run: npx impeccable@4.1.0 detect src/
 
   docker-build:
     runs-on: ubuntu-latest
