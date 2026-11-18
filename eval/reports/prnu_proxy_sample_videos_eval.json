@@ -1,0 +1,44 @@
+{
+  "label": "proxy: 3 web-compressed sample videos (NOT physical cameras)",
+  "crop": [
+    480,
+    600
+  ],
+  "cameras": [
+    "authentic",
+    "deepfake",
+    "manipulated"
+  ],
+  "summary": {
+    "gateway_pce": {
+      "same_camera_median": 40580.71875,
+      "cross_camera_median": 19.954126358032227,
+      "same_accept_rate_at_50": 1.0,
+      "foreign_accept_rate_at_50": 0.0,
+      "auc": 1.0,
+      "eer": 0.0,
+      "eer_threshold": 2344.779296875
+    },
+    "zero_shift_pce": {
+      "same_camera_median": 2161.3131103515625,
+      "cross_camera_median": 3.3333877325057983,
+      "same_accept_rate_at_50": 1.0,
+      "foreign_accept_rate_at_50": 0.0,
+      "auc": 1.0,
+      "eer": 0.0,
+      "eer_threshold": 652.2567138671875
+    }
+  },
+  "pairs": {
+    "authentic->authentic": 147786.7265625,
+    "authentic->deepfake": 18.13232421875,
+    "authentic->manipulated": 19.88352394104004,
+    "deepfake->authentic": 20.20565700531006,
+    "deepfake->deepfake": 5435.095947265625,
+    "deepfake->manipulated": 20.13425350189209,
+    "manipulated->authentic": 21.72734546661377,
+    "manipulated->deepfake": 19.74797534942627,
+    "manipulated->manipulated": 40469.8046875
+  },
+  "n_rows": 1080
+}
