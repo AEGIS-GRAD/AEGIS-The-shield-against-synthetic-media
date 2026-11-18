@@ -1,0 +1,12 @@
+detector,perturbation,strength,n_synthetic,n_real,detection_rate,false_positive_rate,auc,evasion_rate,mean_score_synthetic,mean_score_real,mean_abs_score_shift
+detector_text,clean,0.0,60,60,1.0,0.2667,0.9958,0.0,0.993,0.2885,0.0
+detector_text,gpt4_paraphrase,1.0,60,60,0.9833,0.2667,0.9872,,0.972,0.2885,0.0
+detector_text,homoglyph,0.03,60,60,0.9833,0.1,0.9928,0.0167,0.9664,0.1875,0.0783
+detector_text,homoglyph,0.1,60,60,0.95,0.1333,0.9772,0.05,0.9127,0.2419,0.1092
+detector_text,homoglyph,0.25,60,60,0.8833,0.4167,0.8711,0.1167,0.7634,0.4295,0.2643
+detector_text,paraphrase,0.15,60,60,1.0,0.2333,0.9919,0.0,0.9827,0.2748,0.0138
+detector_text,paraphrase,0.35,60,60,1.0,0.2,0.9911,0.0,0.9798,0.2717,0.0289
+detector_text,paraphrase,0.6,60,60,0.9667,0.2167,0.9819,0.0333,0.9622,0.2543,0.0581
+detector_text,zero_width,0.03,60,60,1.0,0.2667,0.9958,0.0,0.993,0.2885,0.0
+detector_text,zero_width,0.1,60,60,1.0,0.2667,0.9958,0.0,0.993,0.2885,0.0
+detector_text,zero_width,0.25,60,60,1.0,0.2667,0.9958,0.0,0.993,0.2885,0.0
