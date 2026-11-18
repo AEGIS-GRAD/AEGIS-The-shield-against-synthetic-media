@@ -105,7 +105,7 @@ services:
     volumes:
       - ./orchestrator:/app:ro
       - ./capability_manifests:/capability_manifests:ro
-      - ./debate:/repo/debate:ro  # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
+      - ./debate:/repo/debate:ro # mounted as /repo/debate so `import debate` resolves with PYTHONPATH=/repo
       - ./security:/repo/security:ro
       - ./shared:/shared:ro
     tmpfs:
@@ -122,7 +122,7 @@ services:
       - DETECTOR_IMAGE_URL=http://detector_image:8000
       - DETECTOR_DETECTOR_IMAGE_URL=http://detector_image:8000
       - DETECTOR_DETECTOR_TEXT_URL=http://detector_text:8000
-      - PYTHONPATH=/app/app:/repo  # /repo/debate/__init__.py -> `import debate` resolves correctly
+      - PYTHONPATH=/app/app:/repo # /repo/debate/__init__.py -> `import debate` resolves correctly
       - AEGIS_JUDGE_MODE=${AEGIS_JUDGE_MODE:-deterministic}
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:8000/health" ]
@@ -141,9 +141,6 @@ services:
     container_name: aegis_web
     ports:
       - "3000:3000"
-    volumes:
-      - ./web:/app:ro
-      - /app/node_modules
     tmpfs:
       - /app/.next:rw,nosuid,size=256m,mode=1777
       - /tmp:rw,noexec,nosuid,size=64m,mode=1777
@@ -152,6 +149,7 @@ services:
       - NEXT_PUBLIC_INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - NEXT_PUBLIC_GATEWAY_URL=http://localhost:8081
       - NEXT_PUBLIC_ORCHESTRATOR_URL=http://localhost:8000
+      - NPM_CONFIG_CACHE=/tmp/.npm
     networks:
       - aegis_net
     depends_on:
@@ -327,7 +325,7 @@ services:
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-fs", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -350,12 +348,12 @@ services:
       - ./detectors/text-detector/models:/app/models:ro
       - ./shared:/shared:ro
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=256m,mode=1777
-      - /app/.cache/huggingface:rw,noexec,nosuid,size=512m,mode=1777
+      - /tmp:rw,noexec,nosuid,size=512m,mode=1777
     networks:
       - aegis_net
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - HF_HOME=/tmp/huggingface
       - AEGIS_TEXT_MODEL_DIR=/app/models/desklib-base
       - AEGIS_TEXT_PPL_MODEL_DIR=/app/models/gpt2
       - AEGIS_TEXT_USE_FINETUNED=${AEGIS_TEXT_USE_FINETUNED:-1}
@@ -366,7 +364,7 @@ services:
       - AEGIS_TEXT_LORA_DIR=${AEGIS_TEXT_LORA_DIR:-}
       - AEGIS_SHARED_VOLUME=/shared_volume
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-fs", "http://localhost:8000/health" ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -459,7 +457,7 @@ services:
       context: .
       dockerfile: ./security/gateway/ingestion/Dockerfile
     container_name: aegis_ingestion
-    profiles: [live]
+    profiles: [ live ]
     restart: unless-stopped
     ports:
       - "8443:8443" # mTLS Live Camera Ingestion
@@ -488,11 +486,10 @@ services:
     image: jrottenberg/ffmpeg:4.4-alpine
     user: "65534:65534"
     container_name: aegis_rtsp_camera_sim
-    profiles: [live]
+    profiles: [ live ]
     restart: unless-stopped
     command: >
-      -re -stream_loop -1 -i /media/authentic_feed.mp4
-      -c copy -f rtsp -rtsp_transport tcp rtsp://mediamtx:8554/live/camera1
+      -re -stream_loop -1 -i /media/authentic_feed.mp4 -c copy -f rtsp -rtsp_transport tcp rtsp://mediamtx:8554/live/camera1
     volumes:
       - ./web/public/sample_videos:/media:ro
     tmpfs:
@@ -508,7 +505,7 @@ services:
       context: ./security/gateway/rtsp_bridge
       dockerfile: Dockerfile
     container_name: aegis_rtsp_bridge
-    profiles: [live]
+    profiles: [ live ]
     restart: unless-stopped
     environment:
       - RTSP_URL=rtsp://mediamtx:8554/live/camera1

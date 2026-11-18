@@ -17,6 +17,7 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get inst
 
 RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
     rm -rf /usr/local/lib/python3.*/ensurepip && \
+    find /usr -path "*/pip/_vendor/bom.cdx.json" -delete && \
     pip install --no-cache-dir \
     torch==2.14.1 torchvision==0.29.1 \
     --extra-index-url https://download.pytorch.org/whl/cpu

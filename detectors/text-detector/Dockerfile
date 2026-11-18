@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     AEGIS_TEXT_USE_FINETUNED=1 \
     AEGIS_TEXT_ENABLE_PPL=1 \
     AEGIS_TEXT_ENABLE_BINOCULARS=0 \
-    HF_HOME=/app/.cache/huggingface
+    HF_HOME=/tmp/huggingface
 
 WORKDIR /app
 
@@ -24,12 +24,13 @@ ARG TORCH_INDEX_URL=""
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip==26.3 setuptools==84.2.1 wheel==0.48.0 && \
     rm -rf /usr/local/lib/python3.*/ensurepip && \
+    find /usr -path "*/pip/_vendor/bom.cdx.json" -delete && \
     if [ -n "$TORCH_INDEX_URL" ]; then \
         pip install --no-cache-dir torch==2.14.1 --index-url "$TORCH_INDEX_URL"; \
     fi && \
     pip install --no-cache-dir -r requirements.txt
 
-RUN mkdir -p /app/models /app/.cache/huggingface /shared_volume
+RUN mkdir -p /app/models /shared_volume
 COPY --chown=appuser:appuser . /app
 RUN chown -R appuser:appuser /app /shared_volume
 
