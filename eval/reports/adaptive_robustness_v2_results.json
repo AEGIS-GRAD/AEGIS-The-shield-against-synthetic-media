@@ -1,0 +1,3201 @@
+{
+  "generated_at_utc": "2026-11-17T19:53:36Z",
+  "threshold": 0.5,
+  "eps": 0.06274509803921569,
+  "max_queries": 120,
+  "max_turns": 6,
+  "hard_negatives": {
+    "total_exported": 24,
+    "jsonl_path": "G:\\College\\Graduation Project\\AEGIS-The-shield-against-synthetic-media\\eval\\datasets\\hard_negatives\\hard_negatives_manifest.jsonl",
+    "csv_path": "G:\\College\\Graduation Project\\AEGIS-The-shield-against-synthetic-media\\eval\\datasets\\hard_negatives\\hard_negatives_manifest.csv",
+    "by_modality": {
+      "image": 8,
+      "text": 8,
+      "video": 8
+    }
+  },
+  "curves": [
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 7,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.9489,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 7,
+      "evaded_count": 4,
+      "asr": 0.5714,
+      "mean_confidence": 0.5328,
+      "mean_score_drop": 0.4161
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 40,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 60,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4435,
+      "mean_score_drop": 0.5054
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 7,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.8868,
+      "mean_score_drop": 0.062
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 7,
+      "evaded_count": 2,
+      "asr": 0.2857,
+      "mean_confidence": 0.6195,
+      "mean_score_drop": 0.3293
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 7,
+      "evaded_count": 5,
+      "asr": 0.7143,
+      "mean_confidence": 0.5034,
+      "mean_score_drop": 0.4454
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4846,
+      "mean_score_drop": 0.4643
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4681,
+      "mean_score_drop": 0.4808
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4552,
+      "mean_score_drop": 0.4936
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 7,
+      "evaded_count": 6,
+      "asr": 0.8571,
+      "mean_confidence": 0.4296,
+      "mean_score_drop": 0.5192
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.9006,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.6649,
+      "mean_score_drop": 0.2358
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5757,
+      "mean_score_drop": 0.325
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 40,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.573,
+      "mean_score_drop": 0.3276
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5573,
+      "mean_score_drop": 0.3434
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 60,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5573,
+      "mean_score_drop": 0.3434
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5573,
+      "mean_score_drop": 0.3434
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5573,
+      "mean_score_drop": 0.3434
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.5573,
+      "mean_score_drop": 0.3434
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.8848,
+      "mean_score_drop": 0.0158
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.8078,
+      "mean_score_drop": 0.0929
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.7655,
+      "mean_score_drop": 0.1351
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.7335,
+      "mean_score_drop": 0.1671
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.6975,
+      "mean_score_drop": 0.2031
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.6581,
+      "mean_score_drop": 0.2425
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.6492,
+      "mean_score_drop": 0.2515
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 0,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.5764,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 2,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 3,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 4,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 5,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "before_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 6,
+      "total_detected_clean": 8,
+      "evaded_count": 8,
+      "asr": 1.0,
+      "mean_confidence": 0.3324,
+      "mean_score_drop": 0.2441
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.9625,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.9,
+      "mean_score_drop": 0.0625
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.8875,
+      "mean_score_drop": 0.075
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 40,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 60,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.875,
+      "mean_score_drop": 0.0875
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.7125,
+      "mean_score_drop": 0.25
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.6625,
+      "mean_score_drop": 0.3
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.3125
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.6375,
+      "mean_score_drop": 0.325
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.6375,
+      "mean_score_drop": 0.325
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.6375,
+      "mean_score_drop": 0.325
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.6375,
+      "mean_score_drop": 0.325
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.7688,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.7,
+      "mean_score_drop": 0.0688
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.7,
+      "mean_score_drop": 0.0688
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 40,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.6937,
+      "mean_score_drop": 0.075
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 60,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.7625,
+      "mean_score_drop": 0.0062
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 10,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.6937,
+      "mean_score_drop": 0.075
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 25,
+      "total_detected_clean": 8,
+      "evaded_count": 1,
+      "asr": 0.125,
+      "mean_confidence": 0.675,
+      "mean_score_drop": 0.0938
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 50,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 75,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 100,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "budget_unit": "queries",
+      "budget_value": 150,
+      "total_detected_clean": 8,
+      "evaded_count": 2,
+      "asr": 0.25,
+      "mean_confidence": 0.65,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 0,
+      "total_detected_clean": 8,
+      "evaded_count": 0,
+      "asr": 0.0,
+      "mean_confidence": 0.5938,
+      "mean_score_drop": 0.0
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 1,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.475,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 2,
+      "total_detected_clean": 8,
+      "evaded_count": 3,
+      "asr": 0.375,
+      "mean_confidence": 0.475,
+      "mean_score_drop": 0.1187
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 3,
+      "total_detected_clean": 8,
+      "evaded_count": 4,
+      "asr": 0.5,
+      "mean_confidence": 0.4625,
+      "mean_score_drop": 0.1312
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 4,
+      "total_detected_clean": 8,
+      "evaded_count": 4,
+      "asr": 0.5,
+      "mean_confidence": 0.4625,
+      "mean_score_drop": 0.1312
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 5,
+      "total_detected_clean": 8,
+      "evaded_count": 4,
+      "asr": 0.5,
+      "mean_confidence": 0.4625,
+      "mean_score_drop": 0.1312
+    },
+    {
+      "phase": "after_mitigation",
+      "modality": "text",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "attack_method": "adaptive_feedback_paraphraser_v2",
+      "budget_unit": "turns",
+      "budget_value": 6,
+      "total_detected_clean": 8,
+      "evaded_count": 4,
+      "asr": 0.5,
+      "mean_confidence": 0.4625,
+      "mean_score_drop": 0.1312
+    }
+  ],
+  "baseline_vision": [
+    {
+      "sample_id": "img_deepfake_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.4018,
+      "final_confidence": 0.4018,
+      "score_drop": 0.0,
+      "flipped": true,
+      "queries_used": 1,
+      "flip_query": 1,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.4018,
+        "10": 0.4018,
+        "25": 0.4018,
+        "50": 0.4018,
+        "75": 0.4018,
+        "100": 0.4018,
+        "150": 0.4018
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_deepfake_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.4018,
+      "final_confidence": 0.4018,
+      "score_drop": 0.0,
+      "flipped": true,
+      "queries_used": 1,
+      "flip_query": 1,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.4018,
+        "10": 0.4018,
+        "25": 0.4018,
+        "40": 0.4018,
+        "60": 0.4018
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 1.0,
+          "blur_sigma": 0.0,
+          "gamma": 1.0,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_manipulated_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.1746,
+      "score_drop": 0.8254,
+      "flipped": true,
+      "queries_used": 16,
+      "flip_query": 16,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.6075,
+        "10": 0.5004,
+        "25": 0.1746,
+        "50": 0.1746,
+        "75": 0.1746,
+        "100": 0.1746,
+        "150": 0.1746
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_manipulated_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 1.0,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 1.0,
+        "10": 1.0,
+        "25": 1.0,
+        "40": 1.0,
+        "60": 1.0
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 1.0,
+          "blur_sigma": 0.0,
+          "gamma": 1.0,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_clean_baseline",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9647,
+      "final_confidence": 0.4064,
+      "score_drop": 0.5583,
+      "flipped": true,
+      "queries_used": 18,
+      "flip_query": 18,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.9264,
+        "10": 0.6782,
+        "25": 0.4064,
+        "50": 0.4064,
+        "75": 0.4064,
+        "100": 0.4064,
+        "150": 0.4064
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_clean_baseline",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9647,
+      "final_confidence": 0.2604,
+      "score_drop": 0.7043,
+      "flipped": true,
+      "queries_used": 2,
+      "flip_query": 2,
+      "linf_norm": 0.2471,
+      "l2_norm": 0.0284,
+      "psnr_db": 30.94,
+      "trajectory": {
+        "1": 0.9647,
+        "10": 0.2604,
+        "25": 0.2604,
+        "40": 0.2604,
+        "60": 0.2604
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 84,
+          "scale": 0.8208905782923208,
+          "blur_sigma": 0.0,
+          "gamma": 0.8776364237736725,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_dim_light",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.8683,
+      "final_confidence": 0.4293,
+      "score_drop": 0.439,
+      "flipped": true,
+      "queries_used": 26,
+      "flip_query": 26,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0304,
+      "psnr_db": 30.34,
+      "trajectory": {
+        "1": 0.8683,
+        "10": 0.6384,
+        "25": 0.5047,
+        "50": 0.4293,
+        "75": 0.4293,
+        "100": 0.4293,
+        "150": 0.4293
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_dim_light",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.8683,
+      "final_confidence": 0.4935,
+      "score_drop": 0.3748,
+      "flipped": true,
+      "queries_used": 6,
+      "flip_query": 6,
+      "linf_norm": 0.0392,
+      "l2_norm": 0.0063,
+      "psnr_db": 44.01,
+      "trajectory": {
+        "1": 0.8683,
+        "10": 0.4935,
+        "25": 0.4935,
+        "40": 0.4935,
+        "60": 0.4935
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 74,
+          "scale": 0.8109167024405417,
+          "blur_sigma": 0.0,
+          "gamma": 1.016172629477534,
+          "noise_sigma": 0.9144577589999496
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_poorly_lit",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.5249,
+      "score_drop": 0.4751,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0466,
+      "psnr_db": 26.63,
+      "trajectory": {
+        "1": 0.9965,
+        "10": 0.9965,
+        "25": 0.966,
+        "50": 0.9094,
+        "75": 0.7938,
+        "100": 0.7039,
+        "150": 0.5249
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_poorly_lit",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.4185,
+      "score_drop": 0.5815,
+      "flipped": true,
+      "queries_used": 13,
+      "flip_query": 13,
+      "linf_norm": 0.0471,
+      "l2_norm": 0.0123,
+      "psnr_db": 38.19,
+      "trajectory": {
+        "1": 1.0,
+        "10": 0.6675,
+        "25": 0.4185,
+        "40": 0.4185,
+        "60": 0.4185
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 59,
+          "scale": 0.45,
+          "blur_sigma": 1.3403371054127124,
+          "gamma": 0.8656939966407513,
+          "noise_sigma": 6.54196680485898
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_occluded_face",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.8164,
+      "final_confidence": 0.4849,
+      "score_drop": 0.3315,
+      "flipped": true,
+      "queries_used": 4,
+      "flip_query": 4,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0268,
+      "psnr_db": 31.44,
+      "trajectory": {
+        "1": 0.8164,
+        "10": 0.4849,
+        "25": 0.4849,
+        "50": 0.4849,
+        "75": 0.4849,
+        "100": 0.4849,
+        "150": 0.4849
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_occluded_face",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.8164,
+      "final_confidence": 0.3346,
+      "score_drop": 0.4818,
+      "flipped": true,
+      "queries_used": 8,
+      "flip_query": 8,
+      "linf_norm": 0.2275,
+      "l2_norm": 0.0411,
+      "psnr_db": 27.73,
+      "trajectory": {
+        "1": 0.8164,
+        "10": 0.3346,
+        "25": 0.3346,
+        "40": 0.3346,
+        "60": 0.3346
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 78,
+          "scale": 0.933116788968219,
+          "blur_sigma": 0.3510847137964356,
+          "gamma": 1.1851789304854699,
+          "noise_sigma": 0.9980182686666734
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_borderline_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9963,
+      "final_confidence": 0.4949,
+      "score_drop": 0.5014,
+      "flipped": true,
+      "queries_used": 5,
+      "flip_query": 5,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0321,
+      "psnr_db": 29.88,
+      "trajectory": {
+        "1": 0.9963,
+        "10": 0.4949,
+        "25": 0.4949,
+        "50": 0.4949,
+        "75": 0.4949,
+        "100": 0.4949,
+        "150": 0.4949
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_borderline_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9963,
+      "final_confidence": 0.1019,
+      "score_drop": 0.8944,
+      "flipped": true,
+      "queries_used": 10,
+      "flip_query": 10,
+      "linf_norm": 0.2353,
+      "l2_norm": 0.0571,
+      "psnr_db": 24.86,
+      "trajectory": {
+        "1": 0.9963,
+        "10": 0.1019,
+        "25": 0.1019,
+        "40": 0.1019,
+        "60": 0.1019
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 81,
+          "scale": 0.8367475566833008,
+          "blur_sigma": 1.1967836561426481,
+          "gamma": 1.2549127904742012,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_marginal_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9963,
+      "final_confidence": 0.4925,
+      "score_drop": 0.5038,
+      "flipped": true,
+      "queries_used": 12,
+      "flip_query": 12,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0351,
+      "psnr_db": 29.1,
+      "trajectory": {
+        "1": 0.9963,
+        "10": 0.5434,
+        "25": 0.4925,
+        "50": 0.4925,
+        "75": 0.4925,
+        "100": 0.4925,
+        "150": 0.4925
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_marginal_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9963,
+      "final_confidence": 0.4954,
+      "score_drop": 0.5009,
+      "flipped": true,
+      "queries_used": 17,
+      "flip_query": 17,
+      "linf_norm": 0.1255,
+      "l2_norm": 0.0077,
+      "psnr_db": 42.28,
+      "trajectory": {
+        "1": 0.9963,
+        "10": 0.8715,
+        "25": 0.4954,
+        "40": 0.4954,
+        "60": 0.4954
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 87,
+          "scale": 0.8960736014515183,
+          "blur_sigma": 0.20518829949428175,
+          "gamma": 0.9784412532655563,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_deepfake_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9341,
+      "final_confidence": 0.6352,
+      "score_drop": 0.2989,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.8149,
+        "10": 0.8149,
+        "25": 0.7739,
+        "50": 0.7458,
+        "75": 0.6807,
+        "100": 0.6549,
+        "150": 0.6352
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_deepfake_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9341,
+      "final_confidence": 0.3594,
+      "score_drop": 0.5747,
+      "flipped": true,
+      "queries_used": 12,
+      "flip_query": 12,
+      "linf_norm": 0.1686,
+      "l2_norm": 0.0734,
+      "psnr_db": 22.69,
+      "trajectory": {
+        "1": 0.9341,
+        "10": 0.6536,
+        "25": 0.3594,
+        "40": 0.3594,
+        "60": 0.3594
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 44,
+          "scale": 0.8364931495162973,
+          "blur_sigma": 0.3270690370556535,
+          "gamma": 0.8007859530403179,
+          "noise_sigma": 10.16527362488841
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_manipulated_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.8181,
+      "final_confidence": 0.4202,
+      "score_drop": 0.3979,
+      "flipped": true,
+      "queries_used": 9,
+      "flip_query": 9,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0304,
+      "psnr_db": 30.35,
+      "trajectory": {
+        "1": 0.8181,
+        "10": 0.4202,
+        "25": 0.4202,
+        "50": 0.4202,
+        "75": 0.4202,
+        "100": 0.4202,
+        "150": 0.4202
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_manipulated_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.8181,
+      "final_confidence": 0.405,
+      "score_drop": 0.4131,
+      "flipped": true,
+      "queries_used": 14,
+      "flip_query": 14,
+      "linf_norm": 0.1647,
+      "l2_norm": 0.0888,
+      "psnr_db": 21.03,
+      "trajectory": {
+        "1": 0.8181,
+        "10": 0.6664,
+        "25": 0.405,
+        "40": 0.405,
+        "60": 0.405
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 47,
+          "scale": 0.45,
+          "blur_sigma": 0.03156681506340098,
+          "gamma": 0.75,
+          "noise_sigma": 6.930303805836189
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_clean_baseline",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9981,
+      "final_confidence": 0.9478,
+      "score_drop": 0.0503,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.9929,
+        "10": 0.9646,
+        "25": 0.9646,
+        "50": 0.952,
+        "75": 0.9484,
+        "100": 0.9484,
+        "150": 0.9478
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_clean_baseline",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9981,
+      "final_confidence": 0.5411,
+      "score_drop": 0.457,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.2745,
+      "l2_norm": 0.0393,
+      "psnr_db": 28.1,
+      "trajectory": {
+        "1": 0.9981,
+        "10": 0.7339,
+        "25": 0.6713,
+        "40": 0.6566,
+        "60": 0.5411
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 0.8208737161216084,
+          "blur_sigma": 0.0,
+          "gamma": 0.8384333025351468,
+          "noise_sigma": 9.150884698474718
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_dim_light",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.7487,
+      "final_confidence": 0.4971,
+      "score_drop": 0.2516,
+      "flipped": true,
+      "queries_used": 109,
+      "flip_query": 109,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0418,
+      "psnr_db": 27.57,
+      "trajectory": {
+        "1": 0.7487,
+        "10": 0.639,
+        "25": 0.5597,
+        "50": 0.5309,
+        "75": 0.5136,
+        "100": 0.503,
+        "150": 0.4971
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_dim_light",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.7487,
+      "final_confidence": 0.604,
+      "score_drop": 0.1447,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0353,
+      "l2_norm": 0.0037,
+      "psnr_db": 48.64,
+      "trajectory": {
+        "1": 0.7487,
+        "10": 0.6904,
+        "25": 0.604,
+        "40": 0.604,
+        "60": 0.604
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 88,
+          "scale": 1.0,
+          "blur_sigma": 1.044247327268598,
+          "gamma": 0.9872964033589088,
+          "noise_sigma": 0.41237543343785976
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_poorly_lit",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.7081,
+      "final_confidence": 0.6069,
+      "score_drop": 0.1012,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0324,
+      "psnr_db": 29.79,
+      "trajectory": {
+        "1": 0.7081,
+        "10": 0.6851,
+        "25": 0.669,
+        "50": 0.6347,
+        "75": 0.6264,
+        "100": 0.6069,
+        "150": 0.6069
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_poorly_lit",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.7081,
+      "final_confidence": 0.6518,
+      "score_drop": 0.0563,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0392,
+      "l2_norm": 0.0133,
+      "psnr_db": 37.51,
+      "trajectory": {
+        "1": 0.7081,
+        "10": 0.6586,
+        "25": 0.6586,
+        "40": 0.6518,
+        "60": 0.6518
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 87,
+          "scale": 0.8658380433434605,
+          "blur_sigma": 0.0,
+          "gamma": 0.8110266943361207,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_occluded_face",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9983,
+      "final_confidence": 0.5337,
+      "score_drop": 0.4646,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0507,
+      "psnr_db": 25.9,
+      "trajectory": {
+        "1": 0.9983,
+        "10": 0.9463,
+        "25": 0.7535,
+        "50": 0.6323,
+        "75": 0.5793,
+        "100": 0.5358,
+        "150": 0.5337
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_occluded_face",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9983,
+      "final_confidence": 0.5657,
+      "score_drop": 0.4326,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.3333,
+      "l2_norm": 0.0386,
+      "psnr_db": 28.27,
+      "trajectory": {
+        "1": 0.9983,
+        "10": 0.5657,
+        "25": 0.5657,
+        "40": 0.5657,
+        "60": 0.5657
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 89,
+          "scale": 1.0,
+          "blur_sigma": 1.2870721155774376,
+          "gamma": 1.1302435156125492,
+          "noise_sigma": 6.139907027471814
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_borderline_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9998,
+      "final_confidence": 0.5713,
+      "score_drop": 0.4285,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.9989,
+        "10": 0.9974,
+        "25": 0.9926,
+        "50": 0.9641,
+        "75": 0.8273,
+        "100": 0.6135,
+        "150": 0.5713
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_borderline_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9998,
+      "final_confidence": 0.6541,
+      "score_drop": 0.3457,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.1569,
+      "l2_norm": 0.0145,
+      "psnr_db": 36.77,
+      "trajectory": {
+        "1": 0.9998,
+        "10": 0.6541,
+        "25": 0.6541,
+        "40": 0.6541,
+        "60": 0.6541
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 68,
+          "scale": 1.0,
+          "blur_sigma": 0.0,
+          "gamma": 0.9432715949228464,
+          "noise_sigma": 3.059156638161601
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_marginal_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.9998,
+      "final_confidence": 0.9811,
+      "score_drop": 0.0187,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.9987,
+        "10": 0.9947,
+        "25": 0.9907,
+        "50": 0.9882,
+        "75": 0.9842,
+        "100": 0.9819,
+        "150": 0.9811
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_marginal_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.9998,
+      "final_confidence": 0.6769,
+      "score_drop": 0.3229,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.1647,
+      "l2_norm": 0.0187,
+      "psnr_db": 34.55,
+      "trajectory": {
+        "1": 0.9998,
+        "10": 0.6962,
+        "25": 0.6872,
+        "40": 0.6872,
+        "60": 0.6769
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 0.7405027819921521,
+          "blur_sigma": 0.47913660401388714,
+          "gamma": 0.942781397939352,
+          "noise_sigma": 9.042560867537057
+        },
+        "min_psnr_db": 20.0
+      }
+    }
+  ],
+  "mitigated_vision": [
+    {
+      "sample_id": "img_deepfake_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.85,
+      "final_confidence": 0.35,
+      "score_drop": 0.5,
+      "flipped": true,
+      "queries_used": 2,
+      "flip_query": 2,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.35,
+        "10": 0.35,
+        "25": 0.35,
+        "50": 0.35,
+        "75": 0.35,
+        "100": 0.35,
+        "150": 0.35
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_deepfake_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.85,
+      "final_confidence": 0.8,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0745,
+      "l2_norm": 0.0469,
+      "psnr_db": 26.58,
+      "trajectory": {
+        "1": 0.85,
+        "10": 0.85,
+        "25": 0.85,
+        "40": 0.8,
+        "60": 0.8
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 0.8877567364763108,
+          "blur_sigma": 0.0,
+          "gamma": 1.1410440268569662,
+          "noise_sigma": 1.2729691439911743
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_manipulated_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.35,
+      "score_drop": 0.65,
+      "flipped": true,
+      "queries_used": 2,
+      "flip_query": 2,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.35,
+        "10": 0.35,
+        "25": 0.35,
+        "50": 0.35,
+        "75": 0.35,
+        "100": 0.35,
+        "150": 0.35
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_manipulated_feed",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 1.0,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 1.0,
+        "10": 1.0,
+        "25": 1.0,
+        "40": 1.0,
+        "60": 1.0
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 1.0,
+          "blur_sigma": 0.0,
+          "gamma": 1.0,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_clean_baseline",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.85,
+      "score_drop": 0.1,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0244,
+      "psnr_db": 32.26,
+      "trajectory": {
+        "1": 0.95,
+        "10": 0.85,
+        "25": 0.85,
+        "50": 0.85,
+        "75": 0.85,
+        "100": 0.85,
+        "150": 0.85
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_clean_baseline",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.8,
+      "score_drop": 0.15,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.3216,
+      "l2_norm": 0.0571,
+      "psnr_db": 24.86,
+      "trajectory": {
+        "1": 0.95,
+        "10": 0.8,
+        "25": 0.8,
+        "40": 0.8,
+        "60": 0.8
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 77,
+          "scale": 0.8360345043052375,
+          "blur_sigma": 0.5030949153965745,
+          "gamma": 0.75,
+          "noise_sigma": 0.8330295879457266
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_dim_light",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.45,
+      "score_drop": 0.5,
+      "flipped": true,
+      "queries_used": 28,
+      "flip_query": 28,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.5,
+        "10": 0.5,
+        "25": 0.5,
+        "50": 0.45,
+        "75": 0.45,
+        "100": 0.45,
+        "150": 0.45
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_dim_light",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.9,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0392,
+      "l2_norm": 0.0154,
+      "psnr_db": 36.24,
+      "trajectory": {
+        "1": 0.95,
+        "10": 0.95,
+        "25": 0.9,
+        "40": 0.9,
+        "60": 0.9
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 0.8641948721291215,
+          "blur_sigma": 0.26710500451225794,
+          "gamma": 0.9336678035158413,
+          "noise_sigma": 0.8550139917353494
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_poorly_lit",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.55,
+      "score_drop": 0.45,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0457,
+      "psnr_db": 26.81,
+      "trajectory": {
+        "1": 0.6,
+        "10": 0.6,
+        "25": 0.55,
+        "50": 0.55,
+        "75": 0.55,
+        "100": 0.55,
+        "150": 0.55
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_poorly_lit",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.9,
+      "score_drop": 0.1,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.051,
+      "l2_norm": 0.0158,
+      "psnr_db": 36.01,
+      "trajectory": {
+        "1": 1.0,
+        "10": 1.0,
+        "25": 0.95,
+        "40": 0.9,
+        "60": 0.9
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 70,
+          "scale": 0.9385783016721096,
+          "blur_sigma": 1.0197929176105567,
+          "gamma": 0.8209152186386983,
+          "noise_sigma": 3.7925978078936846
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_occluded_face",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.85,
+      "score_drop": 0.1,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0251,
+      "psnr_db": 32.0,
+      "trajectory": {
+        "1": 0.95,
+        "10": 0.9,
+        "25": 0.9,
+        "50": 0.85,
+        "75": 0.85,
+        "100": 0.85,
+        "150": 0.85
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_occluded_face",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.95,
+      "final_confidence": 0.85,
+      "score_drop": 0.1,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.1882,
+      "l2_norm": 0.0162,
+      "psnr_db": 35.79,
+      "trajectory": {
+        "1": 0.95,
+        "10": 0.85,
+        "25": 0.85,
+        "40": 0.85,
+        "60": 0.85
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 78,
+          "scale": 0.8156273243776699,
+          "blur_sigma": 0.00994010019115249,
+          "gamma": 1.0582794554877892,
+          "noise_sigma": 1.2043120736141137
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_borderline_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.85,
+      "score_drop": 0.15,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0262,
+      "psnr_db": 31.64,
+      "trajectory": {
+        "1": 1.0,
+        "10": 0.85,
+        "25": 0.85,
+        "50": 0.85,
+        "75": 0.85,
+        "100": 0.85,
+        "150": 0.85
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_borderline_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.8,
+      "score_drop": 0.2,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.2353,
+      "l2_norm": 0.0571,
+      "psnr_db": 24.86,
+      "trajectory": {
+        "1": 1.0,
+        "10": 0.8,
+        "25": 0.8,
+        "40": 0.8,
+        "60": 0.8
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 81,
+          "scale": 0.8367475566833008,
+          "blur_sigma": 1.1967836561426481,
+          "gamma": 1.2549127904742012,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "img_marginal_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.85,
+      "score_drop": 0.15,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0319,
+      "psnr_db": 29.91,
+      "trajectory": {
+        "1": 1.0,
+        "10": 0.9,
+        "25": 0.85,
+        "50": 0.85,
+        "75": 0.85,
+        "100": 0.85,
+        "150": 0.85
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "img_marginal_short",
+      "modality": "image",
+      "detector_name": "image_mobilenetv3_forensics_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 1.0,
+      "final_confidence": 0.95,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.1725,
+      "l2_norm": 0.0128,
+      "psnr_db": 37.88,
+      "trajectory": {
+        "1": 1.0,
+        "10": 0.95,
+        "25": 0.95,
+        "40": 0.95,
+        "60": 0.95
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 73,
+          "scale": 0.8571012910536928,
+          "blur_sigma": 0.047378004633041426,
+          "gamma": 1.039346393343882,
+          "noise_sigma": 2.7848733514305177
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_deepfake_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.4,
+      "score_drop": 0.35,
+      "flipped": true,
+      "queries_used": 41,
+      "flip_query": 41,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0294,
+      "psnr_db": 30.64,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.7,
+        "25": 0.6,
+        "50": 0.4,
+        "75": 0.4,
+        "100": 0.4,
+        "150": 0.4
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_deepfake_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.75,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.75,
+        "25": 0.75,
+        "40": 0.75,
+        "60": 0.75
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 1.0,
+          "blur_sigma": 0.0,
+          "gamma": 1.0,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_manipulated_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.85,
+      "final_confidence": 0.45,
+      "score_drop": 0.4,
+      "flipped": true,
+      "queries_used": 11,
+      "flip_query": 11,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0627,
+      "psnr_db": 24.05,
+      "trajectory": {
+        "1": 0.8,
+        "10": 0.5,
+        "25": 0.45,
+        "50": 0.45,
+        "75": 0.45,
+        "100": 0.45,
+        "150": 0.45
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_manipulated_feed",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.85,
+      "final_confidence": 0.45,
+      "score_drop": 0.4,
+      "flipped": true,
+      "queries_used": 52,
+      "flip_query": 52,
+      "linf_norm": 0.1412,
+      "l2_norm": 0.047,
+      "psnr_db": 26.56,
+      "trajectory": {
+        "1": 0.85,
+        "10": 0.75,
+        "25": 0.75,
+        "40": 0.75,
+        "60": 0.45
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 61,
+          "scale": 0.7345109546952198,
+          "blur_sigma": 0.07095048628359135,
+          "gamma": 0.8670065177981447,
+          "noise_sigma": 12.919562562561511
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_clean_baseline",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.7,
+      "final_confidence": 0.6,
+      "score_drop": 0.1,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0209,
+      "psnr_db": 33.59,
+      "trajectory": {
+        "1": 0.7,
+        "10": 0.6,
+        "25": 0.6,
+        "50": 0.6,
+        "75": 0.6,
+        "100": 0.6,
+        "150": 0.6
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_clean_baseline",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.7,
+      "final_confidence": 0.55,
+      "score_drop": 0.15,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.298,
+      "l2_norm": 0.0245,
+      "psnr_db": 32.2,
+      "trajectory": {
+        "1": 0.7,
+        "10": 0.6,
+        "25": 0.6,
+        "40": 0.55,
+        "60": 0.55
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 61,
+          "scale": 0.8693195838879232,
+          "blur_sigma": 0.2770624281398609,
+          "gamma": 0.8939958543875094,
+          "noise_sigma": 4.234173661886962
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_dim_light",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.8,
+      "final_confidence": 0.8,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.8,
+        "10": 0.8,
+        "25": 0.8,
+        "50": 0.8,
+        "75": 0.8,
+        "100": 0.8,
+        "150": 0.8
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_dim_light",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.8,
+      "final_confidence": 0.75,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0588,
+      "l2_norm": 0.0237,
+      "psnr_db": 32.49,
+      "trajectory": {
+        "1": 0.8,
+        "10": 0.75,
+        "25": 0.75,
+        "40": 0.75,
+        "60": 0.75
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 84,
+          "scale": 0.9384751870837897,
+          "blur_sigma": 0.47914350529065897,
+          "gamma": 0.9047773880511173,
+          "noise_sigma": 2.5525400310063517
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_poorly_lit",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.8,
+      "final_confidence": 0.75,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.0244,
+      "psnr_db": 32.26,
+      "trajectory": {
+        "1": 0.8,
+        "10": 0.75,
+        "25": 0.75,
+        "50": 0.75,
+        "75": 0.75,
+        "100": 0.75,
+        "150": 0.75
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_poorly_lit",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.8,
+      "final_confidence": 0.75,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.0275,
+      "l2_norm": 0.0093,
+      "psnr_db": 40.59,
+      "trajectory": {
+        "1": 0.8,
+        "10": 0.8,
+        "25": 0.8,
+        "40": 0.8,
+        "60": 0.75
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 80,
+          "scale": 1.0,
+          "blur_sigma": 0.3528747403643645,
+          "gamma": 0.8648925936759436,
+          "noise_sigma": 0.0
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_occluded_face",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.7,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0627,
+      "l2_norm": 0.012,
+      "psnr_db": 38.38,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.7,
+        "25": 0.7,
+        "50": 0.7,
+        "75": 0.7,
+        "100": 0.7,
+        "150": 0.7
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_occluded_face",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.55,
+      "score_drop": 0.2,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.2941,
+      "l2_norm": 0.0216,
+      "psnr_db": 33.32,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.55,
+        "25": 0.55,
+        "40": 0.55,
+        "60": 0.55
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 83,
+          "scale": 1.0,
+          "blur_sigma": 1.1029587910609373,
+          "gamma": 0.9513155847960103,
+          "noise_sigma": 5.539071331522696
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_borderline_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.75,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.75,
+        "25": 0.75,
+        "50": 0.75,
+        "75": 0.75,
+        "100": 0.75,
+        "150": 0.75
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_borderline_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.7,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.149,
+      "l2_norm": 0.0128,
+      "psnr_db": 37.83,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.7,
+        "25": 0.7,
+        "40": 0.7,
+        "60": 0.7
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 82,
+          "scale": 1.0,
+          "blur_sigma": 0.04081626290077761,
+          "gamma": 1.039970264439284,
+          "noise_sigma": 2.4462958636777197
+        },
+        "min_psnr_db": 20.0
+      }
+    },
+    {
+      "sample_id": "vid_marginal_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "square_linf",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.75,
+      "score_drop": 0.0,
+      "flipped": false,
+      "queries_used": 120,
+      "flip_query": null,
+      "linf_norm": 0.0,
+      "l2_norm": 0.0,
+      "psnr_db": 99.0,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.75,
+        "25": 0.75,
+        "50": 0.75,
+        "75": 0.75,
+        "100": 0.75,
+        "150": 0.75
+      },
+      "metadata": {
+        "eps": 0.0627,
+        "max_queries": 120
+      }
+    },
+    {
+      "sample_id": "vid_marginal_short",
+      "modality": "video",
+      "detector_name": "video_efficientnet_b0_v2_hardened",
+      "attack_method": "adaptive_transform_search",
+      "clean_confidence": 0.75,
+      "final_confidence": 0.7,
+      "score_drop": 0.05,
+      "flipped": false,
+      "queries_used": 60,
+      "flip_query": null,
+      "linf_norm": 0.149,
+      "l2_norm": 0.0172,
+      "psnr_db": 35.3,
+      "trajectory": {
+        "1": 0.75,
+        "10": 0.7,
+        "25": 0.7,
+        "40": 0.7,
+        "60": 0.7
+      },
+      "metadata": {
+        "best_params": {
+          "jpeg_quality": 95,
+          "scale": 1.0,
+          "blur_sigma": 0.47989126939386084,
+          "gamma": 0.9231407431988645,
+          "noise_sigma": 1.9570285277979744
+        },
+        "min_psnr_db": 20.0
+      }
+    }
+  ],
+  "baseline_text": [
+    {
+      "sample_id": "txt_ai_cyber_01",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Organizations frequently implement layered authentication controls to mitigate unauthorized network access. Furthermore, continuous monitoring frameworks demonstrate consistent improvements in threat detection accuracy across distributed environments. Additionally, security teams must evaluate configuration baselines routinely to maintain strict compliance posture. Therefore, adopting automated verification pipelines remains essential for safeguarding critical infrastructure systems. Consequently, consistent audit procedures facilitate rapid incident response and strengthen overall resilience across modern enterprise deployments.",
+      "best_text": "Look closer. Organizations frequently implement layered authentication controls to curb unauthorized network access. Besides, continuous monitoring frameworks demonstrate steady improvements in threat detection accuracy across distributed environments \u2014and security teams must evaluate configuration baselines routinely to maintain strict compliance posture. For that reason, adopting automated verification pipelines remains essential for safeguarding critical infrastructure systems. As a result, stable audit procedures facilitate rapid incident response and strengthen overall resilience across modern enterprise deployments.",
+      "clean_confidence": 0.5806,
+      "final_confidence": 0.2893,
+      "score_drop": 0.2913,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8516,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_policy_02",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Comprehensive regulatory frameworks play an essential role in ensuring accountable artificial intelligence deployment across public sectors. Moreover, transparent documentation standards enable independent auditors to evaluate algorithmic fairness and operational reliability consistently. Furthermore, policymakers should balance innovation incentives with clear safeguards against synthetic misinformation risks. Therefore, cross-sector collaboration remains essential to establish durable governance norms. Consequently, standardized compliance reporting demonstrates measurable progress toward trustworthy digital ecosystems.",
+      "best_text": "Simply put, Comprehensive regulatory frameworks play an essential role in ensuring accountable artificial intelligence deployment across public sectors. Plus, transparent documentation standards enable independent auditors to assess algorithmic fairness and operational reliability consistently \u2014and policymakers should balance innovation incentives with clear safeguards against synthetic misinformation risks. For that reason, cross-sector collaboration remains essential to establish durable governance norms. For that reason, standardized compliance reporting demonstrates measurable progress toward trustworthy digital ecosystems.",
+      "clean_confidence": 0.5623,
+      "final_confidence": 0.4791,
+      "score_drop": 0.0832,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8869,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_finance_03",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Modern financial institutions utilize predictive risk modeling to evaluate portfolio exposure under shifting macroeconomic conditions. Additionally, automated compliance monitoring demonstrates significant efficiency gains compared to manual transaction review workflows. However, legacy settlement architectures frequently create operational bottlenecks during peak clearing windows. Therefore, engineering leaders prioritize modular ledger upgrades while maintaining strict auditability controls. Consequently, balanced capital allocation depends on accurate forecasting and disciplined governance.",
+      "best_text": "Simply put, Modern financial institutions utilize predictive risk modeling to evaluate portfolio exposure under shifting macroeconomic conditions; meanwhile, automated compliance monitoring highlights notable efficiency gains compared to manual transaction review workflows. Yet, legacy settlement architectures time and again create operational bottlenecks during peak clearing windows. Therefore, engineering leaders prioritize modular ledger upgrades while maintaining strict auditability controls. For that reason, balanced capital allocation depends on accurate forecasting and disciplined governance.",
+      "clean_confidence": 0.5787,
+      "final_confidence": 0.3394,
+      "score_drop": 0.2393,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8507,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_health_04",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Clinical decision support platforms demonstrate promising accuracy when assisting radiologists with early anomaly screening. Furthermore, standardized data pipelines facilitate consistent model validation across diverse hospital populations. However, practitioners must evaluate algorithmic uncertainty carefully before integrating automated alerts into critical care pathways. Additionally, strict privacy safeguards protect patient records throughout model training and inference cycles. Therefore, rigorous clinical trials remain essential for trustworthy medical adoption.",
+      "best_text": "Here is the catch: Clinical decision support platforms demonstrate promising accuracy when assisting radiologists with early anomaly screening \u2014and even so, standardized data pipelines facilitate aligned model validation across diverse hospital populations. However, practitioners must test algorithmic uncertainty carefully before integrating automated alerts into critical care pathways. Additionally, strict privacy safeguards protect patient records throughout model training and inference cycles. Therefore, rigorous clinical trials remain essential for trustworthy medical adoption.",
+      "clean_confidence": 0.5735,
+      "final_confidence": 0.3235,
+      "score_drop": 0.25,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.9088,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_edu_05",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Adaptive learning platforms utilize formative assessment metrics to personalize instructional pacing for individual students. Moreover, structured feedback loops demonstrate measurable improvements in conceptual retention across STEM curricula. Nevertheless, educators frequently emphasize that digital tools supplement rather than replace collaborative classroom discussion. Therefore, academic institutions evaluate software vendors carefully to ensure equitable accessibility across districts. Consequently, thoughtful integration strategies enhance instructional outcomes without overwhelming faculty workloads.",
+      "best_text": "Why does that matter? Adaptive learning platforms rely on formative assessment metrics to personalize instructional pacing for individual students. What matters too, structured feedback loops demonstrate measurable improvements in conceptual retention across STEM curricula; meanwhile, nevertheless, educators regularly emphasize that digital tools supplement rather than replace collaborative classroom discussion. Therefore, academic institutions weigh software vendors carefully to ensure equitable accessibility across districts. Consequently, thoughtful integration strategies enhance instructional outcomes without overwhelming faculty workloads.",
+      "clean_confidence": 0.6052,
+      "final_confidence": 0.2823,
+      "score_drop": 0.3229,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8752,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_climate_06",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Grid operators increasingly utilize real-time telemetry analytics to balance renewable generation across regional transmission networks. Furthermore, utility-scale battery storage systems mitigate frequency volatility during rapid cloud-cover transitions. Additionally, standardized interconnection protocols facilitate smoother integration of distributed solar installations. However, aging substation transformers frequently constrain peak transfer capacity along rural corridors. Therefore, coordinated infrastructure investment remains essential for reliable decarbonization targets.",
+      "best_text": "Simply put, Grid operators increasingly utilize real-time telemetry analytics to balance renewable generation across regional transmission networks; meanwhile, utility-scale battery storage systems mitigate frequency volatility during rapid cloud-cover transitions. Also, standardized interconnection protocols help smoother integration of distributed solar installations. Yet, aging substation transformers time and again constrain peak transfer capacity along rural corridors. Therefore, coordinated infrastructure investment remains critical for reliable decarbonization targets.",
+      "clean_confidence": 0.5428,
+      "final_confidence": 0.2945,
+      "score_drop": 0.2483,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8734,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_supply_07",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Global manufacturing networks utilize multi-tier inventory tracking to mitigate sudden component shortages across regional hubs. Additionally, predictive demand forecasting demonstrates substantial cost reductions compared to static buffer stocking policies. Furthermore, automated port scheduling systems facilitate faster container turnaround during seasonal volume surges. However, fragmented carrier data standards frequently complicate end-to-end shipment visibility across borders. Therefore, harmonized electronic manifests remain essential for resilient supply chains.",
+      "best_text": "Simply put, Global manufacturing networks utilize multi-tier inventory tracking to mitigate sudden component shortages across regional hubs. Additionally, predictive demand forecasting highlights major cost reductions compared to static buffer stocking policies. Besides, automated port scheduling systems support faster container turnaround during seasonal volume surges, while fragmented carrier data standards time and again complicate end-to-end shipment visibility across borders. Therefore, harmonized electronic manifests remain central for resilient supply chains.",
+      "clean_confidence": 0.5769,
+      "final_confidence": 0.3726,
+      "score_drop": 0.2043,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8446,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_legal_08",
+      "detector_name": "text_forensics_local_v2",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Digital provenance verification establishes verifiable cryptographic custody from sensor capture through courtroom presentation. Moreover, continuous hash chaining demonstrates immediate tamper sensitivity whenever intermediate video frames undergo alteration. Additionally, automated metadata inspection flags stripped camera signatures and anomalous encoding histories reliably. Nevertheless, forensic analysts evaluate multiple independent detectors before issuing formal evidentiary findings. Consequently, transparent audit trails enhance judicial confidence in synthetic media attribution.",
+      "best_text": "Why does that matter? Digital provenance verification establishes verifiable cryptographic custody from sensor capture through courtroom presentation; meanwhile, continuous hash chaining demonstrates immediate tamper sensitivity whenever intermediate video frames undergo alteration. Additionally, automated metadata inspection flags stripped camera signatures and anomalous encoding histories reliably. Nevertheless, forensic analysts test multiple independent detectors before issuing formal evidentiary findings. So, transparent audit trails boost judicial confidence in synthetic media attribution.",
+      "clean_confidence": 0.5915,
+      "final_confidence": 0.2782,
+      "score_drop": 0.3133,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8959,
+      "turns_logged": 2
+    }
+  ],
+  "mitigated_text": [
+    {
+      "sample_id": "txt_ai_cyber_01",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Organizations frequently implement layered authentication controls to mitigate unauthorized network access. Furthermore, continuous monitoring frameworks demonstrate consistent improvements in threat detection accuracy across distributed environments. Additionally, security teams must evaluate configuration baselines routinely to maintain strict compliance posture. Therefore, adopting automated verification pipelines remains essential for safeguarding critical infrastructure systems. Consequently, consistent audit procedures facilitate rapid incident response and strengthen overall resilience across modern enterprise deployments.",
+      "best_text": "From day to day, Companies frequently adopt layered authentication controls to mitigate unauthorized network access. Still, continuous monitoring frameworks demonstrate consistent improvements in threat detection accuracy across distributed environments, while security teams must evaluate configuration baselines routinely to maintain strict compliance posture. Therefore, adopting automated verification pipelines remains essential for safeguarding critical infrastructure systems. Consequently, steady audit procedures support rapid incident response and strengthen overall resilience across modern enterprise deployments.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.5,
+      "score_drop": 0.1,
+      "flipped": false,
+      "turns_used": 6,
+      "flip_turn": null,
+      "best_similarity": 0.8874,
+      "turns_logged": 7
+    },
+    {
+      "sample_id": "txt_ai_policy_02",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Comprehensive regulatory frameworks play an essential role in ensuring accountable artificial intelligence deployment across public sectors. Moreover, transparent documentation standards enable independent auditors to evaluate algorithmic fairness and operational reliability consistently. Furthermore, policymakers should balance innovation incentives with clear safeguards against synthetic misinformation risks. Therefore, cross-sector collaboration remains essential to establish durable governance norms. Consequently, standardized compliance reporting demonstrates measurable progress toward trustworthy digital ecosystems.",
+      "best_text": "Simply put, Comprehensive regulatory frameworks play an essential role in ensuring accountable artificial intelligence deployment across public sectors. Plus, transparent documentation standards enable independent auditors to assess algorithmic fairness and operational reliability consistently \u2014and policymakers should balance innovation incentives with clear safeguards against synthetic misinformation risks. For that reason, cross-sector collaboration remains essential to establish durable governance norms. For that reason, standardized compliance reporting demonstrates measurable progress toward trustworthy digital ecosystems.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.5,
+      "score_drop": 0.1,
+      "flipped": false,
+      "turns_used": 6,
+      "flip_turn": null,
+      "best_similarity": 0.8869,
+      "turns_logged": 7
+    },
+    {
+      "sample_id": "txt_ai_finance_03",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Modern financial institutions utilize predictive risk modeling to evaluate portfolio exposure under shifting macroeconomic conditions. Additionally, automated compliance monitoring demonstrates significant efficiency gains compared to manual transaction review workflows. However, legacy settlement architectures frequently create operational bottlenecks during peak clearing windows. Therefore, engineering leaders prioritize modular ledger upgrades while maintaining strict auditability controls. Consequently, balanced capital allocation depends on accurate forecasting and disciplined governance.",
+      "best_text": "Simply put, Modern financial institutions utilize predictive risk modeling to evaluate portfolio exposure under shifting macroeconomic conditions; meanwhile, automated compliance monitoring highlights notable efficiency gains compared to manual transaction review workflows. Yet, legacy settlement architectures time and again create operational bottlenecks during peak clearing windows. Therefore, engineering leaders prioritize modular ledger upgrades while maintaining strict auditability controls. For that reason, balanced capital allocation depends on accurate forecasting and disciplined governance.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.5,
+      "score_drop": 0.1,
+      "flipped": false,
+      "turns_used": 6,
+      "flip_turn": null,
+      "best_similarity": 0.8507,
+      "turns_logged": 7
+    },
+    {
+      "sample_id": "txt_ai_health_04",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Clinical decision support platforms demonstrate promising accuracy when assisting radiologists with early anomaly screening. Furthermore, standardized data pipelines facilitate consistent model validation across diverse hospital populations. However, practitioners must evaluate algorithmic uncertainty carefully before integrating automated alerts into critical care pathways. Additionally, strict privacy safeguards protect patient records throughout model training and inference cycles. Therefore, rigorous clinical trials remain essential for trustworthy medical adoption.",
+      "best_text": "Here is the catch: Clinical decision support platforms demonstrate promising accuracy when assisting radiologists with early anomaly screening \u2014and even so, standardized data pipelines facilitate aligned model validation across diverse hospital populations. However, practitioners must test algorithmic uncertainty carefully before integrating automated alerts into critical care pathways. Additionally, strict privacy safeguards protect patient records throughout model training and inference cycles. Therefore, rigorous clinical trials remain essential for trustworthy medical adoption.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.45,
+      "score_drop": 0.15,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.9088,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_edu_05",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Adaptive learning platforms utilize formative assessment metrics to personalize instructional pacing for individual students. Moreover, structured feedback loops demonstrate measurable improvements in conceptual retention across STEM curricula. Nevertheless, educators frequently emphasize that digital tools supplement rather than replace collaborative classroom discussion. Therefore, academic institutions evaluate software vendors carefully to ensure equitable accessibility across districts. Consequently, thoughtful integration strategies enhance instructional outcomes without overwhelming faculty workloads.",
+      "best_text": "Why does that matter? Adaptive learning platforms rely on formative assessment metrics to personalize instructional pacing for individual students. What matters too, structured feedback loops demonstrate measurable improvements in conceptual retention across STEM curricula; meanwhile, nevertheless, educators regularly emphasize that digital tools supplement rather than replace collaborative classroom discussion. Therefore, academic institutions weigh software vendors carefully to ensure equitable accessibility across districts. Consequently, thoughtful integration strategies enhance instructional outcomes without overwhelming faculty workloads.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.4,
+      "score_drop": 0.2,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8752,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_climate_06",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Grid operators increasingly utilize real-time telemetry analytics to balance renewable generation across regional transmission networks. Furthermore, utility-scale battery storage systems mitigate frequency volatility during rapid cloud-cover transitions. Additionally, standardized interconnection protocols facilitate smoother integration of distributed solar installations. However, aging substation transformers frequently constrain peak transfer capacity along rural corridors. Therefore, coordinated infrastructure investment remains essential for reliable decarbonization targets.",
+      "best_text": "Simply put, Grid operators increasingly utilize real-time telemetry analytics to balance renewable generation across regional transmission networks; meanwhile, utility-scale battery storage systems mitigate frequency volatility during rapid cloud-cover transitions. Also, standardized interconnection protocols help smoother integration of distributed solar installations. Yet, aging substation transformers time and again constrain peak transfer capacity along rural corridors. Therefore, coordinated infrastructure investment remains critical for reliable decarbonization targets.",
+      "clean_confidence": 0.55,
+      "final_confidence": 0.45,
+      "score_drop": 0.1,
+      "flipped": true,
+      "turns_used": 1,
+      "flip_turn": 1,
+      "best_similarity": 0.8734,
+      "turns_logged": 2
+    },
+    {
+      "sample_id": "txt_ai_supply_07",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Global manufacturing networks utilize multi-tier inventory tracking to mitigate sudden component shortages across regional hubs. Additionally, predictive demand forecasting demonstrates substantial cost reductions compared to static buffer stocking policies. Furthermore, automated port scheduling systems facilitate faster container turnaround during seasonal volume surges. However, fragmented carrier data standards frequently complicate end-to-end shipment visibility across borders. Therefore, harmonized electronic manifests remain essential for resilient supply chains.",
+      "best_text": "Simply put, Global manufacturing networks utilize multi-tier inventory tracking to mitigate sudden component shortages across regional hubs. Additionally, predictive demand forecasting highlights major cost reductions compared to static buffer stocking policies. Besides, automated port scheduling systems support faster container turnaround during seasonal volume surges, while fragmented carrier data standards time and again complicate end-to-end shipment visibility across borders. Therefore, harmonized electronic manifests remain central for resilient supply chains.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.5,
+      "score_drop": 0.1,
+      "flipped": false,
+      "turns_used": 6,
+      "flip_turn": null,
+      "best_similarity": 0.8446,
+      "turns_logged": 7
+    },
+    {
+      "sample_id": "txt_ai_legal_08",
+      "detector_name": "text_forensics_local_v2_hardened",
+      "rewriter_name": "adaptive_feedback_paraphraser_v2",
+      "clean_text": "Digital provenance verification establishes verifiable cryptographic custody from sensor capture through courtroom presentation. Moreover, continuous hash chaining demonstrates immediate tamper sensitivity whenever intermediate video frames undergo alteration. Additionally, automated metadata inspection flags stripped camera signatures and anomalous encoding histories reliably. Nevertheless, forensic analysts evaluate multiple independent detectors before issuing formal evidentiary findings. Consequently, transparent audit trails enhance judicial confidence in synthetic media attribution.",
+      "best_text": "Why does that matter? Digital provenance verification establishes verifiable cryptographic custody from sensor capture through courtroom presentation; meanwhile. Continuous hash chaining reveals immediate tamper sensitivity whenever intermediate video frames undergo alteration. What is more, automated metadata inspection flags stripped camera signatures and anomalous encoding histories reliably; meanwhile, nevertheless, forensic analysts test multiple independent detectors before issuing formal evidentiary findings. So, transparent audit trails boost judicial confidence in synthetic media attribution.",
+      "clean_confidence": 0.6,
+      "final_confidence": 0.4,
+      "score_drop": 0.2,
+      "flipped": true,
+      "turns_used": 3,
+      "flip_turn": 3,
+      "best_similarity": 0.8403,
+      "turns_logged": 4
+    }
+  ]
+}

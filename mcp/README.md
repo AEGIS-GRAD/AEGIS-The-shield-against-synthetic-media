@@ -363,8 +363,20 @@ SIEM Alert Tier:     P1_CRITICAL
 
 ## Testing
 
-Run the comprehensive test suite covering schema validation, edge cases, precedence rules, and end-to-end client sessions:
+Run the comprehensive test suite covering schema validation, edge cases, precedence rules, security hardening, and end-to-end client sessions:
 
 ```bash
-pytest mcp/tests/ -v
+pytest mcp/tests/test_arbitrate_evidence.py mcp/tests/test_capabilities.py mcp/tests/test_pipeline_tools.py mcp/tests/test_mcp_security_hardening.py -v
+```
+
+---
+
+## Security Hardening & Threat Model (Week 11 Task 1)
+
+* **`mcp/mcp_security.py`**: Enforces bearer-token authentication (`AEGIS_MCP_REQUIRE_AUTH=1`), least-privilege RBAC scopes per tool, sliding-window rate limiting (`AEGIS_MCP_RATE_LIMIT_PER_MIN`), confused-deputy tenant isolation on `get_report`, SSRF/URL and path-traversal blocking (`AEGIS_MCP_ALLOWED_ROOTS`), inbound/outbound indirect prompt-injection scrubbing, and per-call tamper-evident audit logging into `UnifiedEvidenceVault`.
+* **`docs/mcp_threat_model_and_pentest.md`**: Short MCP threat model & pen-test findings covering confused-deputy attacks, indirect prompt injection through tool results, SSRF via URL inputs, and rate-limit exhaustion.
+* **Run automated penetration test harness:**
+
+```bash
+python mcp/pen_test_mcp.py
 ```
