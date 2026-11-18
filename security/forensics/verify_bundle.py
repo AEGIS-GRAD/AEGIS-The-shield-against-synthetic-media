@@ -27,7 +27,7 @@ import os
 from pathlib import Path
 import sys
 import zipfile
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 DEFAULT_SIGNING_KEY = b"aegis_surveillance_node_secret_key_v1"
 
@@ -50,10 +50,19 @@ def _read_bundle_files(target: Path) -> Dict[str, bytes]:
     return files
 
 
-def verify_bundle(target: Path | str, signing_key: bytes = DEFAULT_SIGNING_KEY) -> Tuple[bool, str]:
+def verify_bundle(
+    target: Path | str,
+    signing_key: bytes = DEFAULT_SIGNING_KEY,
+    trusted_keys_path: Optional[str] = None,
+    tsa_cert_paths: Optional[list] = None,
+) -> Tuple[bool, str]:
     """
     Runs full offline cryptographic verification on a signed evidence bundle.
     Returns (is_valid, human_readable_report).
+
+    With ``trusted_keys_path`` (the published public keyring) the bundle must also
+    carry a valid Ed25519 seal; with ``tsa_cert_paths`` its RFC 3161 timestamp must
+    chain to a trusted TSA and agree with the record's claimed creation time.
     """
     target_path = Path(target)
     try:
@@ -160,6 +169,16 @@ def verify_bundle(target: Path | str, signing_key: bytes = DEFAULT_SIGNING_KEY) 
     cal_ver = evidence.get("calibration_version", "N/A")
     model_vers = evidence.get("model_versions", {})
 
+    # 4. Ed25519 seal + RFC 3161 trusted timestamp (authenticity). Only enforced when
+    # the verifier supplies the published public keyring; the HMAC checks above use a
+    # shared secret and cannot, on their own, prove who produced the bundle.
+    seal_line = "       Seal:                not checked (no --trusted-keys given; HMAC integrity only)"
+    if trusted_keys_path:
+        ok_seal, seal_msg = _verify_seal(files, record_id, stored_rec_hash, ts, trusted_keys_path, tsa_cert_paths)
+        if not ok_seal:
+            return False, f"[FAIL] {seal_msg}"
+        seal_line = f"       Seal:                {seal_msg}"
+
     summary = (
         f"[PASS] Offline cryptographic verification SUCCEEDED!\n"
         f"       Record ID:           {record_id}\n"
@@ -169,9 +188,46 @@ def verify_bundle(target: Path | str, signing_key: bytes = DEFAULT_SIGNING_KEY) 
         f"       Calibration Version: {cal_ver}\n"
         f"       Model Versions:      {json.dumps(model_vers)}\n"
         f"       Record Hash:         {stored_rec_hash}\n"
-        f"       Files Verified:      {len(listed_files)}"
+        f"       Files Verified:      {len(listed_files)}\n"
+        f"{seal_line}"
     )
     return True, summary
+
+
+def _verify_seal(files: Dict[str, bytes], record_id: str, record_hash: str, claimed_time: str,
+                 trusted_keys_path: str, tsa_cert_paths) -> Tuple[bool, str]:
+    """Verifies seal.json against a pinned public keyring (needs the `cryptography`
+    and `asn1crypto` packages; the rest of this script is stdlib-only)."""
+    if "seal.json" not in files:
+        return False, "Bundle is not sealed (seal.json missing) but a trusted keyring was supplied."
+    try:
+        import sys as _sys
+        _here = Path(__file__).resolve().parent
+        for _p in (_here.parent.parent, _here.parent):
+            if str(_p) not in _sys.path:
+                _sys.path.insert(0, str(_p))
+        try:
+            from security.forensics.keyring import TrustedKeys
+            from security.forensics.sealing import verify_record_seal
+            from security.forensics.timestamping import load_trusted_tsa_certs
+        except ImportError:
+            from forensics.keyring import TrustedKeys  # type: ignore
+            from forensics.sealing import verify_record_seal  # type: ignore
+            from forensics.timestamping import load_trusted_tsa_certs  # type: ignore
+    except Exception as exc:
+        return False, f"Seal verification needs the AEGIS forensics package: {exc}"
+
+    doc = json.loads(files["seal.json"].decode("utf-8"))
+    if doc.get("record_id") != record_id or doc.get("record_hash") != record_hash:
+        return False, "seal.json belongs to a different record (possible replay / substitution)."
+    trusted = TrustedKeys.load(trusted_keys_path)
+    tsa_trust = load_trusted_tsa_certs(tsa_cert_paths) if tsa_cert_paths else None
+    chk = verify_record_seal(doc.get("seal"), record_id, record_hash, trusted, tsa_trust=tsa_trust,
+                             require_timestamp=bool(tsa_trust), claimed_time=claimed_time)
+    if not chk.ok:
+        return False, f"Seal verification FAILED: {chk.reason}"
+    when = f", trusted time {chk.tsa_time.isoformat()}" if chk.tsa_time and chk.tsa_trusted else ""
+    return True, f"Ed25519 key {chk.kid} (node {chk.node_id}){when}"
 
 
 def main() -> int:
@@ -182,12 +238,17 @@ def main() -> int:
         default="AEGIS_VAULT_SIGNING_KEY",
         help="Environment variable containing custom HMAC signing key (optional)",
     )
+    parser.add_argument("--trusted-keys", default=None,
+                        help="Published AEGIS public keyring (trusted_keys.json); requires a valid Ed25519 seal")
+    parser.add_argument("--tsa-cert", action="append", default=None,
+                        help="Trusted TSA certificate or issuing CA (PEM/DER); repeatable")
     args = parser.parse_args()
 
     env_key = os.environ.get(args.key_env)
     key_bytes = env_key.encode("utf-8") if env_key else DEFAULT_SIGNING_KEY
 
-    ok, msg = verify_bundle(args.bundle, signing_key=key_bytes)
+    ok, msg = verify_bundle(args.bundle, signing_key=key_bytes,
+                            trusted_keys_path=args.trusted_keys, tsa_cert_paths=args.tsa_cert)
     print(msg)
     return 0 if ok else 1
 
