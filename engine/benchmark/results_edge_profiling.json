@@ -1,0 +1,241 @@
+{
+  "hardware_mode": "[EMULATION - EDGE CAPPED]",
+  "is_emulation": true,
+  "timestamp": "2026-11-21T16:33:50Z",
+  "batching_experiments": {},
+  "configurations": {
+    "MobileNetV3 FP32 (Baseline)": {
+      "batch_profiling": [
+        {
+          "batch_size": 1,
+          "p50_ms": 11.51,
+          "p90_ms": 15.32,
+          "p95_ms": 16.31,
+          "mean_ms": 12.3,
+          "throughput_fps": 81.3,
+          "latency_per_frame_ms": 12.3
+        },
+        {
+          "batch_size": 2,
+          "p50_ms": 21.47,
+          "p90_ms": 39.68,
+          "p95_ms": 53.14,
+          "mean_ms": 26.21,
+          "throughput_fps": 76.3,
+          "latency_per_frame_ms": 13.11
+        },
+        {
+          "batch_size": 4,
+          "p50_ms": 55.06,
+          "p90_ms": 107.13,
+          "p95_ms": 128.94,
+          "mean_ms": 66.42,
+          "throughput_fps": 60.2,
+          "latency_per_frame_ms": 16.61
+        },
+        {
+          "batch_size": 8,
+          "p50_ms": 104.2,
+          "p90_ms": 130.54,
+          "p95_ms": 144.4,
+          "mean_ms": 108.26,
+          "throughput_fps": 73.9,
+          "latency_per_frame_ms": 13.53
+        },
+        {
+          "batch_size": 16,
+          "p50_ms": 218.36,
+          "p90_ms": 266.05,
+          "p95_ms": 290.28,
+          "mean_ms": 225.94,
+          "throughput_fps": 70.8,
+          "latency_per_frame_ms": 14.12
+        }
+      ],
+      "pipeline_profiling": {
+        "window_size": 16,
+        "stride": 8,
+        "stride_budget_ms": 266.67,
+        "mean_window_latency_ms": 340.64,
+        "p50_window_latency_ms": 275.97,
+        "p90_window_latency_ms": 360.04,
+        "p95_window_latency_ms": 388.88,
+        "spatial_mean_ms": 213.87,
+        "rppg_mean_ms": 126.76,
+        "realtime_ratio": 1.2774,
+        "realtime_pass": false,
+        "peak_ram_mb": 281.88
+      },
+      "accuracy_eer": 0.052
+    },
+    "MobileNetV3 INT8 (Quantized)": {
+      "batch_profiling": [
+        {
+          "batch_size": 1,
+          "p50_ms": 13.92,
+          "p90_ms": 19.43,
+          "p95_ms": 19.7,
+          "mean_ms": 15.3,
+          "throughput_fps": 65.4,
+          "latency_per_frame_ms": 15.3
+        },
+        {
+          "batch_size": 2,
+          "p50_ms": 30.0,
+          "p90_ms": 41.46,
+          "p95_ms": 42.6,
+          "mean_ms": 31.92,
+          "throughput_fps": 62.7,
+          "latency_per_frame_ms": 15.96
+        },
+        {
+          "batch_size": 4,
+          "p50_ms": 53.52,
+          "p90_ms": 73.39,
+          "p95_ms": 75.52,
+          "mean_ms": 58.02,
+          "throughput_fps": 68.9,
+          "latency_per_frame_ms": 14.51
+        },
+        {
+          "batch_size": 8,
+          "p50_ms": 146.76,
+          "p90_ms": 190.21,
+          "p95_ms": 211.45,
+          "mean_ms": 151.67,
+          "throughput_fps": 52.7,
+          "latency_per_frame_ms": 18.96
+        },
+        {
+          "batch_size": 16,
+          "p50_ms": 258.27,
+          "p90_ms": 322.18,
+          "p95_ms": 329.14,
+          "mean_ms": 263.93,
+          "throughput_fps": 60.6,
+          "latency_per_frame_ms": 16.5
+        }
+      ],
+      "pipeline_profiling": {
+        "window_size": 16,
+        "stride": 8,
+        "stride_budget_ms": 266.67,
+        "mean_window_latency_ms": 373.52,
+        "p50_window_latency_ms": 346.15,
+        "p90_window_latency_ms": 468.85,
+        "p95_window_latency_ms": 541.41,
+        "spatial_mean_ms": 296.43,
+        "rppg_mean_ms": 77.09,
+        "realtime_ratio": 1.4007,
+        "realtime_pass": false,
+        "peak_ram_mb": 294.81
+      },
+      "accuracy_eer": 0.055
+    },
+    "MobileNetV3 INT8 + Kernel Fusion (Optimized)": {
+      "batch_profiling": [
+        {
+          "batch_size": 1,
+          "p50_ms": 5.77,
+          "p90_ms": 8.4,
+          "p95_ms": 9.76,
+          "mean_ms": 6.18,
+          "throughput_fps": 161.7,
+          "latency_per_frame_ms": 6.18
+        },
+        {
+          "batch_size": 2,
+          "p50_ms": 11.62,
+          "p90_ms": 14.76,
+          "p95_ms": 14.84,
+          "mean_ms": 11.67,
+          "throughput_fps": 171.4,
+          "latency_per_frame_ms": 5.84
+        },
+        {
+          "batch_size": 4,
+          "p50_ms": 21.14,
+          "p90_ms": 28.13,
+          "p95_ms": 33.28,
+          "mean_ms": 22.63,
+          "throughput_fps": 176.7,
+          "latency_per_frame_ms": 5.66
+        },
+        {
+          "batch_size": 8,
+          "p50_ms": 37.45,
+          "p90_ms": 51.27,
+          "p95_ms": 56.35,
+          "mean_ms": 39.94,
+          "throughput_fps": 200.3,
+          "latency_per_frame_ms": 4.99
+        },
+        {
+          "batch_size": 16,
+          "p50_ms": 89.25,
+          "p90_ms": 112.26,
+          "p95_ms": 120.51,
+          "mean_ms": 92.74,
+          "throughput_fps": 172.5,
+          "latency_per_frame_ms": 5.8
+        }
+      ],
+      "pipeline_profiling": {
+        "window_size": 16,
+        "stride": 8,
+        "stride_budget_ms": 266.67,
+        "mean_window_latency_ms": 217.34,
+        "p50_window_latency_ms": 195.25,
+        "p90_window_latency_ms": 296.96,
+        "p95_window_latency_ms": 322.79,
+        "spatial_mean_ms": 130.02,
+        "rppg_mean_ms": 87.31,
+        "realtime_ratio": 0.815,
+        "realtime_pass": true,
+        "peak_ram_mb": 291.0
+      },
+      "accuracy_eer": 0.055
+    }
+  },
+  "pareto_table": [
+    {
+      "configuration": "MobileNetV3 FP32 (Baseline)",
+      "precision": "FP32",
+      "kernel_fusion": "Disabled",
+      "latency_b1_ms": 12.3,
+      "window_16f_ms": 340.64,
+      "realtime_ratio": 1.2774,
+      "throughput_b16_fps": 70.8,
+      "peak_ram_mb": 281.88,
+      "eer": 0.052,
+      "status": "FAIL",
+      "emulation_tag": "[EMULATION - EDGE CAPPED]"
+    },
+    {
+      "configuration": "MobileNetV3 INT8 (Quantized)",
+      "precision": "INT8",
+      "kernel_fusion": "Disabled",
+      "latency_b1_ms": 15.3,
+      "window_16f_ms": 373.52,
+      "realtime_ratio": 1.4007,
+      "throughput_b16_fps": 60.6,
+      "peak_ram_mb": 294.81,
+      "eer": 0.055,
+      "status": "FAIL",
+      "emulation_tag": "[EMULATION - EDGE CAPPED]"
+    },
+    {
+      "configuration": "MobileNetV3 INT8 + Kernel Fusion (Optimized)",
+      "precision": "INT8",
+      "kernel_fusion": "Enabled",
+      "latency_b1_ms": 6.18,
+      "window_16f_ms": 217.34,
+      "realtime_ratio": 0.815,
+      "throughput_b16_fps": 172.5,
+      "peak_ram_mb": 291.0,
+      "eer": 0.055,
+      "status": "PASS (RTR <= 1.0)",
+      "emulation_tag": "[EMULATION - EDGE CAPPED]"
+    }
+  ]
+}

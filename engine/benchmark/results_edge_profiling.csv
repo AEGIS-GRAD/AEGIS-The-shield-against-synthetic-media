@@ -1,0 +1,4 @@
+configuration,precision,kernel_fusion,latency_b1_ms,window_16f_ms,realtime_ratio,throughput_b16_fps,peak_ram_mb,eer,status,emulation_tag
+MobileNetV3 FP32 (Baseline),FP32,Disabled,12.3,340.64,1.2774,70.8,281.88,0.052,FAIL,[EMULATION - EDGE CAPPED]
+MobileNetV3 INT8 (Quantized),INT8,Disabled,15.3,373.52,1.4007,60.6,294.81,0.055,FAIL,[EMULATION - EDGE CAPPED]
+MobileNetV3 INT8 + Kernel Fusion (Optimized),INT8,Enabled,6.18,217.34,0.815,172.5,291.0,0.055,PASS (RTR <= 1.0),[EMULATION - EDGE CAPPED]
