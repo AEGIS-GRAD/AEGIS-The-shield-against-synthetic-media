@@ -1,54 +1,86 @@
 # AEGIS Red-Team Poisoning Log (Judge & Planner)
 
-- **Total Attack Scenarios:** 30
-- **Unmitigated Baseline Attack Success Rate (ASR):** **93.3%** (28/30)
-- **Mitigated System Attack Success Rate (ASR):** **0.0%** (0/30)
+- **Total Attack Scenarios:** 56
+- **Oversight Cases Evaluated:** 44
+- **Simple Weighted Averaging Flip Rate:** **84.1%** (37/44)
+- **LLM Judge Flip Rate:** **79.5%** (35/44)
+- **Deterministic Judge Flip Rate:** **0.0%** (0/44)
+- **Unmitigated Baseline Attack Success Rate (ASR):** **82.1%** (46/56)
+- **Mitigated System Attack Success Rate (ASR):** **0.0%** (0/56)
 - **Benign Control Preservation:** 4/4 controls preserved without collateral degradation
 
 ## 1. Attack Category Summary
 
-| Category | Scenarios | Baseline ASR | Mitigated ASR | Primary Cheap Mitigation |
-|---|---:|---:|---:|---|
-| `miscalibrated_overconfidence` | 6 | 100.0% | 0.0% | Raw-score calibration mismatch penalty + confidence/weight caps |
-| `rogue_outlier_injection` | 6 | 66.7% | 0.0% | Leave-one-out statistical outlier rejection + pre-rule Precedence isolation |
-| `spoofed_corroboration_and_flag_poisoning` | 6 | 100.0% | 0.0% | Cross-modal corroboration quorum + objective metadata cross-checks |
-| `manifest_reliability_feedback_poisoning` | 6 | 100.0% | 0.0% | Primary-Authority Quorum (rPPG secondary proxy cannot excuse primary skip) |
-| `adversarial_media_and_telemetry_cost_poisoning` | 6 | 100.0% | 0.0% | Telemetry latency spike clamping (2x baseline) + decisive detector guarantee |
+| Category | Cases | Baseline ASR | Mitigated ASR | Weighted Flips (%) | LLM Flips (%) | Det Flips (%) | Primary Mitigation |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `miscalibrated_overconfidence` | 8 | 75.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `rogue_outlier_injection` | 10 | 80.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `spoofed_corroboration_and_flag_poisoning` | 10 | 80.0% | 0.0% | 30.0% | 10.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `cybersecurity_task2_perturbations` | 8 | 50.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `compound_hard_negatives` | 8 | 100.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `manifest_reliability_feedback_poisoning` | 6 | 100.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
+| `adversarial_media_and_telemetry_cost_poisoning` | 6 | 100.0% | 0.0% | 100.0% | 100.0% | 0.0% | Structural Precedence & Quorum Guards |
 
 ## 2. Detailed Scenario Execution Log
 
-| ID | Category | Target | Modality | Attack Scenario | Baseline Result | Base ASR? | Mitigated Result | Mitigated ASR? |
-|---|---|---|---|---|---|---|---|---|
-| `PS-A01` | `miscalibrated_overconfidence` | `judge` | `video` | Tampered confidence vs raw_score on video-classifier (0.99 vs raw 0.22) | SYNTHETIC (score=0.8500) | YES | UNCERTAIN (score=0.5223) | NO |
-| `PS-A02` | `miscalibrated_overconfidence` | `judge` | `image` | Miscalibrated image-mirror confidence (0.99 vs raw 0.28) | SYNTHETIC (score=0.8150) | YES | UNCERTAIN (score=0.3882) | NO |
-| `PS-A03` | `miscalibrated_overconfidence` | `judge` | `text` | Miscalibrated text-desklib confidence (0.99 vs raw 0.25) | SYNTHETIC (score=0.7178) | YES | UNCERTAIN (score=0.4648) | NO |
-| `PS-A04` | `miscalibrated_overconfidence` | `judge` | `video` | False-negative raw_score tampering (0.001 AUTHENTIC vs raw 0.85) | AUTHENTIC (score=0.2193) | YES | SYNTHETIC (score=0.6896) | NO |
-| `PS-A05` | `miscalibrated_overconfidence` | `judge` | `audio` | Tampered AASIST confidence (0.98 vs raw 0.20) forcing Rule 5 | SYNTHETIC (score=0.8500) | YES | UNCERTAIN (score=0.5097) | NO |
-| `PS-A06` | `miscalibrated_overconfidence` | `judge` | `image` | Single-detector uncorroborated 0.999 saturation (raw=0.52) | SYNTHETIC (score=0.8951) | YES | UNCERTAIN (score=0.5131) | NO |
-| `PS-B01` | `rogue_outlier_injection` | `judge` | `multimodal` | Rogue AASIST outlier (0.98) hijacking Rule 5 against 3 AUTHENTIC peers | SYNTHETIC (score=0.8500) | YES | AUTHENTIC (score=0.2125) | NO |
-| `PS-B02` | `rogue_outlier_injection` | `judge` | `video` | Rogue video-classifier outlier (0.97) hijacking Rules 3 & 6 | SYNTHETIC (score=0.8500) | YES | AUTHENTIC (score=0.2213) | NO |
-| `PS-B03` | `rogue_outlier_injection` | `judge` | `multimodal` | Compromised video-classifier outputting 0.04 AUTHENTIC on deepfake | SYNTHETIC (score=0.8500) | NO | SYNTHETIC (score=0.8500) | NO |
-| `PS-B04` | `rogue_outlier_injection` | `judge` | `image` | Rogue image-mirror outlier (0.96) discounting clean frequency & EXIF | SYNTHETIC (score=0.7950) | YES | AUTHENTIC (score=0.2118) | NO |
-| `PS-B05` | `rogue_outlier_injection` | `judge` | `text` | Rogue text-desklib outlier (0.96) discounting authentic stylometry/perplexity | SYNTHETIC (score=0.8172) | YES | AUTHENTIC (score=0.2166) | NO |
-| `PS-B06` | `rogue_outlier_injection` | `judge` | `multimodal` | Compromised AASIST outputting 0.05 AUTHENTIC on deepfake consensus | SYNTHETIC (score=0.8500) | NO | SYNTHETIC (score=0.8500) | NO |
-| `PS-C01` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `image` | Single-detector frequency_anomaly flag spoofing on clean image | SYNTHETIC (score=0.9000) | YES | AUTHENTIC (score=0.2516) | NO |
-| `PS-C02` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `text` | Single-detector stylometry/perplexity flag spoofing on human text | SYNTHETIC (score=0.9200) | YES | AUTHENTIC (score=0.2513) | NO |
-| `PS-C03` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `video` | Spoofed low_light_attenuation flag in bright daylight (lum=160) | UNCERTAIN (score=0.6059) | YES | SYNTHETIC (score=0.6583) | NO |
-| `PS-C04` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `video` | Spoofed short_clip_attenuation flag on 12.0s video | UNCERTAIN (score=0.6057) | YES | SYNTHETIC (score=0.6583) | NO |
-| `PS-C05` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `image` | Single borderline image claim (0.71) self-inflating to >=0.90 via Rule 7C flag | SYNTHETIC (score=0.9000) | YES | UNCERTAIN (score=0.6155) | NO |
-| `PS-C06` | `spoofed_corroboration_and_flag_poisoning` | `judge` | `text` | Self-flag inflation on consensus text detectors without perplexity detector | SYNTHETIC (score=0.9200) | YES | SYNTHETIC (score=0.7039) | NO |
-| `PS-D01` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned nominal reliability drops video-classifier in favor of rPPG | EVICTED (called=['streaming-rppg', 'fusion']) | YES | RETAINED (called=['video-classifier', 'streaming-rppg', 'fusion']) | NO |
-| `PS-D02` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned silent video reliability leaves rPPG as sole witness | EVICTED (called=['streaming-rppg', 'fusion']) | YES | RETAINED (called=['video-classifier', 'streaming-rppg', 'fusion']) | NO |
-| `PS-D03` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned low_light reliability evicts primary spatial video-classifier | EVICTED (called=['streaming-rppg', 'fusion']) | YES | RETAINED (called=['video-classifier', 'streaming-rppg', 'fusion']) | NO |
-| `PS-D04` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned short_clip reliability evicts video-classifier | EVICTED (called=['fusion']) | YES | RETAINED (called=['video-classifier', 'fusion']) | NO |
-| `PS-D05` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned dubbed_audio reliability evicts video-classifier | EVICTED (called=['streaming-rppg', 'fusion']) | YES | RETAINED (called=['video-classifier', 'streaming-rppg', 'fusion']) | NO |
-| `PS-D06` | `manifest_reliability_feedback_poisoning` | `planner` | `video` | Poisoned manifest + high-risk budget pressure evicts video-classifier | EVICTED (called=['fusion', 'streaming-rppg']) | YES | RETAINED (called=['video-classifier', 'fusion', 'streaming-rppg']) | NO |
-| `PS-E01` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `video` | Hard-negative vid_deepfake_feed (adaptive_transform_search) + spoofed 48s telemetry + cost_weight=0.55 | EVICTED_DECISIVE (evaded=0.359, plan=['fusion', 'streaming-rppg']) | YES | RETAINED (evaded=0.359, plan=['fusion', 'streaming-rppg', 'video-classifier']) | NO |
-| `PS-E02` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `video` | Hard-negative vid_manipulated_feed (adaptive_transform_search) + spoofed 48s telemetry + cost_weight=0.55 | EVICTED_DECISIVE (evaded=0.405, plan=['fusion', 'streaming-rppg']) | YES | RETAINED (evaded=0.405, plan=['fusion', 'streaming-rppg', 'video-classifier']) | NO |
-| `PS-E03` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `image` | Hard-negative img_borderline_short (adaptive_transform_search) + spoofed 42s telemetry + cost_weight=0.55 | EVICTED_DECISIVE (evaded=0.102, plan=['image']) | YES | RETAINED (evaded=0.102, plan=['image', 'detector_image']) | NO |
-| `PS-E04` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `image` | Hard-negative img_manipulated_feed (square_linf) + spoofed 42s telemetry + cost_weight=0.55 | EVICTED_DECISIVE (evaded=0.175, plan=['image']) | YES | RETAINED (evaded=0.175, plan=['image', 'detector_image']) | NO |
-| `PS-E05` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `text` | Hard-negative txt_ai_edu_05 (adaptive_feedback_paraphraser_v2) + spoofed 42s telemetry | EVICTED_DECISIVE (evaded=0.282, plan=[]) | YES | RETAINED (evaded=0.282, plan=['detector_text']) | NO |
-| `PS-E06` | `adversarial_media_and_telemetry_cost_poisoning` | `planner+judge` | `text` | Hard-negative txt_ai_legal_08 (adaptive_feedback_paraphraser_v2) + spoofed 42s telemetry | EVICTED_DECISIVE (evaded=0.278, plan=[]) | YES | RETAINED (evaded=0.278, plan=['detector_text']) | NO |
+| ID | Modality | Scenario | Clean | Injected Detector | Weighted Verdict | LLM Verdict | Det Verdict | Flips (W / L / D) |
+|---|---|---|---|---|---|---|---|:---:|
+| `PS-A01` | `video` | Tampered confidence vs raw_score on video-classifier (0.99 vs raw 0.22) | `AUTHENTIC` | `video-classifier=0.99` | `SYNTHETIC` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A02` | `image` | Miscalibrated image-mirror confidence (0.99 vs raw 0.28) | `AUTHENTIC` | `image-mirror=0.99` | `SYNTHETIC` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A03` | `text` | Miscalibrated text-desklib confidence (0.99 vs raw 0.25) | `AUTHENTIC` | `text-desklib=0.99` | `SYNTHETIC` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A04` | `video` | False-negative raw_score tampering (0.001 AUTHENTIC vs raw 0.85) | `SYNTHETIC` | `video-classifier=0.001` | `UNCERTAIN` | `UNCERTAIN` | `SYNTHETIC` | `FLIP / FLIP / OK` |
+| `PS-A05` | `audio` | Tampered AASIST confidence (0.98 vs raw 0.20) forcing Rule 5 | `AUTHENTIC` | `aasist=0.98` | `UNCERTAIN` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A06` | `image` | Single-detector uncorroborated 0.999 saturation (raw=0.52) | `AUTHENTIC` | `detector_image=0.999` | `SYNTHETIC` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A07` | `video` | Miscalibrated streaming rPPG confidence (0.98 vs raw 0.31) on live feed | `AUTHENTIC` | `streaming-rppg=0.98` | `UNCERTAIN` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-A08` | `text` | Miscalibrated text-perplexity spike (0.99 vs raw 0.30) on essay | `AUTHENTIC` | `text-perplexity=0.99` | `UNCERTAIN` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-B01` | `multimodal` | Rogue AASIST outlier (0.98) hijacking Rule 5 against 3 AUTHENTIC peers | `AUTHENTIC` | `aasist=0.98` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B02` | `video` | Rogue video-classifier outlier (0.97) hijacking Rules 3 & 6 | `AUTHENTIC` | `video-classifier=0.97` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B03` | `image` | Rogue image-mirror outlier (0.96) discounting clean frequency & EXIF | `AUTHENTIC` | `image-mirror=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B04` | `text` | Rogue text-desklib outlier (0.96) discounting authentic stylometry/perplexity | `AUTHENTIC` | `text-desklib=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B05` | `audio` | Single AASIST spike (0.96) without AV corroboration attempting Rule 5 override | `AUTHENTIC` | `aasist=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B06` | `image` | Rogue image-frequency detector (0.95) outlier on high-contrast photo | `AUTHENTIC` | `image-frequency=0.95` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B07` | `text` | Rogue stylometry outlier (0.95) against clean neural desklib and perplexity | `AUTHENTIC` | `text-stylometry=0.95` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B08` | `video` | Heavy H.264 social media compression causing video-classifier (0.93) false alarm | `AUTHENTIC` | `video-classifier=0.93` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B09` | `video` | Sensor Gaussian noise (sigma=14) causing video-classifier (0.92) false alarm | `AUTHENTIC` | `video-classifier=0.92` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-B10` | `text` | Academic domain terminology triggering text-desklib (0.94) false positive | `AUTHENTIC` | `text-desklib=0.94` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-C01` | `image` | Single-detector frequency_anomaly flag spoofing on clean image | `AUTHENTIC` | `detector_image=0.7` | `UNCERTAIN` | `AUTHENTIC` | `AUTHENTIC` | `FLIP / OK / OK` |
+| `PS-C02` | `text` | Single-detector stylometry/perplexity flag spoofing on human text | `AUTHENTIC` | `detector_text=0.7` | `UNCERTAIN` | `AUTHENTIC` | `AUTHENTIC` | `FLIP / OK / OK` |
+| `PS-C03` | `video` | Spoofed low_light_attenuation flag in bright daylight (lum=160) | `SYNTHETIC` | `rppg=0.88` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C04` | `video` | Spoofed short_clip_attenuation flag on 12.0s video | `SYNTHETIC` | `rppg=0.88` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C05` | `image` | Single borderline image claim (0.71) self-inflating to >=0.90 via Rule 7C flag | `SYNTHETIC` | `detector_image=0.71` | `UNCERTAIN` | `AUTHENTIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-C06` | `text` | Self-flag inflation on consensus text detectors without perplexity detector | `SYNTHETIC` | `detector_text=0.72` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C07` | `video` | Spoofed low_light flag on well-lit video (lum=140) to evade detection | `SYNTHETIC` | `rppg=0.86` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C08` | `video` | Spoofed short_clip flag on 9s video to evade detection | `SYNTHETIC` | `rppg=0.85` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C09` | `audio` | Forged silent_video flag to suppress voice clone detection | `SYNTHETIC` | `aasist=0.89` | `SYNTHETIC` | `SYNTHETIC` | `SYNTHETIC` | `OK / OK / OK` |
+| `PS-C10` | `image` | Single EXIF claim spoofing metadata mismatch flag on genuine camera photo | `AUTHENTIC` | `image-exif=0.7` | `AUTHENTIC` | `AUTHENTIC` | `AUTHENTIC` | `OK / OK / OK` |
+| `PS-CYB-01` | `image` | Camera sensor noise (Task 2 FPR finding) causing ViT-S to assert 0.98 SYNTHETIC | `AUTHENTIC` | `detector_image=0.98` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-CYB-02` | `text` | 25% Unicode homoglyph confusables (Task 2 FPR finding) triggering desklib (0.92) | `AUTHENTIC` | `text-desklib=0.92` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-CYB-03` | `audio` | Rogue AASIST claim (0.95) on silent video file (no audio track) | `AUTHENTIC` | `aasist=0.95` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-CYB-04` | `audiovisual` | SyncNet lip-desync (0.96) false positive on dubbed foreign language video | `AUTHENTIC` | `syncnet=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-CYB-05` | `multimodal` | Compound attack: clean video where AASIST=0.98 + spoofed low-light flag attack both channels | `AUTHENTIC` | `aasist=0.98` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-CYB-06` | `video` | Inverted rPPG in low light (lum=28) asserting 0.94 SYNTHETIC on authentic video | `AUTHENTIC` | `rppg=0.94` | `UNCERTAIN` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-CYB-07` | `video` | Inverted rPPG on short clip (dur=1.8s) asserting 0.92 SYNTHETIC on authentic clip | `AUTHENTIC` | `rppg=0.92` | `UNCERTAIN` | `SYNTHETIC` | `INTEGRITY_UNKNOWN` | `FLIP / FLIP / OK` |
+| `PS-CYB-08` | `video` | Compromised rPPG (0.95) asserting synthetic pulse against authentic video | `AUTHENTIC` | `rppg=0.95` | `UNCERTAIN` | `SYNTHETIC` | `UNCERTAIN` | `FLIP / FLIP / OK` |
+| `PS-HN-01` | `multimodal` | Adversarial square_linf hard-negative video + spoofed AASIST (0.05) claim | `SYNTHETIC` | `aasist=0.05` | `UNCERTAIN` | `UNCERTAIN` | `SYNTHETIC` | `FLIP / FLIP / OK` |
+| `PS-HN-02` | `multimodal` | Deepfake with spatial adversarial patch evading video-classifier (0.05) | `SYNTHETIC` | `video-classifier=0.05` | `UNCERTAIN` | `UNCERTAIN` | `SYNTHETIC` | `FLIP / FLIP / OK` |
+| `PS-HN-03` | `video` | Compromised video-classifier emitting 0.04 AUTHENTIC on face swap with synthetic audio | `SYNTHETIC` | `video-classifier=0.04` | `UNCERTAIN` | `UNCERTAIN` | `SYNTHETIC` | `FLIP / FLIP / OK` |
+| `PS-HN-04` | `video` | Spatial 4x downscaling evasion (Cybersecurity Task 2) causing 0.04 video score on deepfake | `SYNTHETIC` | `video-classifier=0.04` | `UNCERTAIN` | `UNCERTAIN` | `SYNTHETIC` | `FLIP / FLIP / OK` |
+| `PS-HN-05` | `image` | 4x downscaling perturbation causing ViT-S false alarm (0.96) on authentic photo | `AUTHENTIC` | `detector_image=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-HN-06` | `image` | Heavy JPEG Q25 compression causing ViT-S false alarm (0.95) on authentic photo | `AUTHENTIC` | `detector_image=0.95` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-HN-07` | `image` | Gaussian blur sigma=2.4 causing ViT-S false alarm (0.94) on authentic photo | `AUTHENTIC` | `detector_image=0.94` | `UNCERTAIN` | `UNCERTAIN` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-HN-08` | `text` | Repetitive academic phrasing causing text-desklib false alarm (0.96) on human essay | `AUTHENTIC` | `text-desklib=0.96` | `UNCERTAIN` | `SYNTHETIC` | `AUTHENTIC` | `FLIP / FLIP / OK` |
+| `PS-D01` | `video` | Poisoned nominal reliability drops video-classifier in favor of rPPG | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-D02` | `video` | Poisoned silent video reliability leaves rPPG as sole witness | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-D03` | `video` | Poisoned low_light reliability evicts primary spatial video-classifier | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-D04` | `video` | Poisoned short_clip reliability evicts video-classifier | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-D05` | `video` | Poisoned dubbed_audio reliability evicts video-classifier | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-D06` | `video` | Poisoned manifest + high-risk budget pressure evicts video-classifier | `RETAINED` | `video-classifier=0.22` | `EVICTED` | `EVICTED` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E01` | `video` | Hard-negative vid_deepfake_feed (adaptive_transform_search) + spoofed 48s telemetry + cost_weight=0.55 | `RETAINED` | `video-classifier=0.3594` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E02` | `video` | Hard-negative vid_manipulated_feed (adaptive_transform_search) + spoofed 48s telemetry + cost_weight=0.55 | `RETAINED` | `video-classifier=0.405` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E03` | `image` | Hard-negative img_borderline_short (adaptive_transform_search) + spoofed 42s telemetry + cost_weight=0.55 | `RETAINED` | `detector_image=0.1019` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E04` | `image` | Hard-negative img_manipulated_feed (square_linf) + spoofed 42s telemetry + cost_weight=0.55 | `RETAINED` | `detector_image=0.1746` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E05` | `text` | Hard-negative txt_ai_edu_05 (adaptive_feedback_paraphraser_v2) + spoofed 42s telemetry | `RETAINED` | `detector_text=0.2823` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
+| `PS-E06` | `text` | Hard-negative txt_ai_legal_08 (adaptive_feedback_paraphraser_v2) + spoofed 42s telemetry | `RETAINED` | `detector_text=0.2782` | `EVICTED_DECISIVE` | `EVICTED_DECISIVE` | `RETAINED` | `FLIP / FLIP / OK` |
 
 ## 3. Clean Benign Control Verification
 
