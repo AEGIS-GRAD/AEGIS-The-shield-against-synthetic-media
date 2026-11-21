@@ -1,0 +1,33 @@
+# engine/docker/Dockerfile.edge_profile
+# Multi-stage Dockerfile emulating a Jetson-class edge device environment
+# Spec: 4 CPU cores, 4 GB RAM, ARM/x86 Linux edge runtime
+
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    AEGIS_EDGE_EMULATION=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 curl procps \
+    && rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 10001 edgeuser && \
+    useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash edgeuser
+
+COPY engine/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir onnxruntime==1.17.3 psutil==5.9.8 numpy==1.26.4 scipy opencv-python-headless tabulate && \
+    rm -f /tmp/requirements.txt
+
+# Copy engine codebase
+COPY --chown=edgeuser:edgeuser engine /app/engine
+RUN chown -R edgeuser:edgeuser /app
+
+ENV PYTHONPATH=/app:/app/engine
+
+USER edgeuser
+
+# By default, run the edge profiler and output results
+ENTRYPOINT ["python", "/app/engine/benchmark/profile_edge_hardware.py"]
