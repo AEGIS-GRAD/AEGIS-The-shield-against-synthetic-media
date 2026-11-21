@@ -44,6 +44,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const liveMode = pathname.startsWith("/live");
 
+  // RQ3 study pages render without AEGIS navigation so participants see only the study.
+  if (pathname.startsWith("/study")) return <div className="min-h-screen overflow-auto bg-background">{children}</div>;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className={cn("hidden shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-soft md:flex", collapsed ? "w-[72px]" : "w-60")}>
