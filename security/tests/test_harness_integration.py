@@ -193,7 +193,12 @@ def stream_scenario(scenario_name, index_row, context, clean_hashes):
                 conn.setblocking(True)
                 pass # Connection still open
                 
-        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError,
+                ssl.SSLEOFError, OSError):
+            # Server correctly severed the TLS connection upon detecting an attack.
+            # SSLEOFError is raised on Linux when the peer closes the TLS session
+            # mid-stream (server-side EOF in violation of a clean shutdown); this is
+            # expected and correct behaviour for attack scenarios.
             connection_severed = True
             break
             
