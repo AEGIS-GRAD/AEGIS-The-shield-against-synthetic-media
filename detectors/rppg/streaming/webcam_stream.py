@@ -42,7 +42,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 # Repository Root Resolution
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 MOBILENET_PATH = REPO_ROOT / "engine" / "edge_model" / "mobilenetv3_small_ffpp.pth"
-EFFICIENTNET_PATH = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_ffpp_finetuned.pth"
+_PRIMARY_EFFICIENTNET = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_df40_finetuned.pth"
+_LEGACY_EFFICIENTNET = REPO_ROOT / "detectors" / "video-classifier" / "models" / "ffpp_legacy_baseline" / "efficientnet_b0_ffpp_finetuned.pth"
+EFFICIENTNET_PATH = _PRIMARY_EFFICIENTNET if _PRIMARY_EFFICIENTNET.exists() else _LEGACY_EFFICIENTNET
 JOBS_DIR = REPO_ROOT / "web" / ".jobs"
 JOBS_FILE = JOBS_DIR / "jobs.json"
 THUMBNAILS_DIR = REPO_ROOT / "web" / "public" / "thumbnails"

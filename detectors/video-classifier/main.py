@@ -20,12 +20,12 @@ from prometheus_client import make_asgi_app
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("video-classifier")
 
-MODEL_VERSION = "efficientnet-b0-v1.0"
+MODEL_VERSION = "efficientnet-b0-df40-v1.0"
 
 app = FastAPI(
     title="AEGIS Video Classifier Detector",
-    description="EfficientNet-B0 / FaceForensics++ video frame classification microservice",
-    version="0.1.0",
+    description="EfficientNet-B0 / DF40 video frame classification microservice",
+    version="0.2.0",
 )
 
 # Expose Prometheus Metrics
@@ -163,7 +163,7 @@ async def detect(
         ram_usage_mb = round(process.memory_info().rss / (1024 * 1024), 2)
         vram_usage_mb = round(torch.cuda.max_memory_allocated() / (1024 * 1024), 2) if torch.cuda.is_available() else None
 
-        claim = f"Frame-level EfficientNet-B0 analysis computed fake probability of {confidence:.2f} across sampled frames."
+        claim = f"Frame-level EfficientNet-B0 (DF40) analysis computed fake probability of {confidence:.2f} across sampled frames."
         flags = ["high_fake_probability"] if confidence > 0.65 else (["authentic_frames"] if confidence < 0.35 else ["borderline_frames"])
 
         return DetectorResponse(

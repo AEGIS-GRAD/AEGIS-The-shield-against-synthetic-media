@@ -34,10 +34,22 @@ See [docs/failure_notes.md](docs/failure_notes.md) for per-detector failure trac
 
 ## 🚀 Getting Started
 
-The infrastructure is currently fully dockerized with placeholder stubs to allow isolated development.
-
-1. Clone the repository.
-2. Run `docker compose up -d` to spin up the entire `aegis_net` network and stub containers.
-3. Review the API Schemas in `shared/json-api-contracts-schema/` before building your service endpoints.
-4. **Note:** Direct pushes to `main` are blocked. You must open a Pull Request, pass the `validate-docker` CI check, and receive a peer review approval before merging.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/user/AEGIS.git
+   cd AEGIS
+   ```
+2. Verify / download detector model weights:
+   ```bash
+   python scripts/setup_models.py
+   ```
+3. Start the entire system (all detector microservices, orchestrator, and web interface):
+   ```bash
+   docker compose up --build -d
+   ```
+4. Access the services:
+   - **Web Interface**: `http://localhost:3000`
+   - **Orchestrator API**: `http://localhost:8000`
+   - **API Gateway**: `http://localhost:8081`
+   - **Grafana Observability Dashboard**: `http://localhost:3001` (admin / admin)
 

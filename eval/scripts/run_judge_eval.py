@@ -42,8 +42,13 @@ REPORTS_DIR = REPO_ROOT / "eval" / "reports"
 MONTH2_RAW_CSV = REPORTS_DIR / "judge_prototype_eval_raw.csv"
 DEFAULT_OUT_CSV = REPORTS_DIR / "task7_judge_eval_raw.csv"
 DEFAULT_OUT_MD = REPORTS_DIR / "task7_judge_abstention_report.md"
-DEFAULT_VIDEO_CKPT = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_ffpp_finetuned.pth"
-DEFAULT_FINETUNE_LOG = REPO_ROOT / "detectors" / "video-classifier" / "models" / "finetune_efficientnet_log.csv"
+_DF40_CKPT = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_df40_finetuned.pth"
+_LEGACY_CKPT = REPO_ROOT / "detectors" / "video-classifier" / "models" / "ffpp_legacy_baseline" / "efficientnet_b0_ffpp_finetuned.pth"
+DEFAULT_VIDEO_CKPT = _DF40_CKPT if _DF40_CKPT.exists() else _LEGACY_CKPT
+
+_DF40_LOG = REPO_ROOT / "detectors" / "video-classifier" / "models" / "finetune_df40_log.csv"
+_LEGACY_LOG = REPO_ROOT / "detectors" / "video-classifier" / "models" / "ffpp_legacy_baseline" / "finetune_efficientnet_log.csv"
+DEFAULT_FINETUNE_LOG = _DF40_LOG if _DF40_LOG.exists() else _LEGACY_LOG
 
 
 def _compute_metrics(rows: List[Dict[str, Any]]) -> Dict[str, Any]:

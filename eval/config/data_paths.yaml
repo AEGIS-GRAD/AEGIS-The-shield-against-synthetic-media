@@ -77,8 +77,9 @@ task4:
 # ─────────────────────────────────────────────────────────────────────────────
 video_generalization:
   models:
-    baseline: "detectors/video-classifier/models/efficientnet_b0_ffpp_ckpt_ep10.pth"
-    finetuned: "detectors/video-classifier/models/efficientnet_b0_ffpp_finetuned.pth"
+    baseline: "detectors/video-classifier/models/ffpp_legacy_baseline/efficientnet_b0_ffpp_ckpt_ep10.pth"
+    finetuned: "detectors/video-classifier/models/efficientnet_b0_df40_finetuned.pth"
+    legacy_finetuned: "detectors/video-classifier/models/ffpp_legacy_baseline/efficientnet_b0_ffpp_finetuned.pth"
   raw_roots:
     ffpp_c23: "D:/archive/FaceForensics++_C23"
     celeb_df_v2: "D:/datasets/Celeb-DF-v2"

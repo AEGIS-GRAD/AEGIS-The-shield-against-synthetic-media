@@ -1,0 +1,24 @@
+feat(video-classifier): implement DF40 balanced fine-tuning pipeline for EfficientNet-B0
+
+- Replace proof-of-concept FF++ full-frame model with balanced training across 27 DF40 methods and FF++ real frames.
+- Add dynamic balanced sampling (20,694 real and 20,694 fakes per epoch) cycling evenly across 548k training frames.
+- Integrate 7 geometric/photometric augmentations with automated 24-image visual verification grid.
+- Implement comprehensive validation tracking: frame AUC, video AUC, EER, and mean per-method AUC.
+- Include shortcut detection (AUC > 0.999 in epochs 1-2) and failure alerts (AUC < 0.70).
+- Add atomic checkpointing, automatic resumption, and graceful termination via STOP trigger file or SIGINT.
+- Provide post-training generalization evaluation module on held-out methods (uniface, wav2lip, VQGAN).
+- Document methodology, execution guide, and MTCNN vs DF40 inference face-cropping mismatch in README.
+
+Files to commit:
+  - detectors/video-classifier/finetune_efficientnet_df40.py
+  - detectors/video-classifier/README_df40_finetune.md
+  - detectors/video-classifier/COMMIT_MESSAGE_df40_finetune.txt
+  - detectors/video-classifier/models/finetune_df40_config.json
+  - detectors/video-classifier/models/finetune_df40_log.csv
+  - detectors/video-classifier/models/df40_val_per_method.csv
+  - detectors/video-classifier/models/df40_heldout_report.json
+
+Files to ignore (do not commit to git due to size/ephemerality):
+  - detectors/video-classifier/models/*.pth
+  - detectors/video-classifier/models/STOP
+  - detectors/video-classifier/models/aug_check.png

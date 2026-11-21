@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_REPO_ID = os.getenv("MODEL_CHECKPOINT_REPO", "Xicor9/efficientnet-b0-ffpp-c23")
 DEFAULT_REVISION = os.getenv("MODEL_CHECKPOINT_REVISION", "21aebf2d1c8a7ba85eb61734884c50c877c38ea3")
-DEFAULT_FILENAME = "efficientnet_b0_ffpp_c23.pth"
+DEFAULT_FILENAME = "efficientnet_b0_df40_finetuned.pth"
 DEFAULT_HF_SHA256 = "2a7963b787ece2594a79160f20e53d6bc621f6bfe34ee21d139efa81bcb70c84"
-DEFAULT_LOCAL_CHECKPOINT = Path(__file__).resolve().parent / "models" / "efficientnet_b0_ffpp_finetuned.pth"
-DEFAULT_LOCAL_SHA256 = "5622d78b079927a84a86f8d8545ac76e11130e6d3cbaf7c517ac90e2740f271a"
+
+DEFAULT_LOCAL_CHECKPOINT = Path(__file__).resolve().parent / "models" / "efficientnet_b0_df40_finetuned.pth"
+DEFAULT_LOCAL_SHA256 = "cc6b8550d1fc86f6962bfe4593f1ab2df39650f93f1683035d44609e9adc537e"
+
+LEGACY_LOCAL_CHECKPOINT = Path(__file__).resolve().parent / "models" / "ffpp_legacy_baseline" / "efficientnet_b0_ffpp_finetuned.pth"
+LEGACY_LOCAL_SHA256 = "5622d78b079927a84a86f8d8545ac76e11130e6d3cbaf7c517ac90e2740f271a"
 
 
 def _verify_sha256(file_path: str | Path, expected_sha256: str) -> None:
@@ -50,7 +54,7 @@ def load_model(
 
     Args:
         checkpoint_repo: HuggingFace repository ID (defaults to MODEL_CHECKPOINT_REPO env var or 'Xicor9/efficientnet-b0-ffpp-c23').
-        filename: Checkpoint filename in repo (default 'efficientnet_b0_ffpp_c23.pth').
+        filename: Checkpoint filename in repo (default 'efficientnet_b0_df40_finetuned.pth').
         device: Device to place the model on ('cpu', 'cuda', etc.).
         checkpoint_path: Optional explicit local checkpoint path (or via MODEL_CHECKPOINT_PATH env var).
 
@@ -60,37 +64,41 @@ def load_model(
     repo_id = checkpoint_repo or os.getenv("MODEL_CHECKPOINT_REPO", DEFAULT_REPO_ID)
     target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     explicit_local = str(checkpoint_path or os.getenv("MODEL_CHECKPOINT_PATH", "")).strip()
-    allow_fallback = os.getenv("ALLOW_LOCAL_CHECKPOINT_FALLBACK", "0").strip().lower() in {"1", "true", "yes"}
 
     resolved_ckpt_path: Optional[str] = None
     if explicit_local:
         if os.path.exists(explicit_local):
             resolved_ckpt_path = explicit_local
-            logger.info(f"Loading local checkpoint from MODEL_CHECKPOINT_PATH: {resolved_ckpt_path}")
+            logger.info(f"Loading local checkpoint from explicit path / MODEL_CHECKPOINT_PATH: {resolved_ckpt_path}")
         else:
             logger.warning(f"Specified local checkpoint path does not exist: {explicit_local}")
 
+    # Prioritize the primary local fine-tuned DF40 model
+    if resolved_ckpt_path is None and DEFAULT_LOCAL_CHECKPOINT.is_file():
+        resolved_ckpt_path = str(DEFAULT_LOCAL_CHECKPOINT)
+        logger.info(f"Loading primary local DF40 fine-tuned checkpoint: {resolved_ckpt_path}")
+
+    # Fallback to legacy baseline if primary DF40 model is absent
+    if resolved_ckpt_path is None and LEGACY_LOCAL_CHECKPOINT.is_file():
+        resolved_ckpt_path = str(LEGACY_LOCAL_CHECKPOINT)
+        logger.info(f"Loading legacy FF++ baseline checkpoint: {resolved_ckpt_path}")
+
+    # Remote fallback from HuggingFace if no local model file exists
     if resolved_ckpt_path is None:
-        logger.info(f"Fetching model checkpoint '{filename}' (rev={DEFAULT_REVISION}) from HuggingFace repo '{repo_id}'...")
+        logger.info(f"No local model found. Fetching model checkpoint '{filename}' (rev={DEFAULT_REVISION}) from HuggingFace repo '{repo_id}'...")
         try:
             if hf_hub_download is None:
                 raise ImportError("huggingface_hub is not installed")
             resolved_ckpt_path = hf_hub_download(repo_id=repo_id, filename=filename, revision=DEFAULT_REVISION)
-            if repo_id == "Xicor9/efficientnet-b0-ffpp-c23" and filename == DEFAULT_FILENAME:
+            if repo_id == "Xicor9/efficientnet-b0-ffpp-c23" and filename == "efficientnet_b0_ffpp_c23.pth":
                 _verify_sha256(resolved_ckpt_path, DEFAULT_HF_SHA256)
             logger.info(f"Loaded checkpoint file path: {resolved_ckpt_path}")
         except Exception as exc:
-            if allow_fallback and DEFAULT_LOCAL_CHECKPOINT.is_file():
-                resolved_ckpt_path = str(DEFAULT_LOCAL_CHECKPOINT)
-                _verify_sha256(resolved_ckpt_path, DEFAULT_LOCAL_SHA256)
-                logger.info(
-                    f"HuggingFace unavailable ({exc}); using verified local fallback checkpoint: {resolved_ckpt_path}"
-                )
-            else:
-                logger.warning(
-                    f"Could not download checkpoint from HuggingFace ({exc}). Using randomly initialized model fallback for offline evaluation."
-                )
-                resolved_ckpt_path = None
+            logger.warning(
+                f"Could not load local weights or download from HuggingFace ({exc}). "
+                "Using ImageNet-initialized backbone fallback."
+            )
+            resolved_ckpt_path = None
 
     # Build EfficientNet-B0 architecture
     try:
@@ -106,6 +114,8 @@ def load_model(
         expected_ckpt_sha = os.getenv("VIDEO_CLASSIFIER_SHA256", "").strip().lower()
         if not expected_ckpt_sha and Path(resolved_ckpt_path).resolve() == DEFAULT_LOCAL_CHECKPOINT.resolve():
             expected_ckpt_sha = DEFAULT_LOCAL_SHA256
+        elif not expected_ckpt_sha and Path(resolved_ckpt_path).resolve() == LEGACY_LOCAL_CHECKPOINT.resolve():
+            expected_ckpt_sha = LEGACY_LOCAL_SHA256
         if expected_ckpt_sha:
             _verify_sha256(resolved_ckpt_path, expected_ckpt_sha)
         # Strictly enforce safe tensor deserialization (no arbitrary pickle deserialization fallback)

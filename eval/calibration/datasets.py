@@ -285,13 +285,17 @@ def load_video_calibration_data(
     resolved_ckpt = checkpoint_path
     if resolved_ckpt is None:
         # Default to existing refined checkpoint if present
-        default_p = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_ffpp_finetuned.pth"
+        default_p = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_df40_finetuned.pth"
         if default_p.is_file():
             resolved_ckpt = default_p
         else:
-            ckpt_ep10 = REPO_ROOT / "detectors" / "video-classifier" / "models" / "efficientnet_b0_ffpp_ckpt_ep10.pth"
-            if ckpt_ep10.is_file():
-                resolved_ckpt = ckpt_ep10
+            legacy_p = REPO_ROOT / "detectors" / "video-classifier" / "models" / "ffpp_legacy_baseline" / "efficientnet_b0_ffpp_finetuned.pth"
+            if legacy_p.is_file():
+                resolved_ckpt = legacy_p
+            else:
+                ckpt_ep10 = REPO_ROOT / "detectors" / "video-classifier" / "models" / "ffpp_legacy_baseline" / "efficientnet_b0_ffpp_ckpt_ep10.pth"
+                if ckpt_ep10.is_file():
+                    resolved_ckpt = ckpt_ep10
 
     ckpt_name = Path(resolved_ckpt).name if resolved_ckpt else "baseline_weights"
 

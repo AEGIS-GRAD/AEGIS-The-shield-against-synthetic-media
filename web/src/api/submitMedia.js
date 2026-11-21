@@ -106,7 +106,7 @@ function formatResultsFromStatus(statusData, jobId, isAudio) {
   const dets = statusData.detectors || {};
 
   const video_classifier = !isAudio && dets.video_classifier?.status === "complete"
-    ? completedResponse(jobId, "efficientnet-b0-ffpp", {
+    ? completedResponse(jobId, "efficientnet-b0-df40", {
         confidence: dets.video_classifier.confidence ?? 0.15,
         rawScore: dets.video_classifier.raw_score ?? -1.4,
         latencyMs: dets.video_classifier.latency_ms ?? 310,
@@ -114,7 +114,7 @@ function formatResultsFromStatus(statusData, jobId, isAudio) {
         claim: dets.video_classifier.claim ?? "Frame-level facial boundary analysis completed.",
         flags: dets.video_classifier.flags ?? [],
       })
-    : notApplicableResponse(jobId, "efficientnet-b0-ffpp", dets.video_classifier?.claim || "Submitted media file has no video stream — visual frame analysis skipped.");
+    : notApplicableResponse(jobId, "efficientnet-b0-df40", dets.video_classifier?.claim || "Submitted media file has no video stream — visual frame analysis skipped.");
 
   const aasist = dets.aasist?.status === "complete"
     ? completedResponse(jobId, "aasist-gat-v2", {

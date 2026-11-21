@@ -3,8 +3,8 @@
   "modality": [
     "video"
   ],
-  "version": "xception-ff++-v1",
-  "description": "Frame-level classifier detecting face-swap and reenactment deepfakes using Xception.",
+  "version": "efficientnet-b0-df40-v1",
+  "description": "Frame-level classifier detecting face-swap, reenactment, and diffusion deepfakes using EfficientNet-B0 trained on DF40.",
   "input_constraints": {
     "requires_audio": false,
     "min_duration_seconds": 0.1,

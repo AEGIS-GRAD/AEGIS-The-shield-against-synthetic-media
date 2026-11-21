@@ -56,6 +56,8 @@ web/.jobs/
 # Large model weights (Hugging Face models & safetensors)
 *.bin
 *.pth
+!detectors/video-classifier/models/efficientnet_b0_df40_finetuned.pth
+!detectors/video-classifier/models/ffpp_legacy_baseline/*.pth
 detectors/text-detector/models/*
 !detectors/text-detector/models/desklib-finetuned/
 !detectors/text-detector/models/signal_calibration.json

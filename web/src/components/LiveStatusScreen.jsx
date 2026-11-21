@@ -26,7 +26,7 @@ const DETECTOR_META = {
   video_classifier: {
     name: "Video Frame Classifier",
     subtitle: "Spatial Artifact & Facial Boundary Analysis",
-    modelBadge: "EfficientNet-B0 • FF++ c23",
+    modelBadge: "EfficientNet-B0 • DF40 Benchmark",
     modality: "Visual Frame",
     icon: Film,
     accent: "cyan",

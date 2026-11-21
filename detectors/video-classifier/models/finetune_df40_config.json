@@ -1,0 +1,26 @@
+{
+  "manifests": {
+    "train_csv": "E:\\df40_check\\manifests\\train.csv",
+    "train_sha256": "bac8e47689d3eb88744259cd85d8d4474ff5b1b2dceb6ae125b596ef2fb4cb2f",
+    "val_csv": "E:\\df40_check\\manifests\\val.csv",
+    "val_sha256": "72f2b19cd97ca351c7beccb09dc0a2b011cea97fecc60e61fd42b85f63353dd0",
+    "heldout_csv": "E:\\df40_check\\manifests\\heldout_methods.csv",
+    "heldout_sha256": "b8b4cff49ec2d440b1ad767b08fd2d12acdf41199a46ceeffacf89b22fd79ae2"
+  },
+  "hyperparameters": {
+    "model": "efficientnet_b0",
+    "init_from": null,
+    "base_seed": 42,
+    "epochs": 15,
+    "batch_size": 64,
+    "lr": 0.0002,
+    "weight_decay": 0.01,
+    "warmup_epochs": 1,
+    "label_smoothing": 0.05,
+    "gradient_clipping": 1.0,
+    "focal_loss": false,
+    "num_workers": 6,
+    "amp": true,
+    "channels_last": true
+  }
+}

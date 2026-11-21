@@ -1,0 +1,98 @@
+{
+  "evaluation_timestamp": "2026-11-19 01:12:34",
+  "best_weights_path": "D:\\DeepFake_Grad\\detectors\\video-classifier\\models\\efficientnet_b0_df40_finetuned.pth",
+  "validation_full_metrics": {
+    "total_val_frames": 55712,
+    "overall_auc": 0.9843,
+    "overall_eer": 0.0535,
+    "balanced_acc_05": 0.9452,
+    "video_auc": 0.9975,
+    "mean_per_method_auc": 0.9849,
+    "per_method_auc": {
+      "DiT": 0.955,
+      "MRAA": 0.9947,
+      "RDDM": 0.997,
+      "SiT": 0.9747,
+      "StyleGAN2": 0.9962,
+      "StyleGANXL": 0.9974,
+      "blendface": 0.9911,
+      "danet": 0.9694,
+      "ddim": 0.9976,
+      "e4s": 0.9942,
+      "facedancer": 0.9808,
+      "faceswap": 0.9707,
+      "facevid2vid": 0.9544,
+      "fomm": 0.9983,
+      "fsgan": 0.988,
+      "hyperreenact": 0.9987,
+      "inswap": 0.9922,
+      "lia": 0.9768,
+      "mcnet": 0.9756,
+      "mobileswap": 0.9929,
+      "one_shot_free": 0.994,
+      "pirender": 0.9941,
+      "pixart": 0.9913,
+      "sadtalker": 0.9665,
+      "sd2.1": 0.9948,
+      "simswap": 0.9906,
+      "tpsm": 0.9656
+    },
+    "per_method_recall_05": {
+      "DiT": 0.8297,
+      "MRAA": 0.989,
+      "RDDM": 0.9975,
+      "SiT": 0.8999,
+      "StyleGAN2": 1.0,
+      "StyleGANXL": 1.0,
+      "blendface": 0.9758,
+      "danet": 0.8863,
+      "ddim": 0.998,
+      "e4s": 0.9783,
+      "facedancer": 0.9309,
+      "faceswap": 0.914,
+      "facevid2vid": 0.8455,
+      "fomm": 0.9991,
+      "fsgan": 0.9683,
+      "hyperreenact": 1.0,
+      "inswap": 0.9715,
+      "lia": 0.9036,
+      "mcnet": 0.9255,
+      "mobileswap": 0.9819,
+      "one_shot_free": 0.9837,
+      "pirender": 0.9798,
+      "pixart": 0.9741,
+      "sadtalker": 0.8769,
+      "sd2.1": 0.9864,
+      "simswap": 0.9726,
+      "tpsm": 0.8939
+    }
+  },
+  "thresholds": {
+    "tau_1pct_far": 0.9266,
+    "tau_best_bacc": 0.69,
+    "val_bacc_at_best_tau": 0.9501
+  },
+  "heldout_evaluation": {
+    "uniface": {
+      "total_frames": 11792,
+      "auc_vs_real_val": 0.9953,
+      "recall_at_1pct_far_tau": 0.9696,
+      "recall_at_best_bacc_tau": 0.9865,
+      "recall_at_05": 0.9888
+    },
+    "wav2lip": {
+      "total_frames": 22679,
+      "auc_vs_real_val": 0.7239,
+      "recall_at_1pct_far_tau": 0.0817,
+      "recall_at_best_bacc_tau": 0.187,
+      "recall_at_05": 0.256
+    },
+    "VQGAN": {
+      "total_frames": 15586,
+      "auc_vs_real_val": 0.991,
+      "recall_at_1pct_far_tau": 0.8585,
+      "recall_at_best_bacc_tau": 0.9454,
+      "recall_at_05": 0.9657
+    }
+  }
+}

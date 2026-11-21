@@ -394,6 +394,7 @@ services:
       - aegis_net
     environment:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - MODEL_CHECKPOINT_PATH=/app/models/efficientnet_b0_df40_finetuned.pth
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:8000/health" ]
       interval: 10s
