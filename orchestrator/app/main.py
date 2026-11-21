@@ -11,7 +11,7 @@ from judge_bridge import run_judge
 from contextlib import asynccontextmanager
 
 from typing import Optional
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security, Query, Header
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Security, Query, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security.api_key import APIKeyHeader
@@ -45,6 +45,10 @@ from telemetry import (
     update_circuit_breaker_metrics,
     update_reliability_metrics,
 )
+from bundle_parser import parse_bundle
+from bundle_router import route_bundle
+from bundle_fusion import fuse_bundle, BundleFusionResult
+from bundle_agreement import compute_agreement, BundleAgreement
 
 # Configure vibrant terminal logging
 logging.basicConfig(
@@ -443,4 +447,63 @@ async def orchestrate(
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+
+@app.post("/orchestrate/bundle")
+async def orchestrate_bundle(
+    request: Request,
+    planner_mode: Optional[str] = Query(None),
+    api_key: str = Depends(get_api_key),
+):
+    
+    upload_dir = tempfile.mkdtemp(prefix="aegis_bundle_")
+    try:
+        # 1. Parse the incoming bundle
+        bundle = await parse_bundle(request, upload_dir)
+        job_id = str(uuid.uuid4())
+        logger.info(f"Bundle job {job_id}: modalities={list(bundle.items.keys())}")
+        # 2. Route each modality to its detector(s)
+        modality_results = await route_bundle(bundle, job_id)
+        # 3. Fuse per-modality results → bundle verdict
+        fusion = fuse_bundle(bundle.bundle_id, modality_results)
+        # 4. Compute cross-modal agreement view
+        agreement = compute_agreement(fusion)
+        # 5. Build response
+        return {
+            "bundle_id":    bundle.bundle_id,
+            "job_id":       job_id,
+            "bundle_verdict": fusion.bundle_verdict,
+            "bundle_score": fusion.bundle_score,
+            "num_modalities": fusion.num_modalities,
+            "per_modality": [
+                {
+                    "modality":  s.modality,
+                    "detector":  s.detector,
+                    "score":     s.score,
+                    "verdict":   s.verdict,
+                    "claim":     s.claim,
+                    "flags":     s.flags,
+                }
+                for s in fusion.modality_scores
+            ],
+            "cross_modal_agreement": {
+                "state":                  agreement.state,
+                "agreement_score":        agreement.agreement_score,
+                "summary":                agreement.summary,
+                "fake_votes":             agreement.fake_votes,
+                "real_votes":             agreement.real_votes,
+                "conflicting_modalities": agreement.conflicting_modalities,
+            },
+            "status": "ok",
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"Bundle orchestration error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        # Clean up temp files
+        import shutil as _shutil
+        _shutil.rmtree(upload_dir, ignore_errors=True)
+
 
