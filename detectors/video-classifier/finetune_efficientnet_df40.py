@@ -203,7 +203,7 @@ def create_efficientnet_b0(init_from: Optional[str] = None) -> nn.Module:
         model = tv_models.efficientnet_b0(weights=None)
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, 2)
-        state_dict = torch.load(init_from, map_location="cpu", weights_only=False)
+        state_dict = torch.load(init_from, map_location="cpu", weights_only=True)
         if isinstance(state_dict, dict) and "model_state_dict" in state_dict:
             state_dict = state_dict["model_state_dict"]
         model.load_state_dict(state_dict)
@@ -601,7 +601,7 @@ def run_training(args):
 
     if not args.fresh and ckpt_last_path.is_file():
         log.info("Found last checkpoint: %s. Resuming...", ckpt_last_path)
-        ckpt = torch.load(ckpt_last_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(ckpt_last_path, map_location="cpu", weights_only=True)
 
         # Safety checks on hyperparams and manifest hashes
         saved_args = ckpt.get("args", {})
@@ -1083,7 +1083,7 @@ def run_smoke_test(args):
         assert len(lines_p1) == 2, f"Expected 2 lines in log, got {len(lines_p1)}"
 
         # Check saved metric in checkpoint
-        ckpt_p1 = torch.load(ckpt_last, map_location="cpu", weights_only=False)
+        ckpt_p1 = torch.load(ckpt_last, map_location="cpu", weights_only=True)
         best_metric_p1 = ckpt_p1["best_metric"]
         print(f"Phase 1 checkpoint verified: completed epoch={ckpt_p1['epoch']}, best_metric={best_metric_p1:.4f}")
 
@@ -1097,7 +1097,7 @@ def run_smoke_test(args):
         print(f"Phase 2 complete. Log lines: {len(lines_p2)} (expected 3: header + epoch 1 + epoch 2)")
         assert len(lines_p2) == 3, f"Expected 3 lines in log, got {len(lines_p2)}"
 
-        ckpt_p2 = torch.load(ckpt_last, map_location="cpu", weights_only=False)
+        ckpt_p2 = torch.load(ckpt_last, map_location="cpu", weights_only=True)
         print(f"Phase 2 checkpoint verified: completed epoch={ckpt_p2['epoch']}, best_metric={ckpt_p2['best_metric']:.4f}")
         assert ckpt_p2["epoch"] == 2, f"Expected epoch 2 in ckpt, got {ckpt_p2['epoch']}"
 

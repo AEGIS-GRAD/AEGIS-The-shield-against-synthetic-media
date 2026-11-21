@@ -51,7 +51,8 @@ def test_tracked_weights_verify_against_manifest():
     tracked_core = [
         "detectors/aasist/AASIST.pth",
         "detectors/text-detector/models/desklib-finetuned/lora_adapter/adapter_model.safetensors",
-        "detectors/video-classifier/models/efficientnet_b0_ffpp_finetuned.pth",
+        "detectors/video-classifier/models/efficientnet_b0_df40_finetuned.pth",
+        "detectors/video-classifier/models/ffpp_legacy_baseline/efficientnet_b0_ffpp_finetuned.pth",
         "engine/edge_model/mobilenetv3_small_ffpp.pth",
     ]
     for rel in tracked_core:
