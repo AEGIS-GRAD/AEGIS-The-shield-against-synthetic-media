@@ -9,7 +9,7 @@ on:
 jobs:
   surveillance-and-security:
     name: Surveillance, Stream Integrity & Security Suites
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -53,7 +53,7 @@ jobs:
 
   orchestrator-and-debate:
     name: Orchestrator & Debate Suites
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -81,7 +81,7 @@ jobs:
 
   engine-edge:
     name: Edge Inference & Quantization Suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -104,7 +104,7 @@ jobs:
 
   detectors:
     name: Detector Suite (${{ matrix.detector }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
