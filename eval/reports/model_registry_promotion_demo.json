@@ -1,0 +1,170 @@
+{
+  "registry_path": "D:\\Grad Projectt eccuuuuu\\model_registry\\registry.json",
+  "detector_name": "detector_text",
+  "pre_promotion": {
+    "active_entry_id": "detector_text@1.0.0-asis",
+    "manifest_version": "desklib-ai-text-detector-v1.01-fp16",
+    "calibration_checkpoint": "eval/calibration/checkpoints/detector_text_platt_calibrator.json"
+  },
+  "gate_result": {
+    "entry_id": "detector_text@1.1.0-lora-finetuned",
+    "detector_name": "detector_text",
+    "passed": true,
+    "checks": [
+      {
+        "name": "integrity_and_calibration",
+        "passed": true,
+        "summary": "All checkpoint, adapter, and calibration hashes verified.",
+        "details": {
+          "checkpoint_sha256": "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265",
+          "adapter_sha256": "dba5608b7f771fa38dce1c8148f874d46bc5d1bde6fb2e8a780f525c5044d93b",
+          "calibration_sha256": "3a322d8b013a5ba498ee1bb116fede3002496ed04893fa1ee42c0ba21d280c89",
+          "calibration_probe_0.5": 0.4863,
+          "issues": []
+        }
+      },
+      {
+        "name": "schema_and_contract_tests",
+        "passed": true,
+        "summary": "Manifest schema and API contract checks passed.",
+        "details": {
+          "manifest_schema_valid": true,
+          "health_model_version": "desklib-v1.01-lora-finetuned-fp16",
+          "detect_long_status": "ok",
+          "detect_short_status": "not_applicable",
+          "issues": []
+        }
+      },
+      {
+        "name": "staged_eval_regression",
+        "passed": true,
+        "summary": "Staged eval passed (N=16, AUROC=1.0000, Acc=0.9375, ECE=0.0589).",
+        "details": {
+          "candidate": {
+            "n_samples": 16,
+            "auroc": 1.0,
+            "calibrated_auroc": 1.0,
+            "accuracy": 0.9375,
+            "precision": 0.8889,
+            "recall": 1.0,
+            "f1": 0.9412,
+            "tpr_at_1pct_fpr": 1.0,
+            "uncalibrated_ece": 0.059,
+            "calibrated_ece": 0.0589,
+            "device": "cuda",
+            "avg_latency_ms": 147.2,
+            "p95_latency_ms": 274.64,
+            "peak_ram_mb": 1372.23,
+            "peak_vram_mb": 1908.83,
+            "eval_manifest": "eval/data/text/text_eval_manifest.jsonl"
+          },
+          "baseline": {
+            "n_samples": 16,
+            "auroc": 1.0,
+            "calibrated_auroc": 1.0,
+            "accuracy": 0.9375,
+            "precision": 0.8889,
+            "recall": 1.0,
+            "f1": 0.9412,
+            "tpr_at_1pct_fpr": 1.0,
+            "uncalibrated_ece": 0.0612,
+            "calibrated_ece": 0.061,
+            "device": "cuda",
+            "avg_latency_ms": 116.79,
+            "p95_latency_ms": 265.72,
+            "peak_ram_mb": 1350.23,
+            "peak_vram_mb": 1913.95,
+            "eval_manifest": "eval/data/text/text_eval_manifest.jsonl"
+          },
+          "issues": []
+        }
+      },
+      {
+        "name": "latency_and_memory_budget",
+        "passed": true,
+        "summary": "Budget check passed (cuda: avg=147.2ms <= 500ms, p95=274.6ms <= 1000ms, RAM=1372.2MB <= 6144MB).",
+        "details": {
+          "device": "cuda",
+          "avg_latency_ms": 147.2,
+          "avg_limit_ms": 500.0,
+          "p95_latency_ms": 274.64,
+          "p95_limit_ms": 1000.0,
+          "peak_ram_mb": 1372.23,
+          "ram_limit_mb": 6144.0,
+          "peak_vram_mb": 1908.83,
+          "vram_limit_mb": 4096.0,
+          "issues": []
+        }
+      },
+      {
+        "name": "manifest_update_validation",
+        "passed": true,
+        "summary": "Prepared schema-valid manifest update for version=desklib-v1.01-lora-finetuned-fp16.",
+        "details": {
+          "manifest_path": "D:\\Grad Projectt eccuuuuu\\capability_manifests\\detector_text.json",
+          "new_version": "desklib-v1.01-lora-finetuned-fp16"
+        }
+      }
+    ],
+    "measured_metrics": {
+      "n_samples": 16,
+      "auroc": 1.0,
+      "calibrated_auroc": 1.0,
+      "accuracy": 0.9375,
+      "precision": 0.8889,
+      "recall": 1.0,
+      "f1": 0.9412,
+      "tpr_at_1pct_fpr": 1.0,
+      "uncalibrated_ece": 0.059,
+      "calibrated_ece": 0.0589,
+      "device": "cuda",
+      "avg_latency_ms": 147.2,
+      "p95_latency_ms": 274.64,
+      "peak_ram_mb": 1372.23,
+      "peak_vram_mb": 1908.83,
+      "eval_manifest": "eval/data/text/text_eval_manifest.jsonl"
+    },
+    "baseline_metrics": {
+      "n_samples": 16,
+      "auroc": 1.0,
+      "calibrated_auroc": 1.0,
+      "accuracy": 0.9375,
+      "precision": 0.8889,
+      "recall": 1.0,
+      "f1": 0.9412,
+      "tpr_at_1pct_fpr": 1.0,
+      "uncalibrated_ece": 0.0612,
+      "calibrated_ece": 0.061,
+      "device": "cuda",
+      "avg_latency_ms": 116.79,
+      "p95_latency_ms": 265.72,
+      "peak_ram_mb": 1350.23,
+      "peak_vram_mb": 1913.95,
+      "eval_manifest": "eval/data/text/text_eval_manifest.jsonl"
+    },
+    "summary": {
+      "passed_checks": 5,
+      "total_checks": 5,
+      "failed_checks": [],
+      "auroc": 1.0,
+      "accuracy": 0.9375,
+      "avg_latency_ms": 147.2,
+      "p95_latency_ms": 274.64,
+      "device": "cuda"
+    }
+  },
+  "promoted_state": {
+    "active_entry_id": "detector_text@1.1.0-lora-finetuned",
+    "from_entry_id": "detector_text@1.0.0-asis",
+    "manifest_version": "desklib-v1.01-lora-finetuned-fp16",
+    "manifest_registry_entry_id": "detector_text@1.1.0-lora-finetuned",
+    "manifest_measured_on": "PromotionGate (CUDA) on eval/data/text/text_eval_manifest.jsonl (N=16, AUROC=1.0)"
+  },
+  "rollback_state": {
+    "active_entry_id": "detector_text@1.0.0-asis",
+    "rolled_back_from": "detector_text@1.1.0-lora-finetuned",
+    "manifest_version": "desklib-ai-text-detector-v1.01-fp16",
+    "calibration_checkpoint": "eval/calibration/checkpoints/detector_text_platt_calibrator.json",
+    "manifest_schema_valid": true
+  }
+}
