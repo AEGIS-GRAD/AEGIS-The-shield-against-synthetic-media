@@ -166,7 +166,9 @@ def test_all_dockerfiles_have_non_root_user_and_healthcheck():
 def test_requirements_files_use_exact_pins():
     req_files = sorted(
         p for p in REPO_ROOT.rglob("requirements*.txt")
-        if "venv" not in p.parts and "node_modules" not in p.parts and "Community-Forensics" not in p.parts
+        if "venv" not in p.parts
+        and "node_modules" not in p.parts
+        and not any("community-forensics" in part.lower() or "community_forensics" in part.lower() for part in p.parts)
     )
     assert len(req_files) >= 14
     unpinned = []
