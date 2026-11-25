@@ -1,0 +1,279 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-11-24T22:53:29.939144+00:00",
+  "active": {
+    "image": "image@1.0.0-commfor",
+    "detector_text": "detector_text@1.0.0-asis"
+  },
+  "entries": {
+    "image@1.0.0-commfor": {
+      "entry_id": "image@1.0.0-commfor",
+      "detector_name": "image",
+      "modality": "image",
+      "version": "1.0.0-commfor",
+      "model_version": "commfor-model-384-fp16",
+      "status": "active",
+      "description": "Community Forensics ViT-Small (384x384, fp16) baseline image forgery detector.",
+      "checkpoint": {
+        "path": "detectors/image/weights/model.safetensors",
+        "format": "safetensors",
+        "sha256": "b89f36275f3bf5e2b040eee36597a8f19db051bff9a473a9cf7b2466284fb387",
+        "size_bytes": 87262324,
+        "source_type": "huggingface_hub",
+        "hf_repo": "OwensLab/commfor-model-384",
+        "hf_revision": "6076002bf0d9dd37537f965ee2f06f826c333b61",
+        "load_config": {
+          "use_fp16": true,
+          "input_size": 384
+        }
+      },
+      "calibration": {
+        "path": "eval/calibration/checkpoints/image_temperature_calibrator.json",
+        "sha256": "4c9691f753eb22eb7eff3a88ba4227747ec736ad572361f56c58f5704918ba0d",
+        "calibrator_type": "temperature",
+        "preferred_method": "temperature"
+      },
+      "manifest_path": "capability_manifests/image.json",
+      "budgets": {
+        "max_avg_latency_ms": 150.0,
+        "max_p95_latency_ms": 250.0,
+        "max_vram_mb": 4096.0,
+        "max_ram_mb": 4096.0,
+        "cpu_max_avg_latency_ms": 2500.0,
+        "cpu_max_p95_latency_ms": 4000.0
+      },
+      "regression_policy": {
+        "eval_manifest": "eval/reports/image_detector_baseline.md",
+        "min_auroc": 0.9,
+        "max_auroc_drop": 0.03,
+        "min_accuracy": 0.85,
+        "max_accuracy_drop": 0.03
+      },
+      "measured_metrics": {
+        "n_samples": 300,
+        "auroc": 0.978,
+        "accuracy": 0.95,
+        "avg_latency_ms": 40.0,
+        "p95_latency_ms": 48.0,
+        "peak_ram_mb": 850.0,
+        "gpu_profile_vram_mb": 3400.0,
+        "device": "cuda_baseline_report"
+      },
+      "registered_at": "2026-11-24T17:10:00+00:00"
+    },
+    "detector_text@1.0.0-asis": {
+      "entry_id": "detector_text@1.0.0-asis",
+      "detector_name": "detector_text",
+      "modality": "text",
+      "version": "1.0.0-asis",
+      "model_version": "desklib-v1.01-fp16",
+      "status": "active",
+      "description": "As-is Desklib AI Text Detector v1.01 (DeBERTa-v3-large mean-pooling head).",
+      "checkpoint": {
+        "path": "detectors/text-detector/models/desklib-base/model.safetensors",
+        "format": "safetensors",
+        "sha256": "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265",
+        "size_bytes": 1736100972,
+        "source_type": "huggingface_hub",
+        "hf_repo": "desklib/ai-text-detector-v1.01",
+        "hf_revision": "5fdea974cd4287c61674951ec78803aa274e2fb7",
+        "load_config": {
+          "use_finetuned": false,
+          "lora_dir": ""
+        }
+      },
+      "calibration": {
+        "path": "eval/calibration/checkpoints/detector_text_platt_calibrator.json",
+        "sha256": "3a322d8b013a5ba498ee1bb116fede3002496ed04893fa1ee42c0ba21d280c89",
+        "calibrator_type": "platt",
+        "preferred_method": "platt",
+        "signal_calibration_path": "detectors/text-detector/models/signal_calibration.json",
+        "signal_calibration_sha256": "d8b1a9bb679bb95a2365b07f831c627604a9e527fd3598514487a1c87707d4ea"
+      },
+      "manifest_path": "capability_manifests/detector_text.json",
+      "budgets": {
+        "max_avg_latency_ms": 500.0,
+        "max_p95_latency_ms": 1000.0,
+        "max_vram_mb": 4096.0,
+        "max_ram_mb": 6144.0,
+        "cpu_max_avg_latency_ms": 15000.0,
+        "cpu_max_p95_latency_ms": 25000.0
+      },
+      "regression_policy": {
+        "eval_manifest": "eval/data/text/text_eval_manifest.jsonl",
+        "min_auroc": 0.8,
+        "max_auroc_drop": 0.05,
+        "min_accuracy": 0.75,
+        "max_accuracy_drop": 0.05
+      },
+      "measured_metrics": {
+        "n_samples": 440,
+        "auroc": 0.931,
+        "accuracy": 0.8545,
+        "avg_latency_ms": 225.65,
+        "p95_latency_ms": 643.46,
+        "peak_ram_mb": 1887.67,
+        "gpu_profile_vram_mb": 1913.95,
+        "device": "cuda_baseline_report"
+      },
+      "registered_at": "2026-11-24T17:10:00+00:00"
+    },
+    "detector_text@1.1.0-lora-finetuned": {
+      "entry_id": "detector_text@1.1.0-lora-finetuned",
+      "detector_name": "detector_text",
+      "modality": "text",
+      "version": "1.1.0-lora-finetuned",
+      "model_version": "desklib-v1.01-lora-finetuned-fp16",
+      "status": "rolled_back",
+      "description": "Task 3 LoRA-adapted Desklib (rank=8, alpha=16 on query/value projections) hardened against paraphrased AI text.",
+      "checkpoint": {
+        "path": "detectors/text-detector/models/desklib-base/model.safetensors",
+        "format": "safetensors",
+        "sha256": "c024a1704c65f5a4bffeda58745c58fc0ed67d6ca07b158b068a257238815265",
+        "size_bytes": 1736100972,
+        "source_type": "huggingface_hub",
+        "hf_repo": "desklib/ai-text-detector-v1.01",
+        "hf_revision": "5fdea974cd4287c61674951ec78803aa274e2fb7",
+        "adapter_path": "detectors/text-detector/models/desklib-finetuned/lora_adapter/adapter_model.safetensors",
+        "adapter_sha256": "dba5608b7f771fa38dce1c8148f874d46bc5d1bde6fb2e8a780f525c5044d93b",
+        "load_config": {
+          "use_finetuned": true,
+          "lora_dir": ""
+        }
+      },
+      "calibration": {
+        "path": "eval/calibration/checkpoints/detector_text_platt_calibrator.json",
+        "sha256": "3a322d8b013a5ba498ee1bb116fede3002496ed04893fa1ee42c0ba21d280c89",
+        "calibrator_type": "platt",
+        "preferred_method": "platt",
+        "signal_calibration_path": "detectors/text-detector/models/signal_calibration.json",
+        "signal_calibration_sha256": "d8b1a9bb679bb95a2365b07f831c627604a9e527fd3598514487a1c87707d4ea"
+      },
+      "manifest_path": "capability_manifests/detector_text.json",
+      "budgets": {
+        "max_avg_latency_ms": 500.0,
+        "max_p95_latency_ms": 1000.0,
+        "max_vram_mb": 4096.0,
+        "max_ram_mb": 6144.0,
+        "cpu_max_avg_latency_ms": 15000.0,
+        "cpu_max_p95_latency_ms": 25000.0
+      },
+      "regression_policy": {
+        "eval_manifest": "eval/data/text/text_eval_manifest.jsonl",
+        "min_auroc": 0.8,
+        "max_auroc_drop": 0.05,
+        "min_accuracy": 0.75,
+        "max_accuracy_drop": 0.05
+      },
+      "measured_metrics": {
+        "n_samples": 16,
+        "auroc": 1.0,
+        "calibrated_auroc": 1.0,
+        "accuracy": 0.9375,
+        "precision": 0.8889,
+        "recall": 1.0,
+        "f1": 0.9412,
+        "tpr_at_1pct_fpr": 1.0,
+        "uncalibrated_ece": 0.059,
+        "calibrated_ece": 0.0589,
+        "device": "cuda",
+        "avg_latency_ms": 147.2,
+        "p95_latency_ms": 274.64,
+        "peak_ram_mb": 1372.23,
+        "peak_vram_mb": 1908.83,
+        "eval_manifest": "eval/data/text/text_eval_manifest.jsonl"
+      },
+      "registered_at": "2026-11-24T17:10:00+00:00"
+    }
+  },
+  "promotion_history": [
+    {
+      "timestamp": "2026-11-24T17:10:00+00:00",
+      "action": "register",
+      "detector_name": "image",
+      "from_entry_id": null,
+      "to_entry_id": "image@1.0.0-commfor",
+      "gate_passed": null,
+      "reason": "Seed initial Community Forensics image checkpoint",
+      "gate_summary": null
+    },
+    {
+      "timestamp": "2026-11-24T17:10:00+00:00",
+      "action": "register",
+      "detector_name": "detector_text",
+      "from_entry_id": null,
+      "to_entry_id": "detector_text@1.0.0-asis",
+      "gate_passed": null,
+      "reason": "Seed initial as-is Desklib baseline checkpoint",
+      "gate_summary": null
+    },
+    {
+      "timestamp": "2026-11-24T17:10:00+00:00",
+      "action": "register",
+      "detector_name": "detector_text",
+      "from_entry_id": "detector_text@1.0.0-asis",
+      "to_entry_id": "detector_text@1.1.0-lora-finetuned",
+      "gate_passed": null,
+      "reason": "Seed Task 3 fine-tuned Desklib LoRA candidate",
+      "gate_summary": null
+    },
+    {
+      "timestamp": "2026-11-24T22:53:29.756735+00:00",
+      "action": "promote",
+      "detector_name": "detector_text",
+      "from_entry_id": "detector_text@1.0.0-asis",
+      "to_entry_id": "detector_text@1.1.0-lora-finetuned",
+      "gate_passed": true,
+      "reason": "Task #5 demonstration: promote fine-tuned Desklib LoRA over as-is baseline",
+      "gate_summary": {
+        "passed_checks": 5,
+        "total_checks": 5,
+        "failed_checks": [],
+        "auroc": 1.0,
+        "accuracy": 0.9375,
+        "avg_latency_ms": 147.2,
+        "p95_latency_ms": 274.64,
+        "device": "cuda"
+      },
+      "manifest_snapshot": {
+        "version": "desklib-ai-text-detector-v1.01-fp16",
+        "description": "Transformer-based synthetic text detector using desklib/ai-text-detector-v1.01 (DeBERTa-v3-large mean-pooling head + optional Task 3 LoRA adapter) with overlapping 510-token window aggregation, sentence-level GPT-2 perplexity/burstiness, linguistic stylometry, minimum-length gating, and opt-in Binoculars-small corroboration.",
+        "performance": {
+          "avg_latency_ms": 225.65,
+          "p95_latency_ms": 643.46,
+          "avg_ram_usage_mb": 1887.67,
+          "avg_vram_usage_mb": 1913.95,
+          "measured_on": "NVIDIA RTX 3050 4GB fp16 (Desklib v1.01 + GPT-2 perplexity on 440 interim MAGE texts)"
+        },
+        "calibration": {
+          "modality": "text",
+          "preferred_method": "platt",
+          "checkpoint": "eval/calibration/checkpoints/detector_text_platt_calibrator.json"
+        },
+        "model_metadata": {
+          "checkpoint": "desklib/ai-text-detector-v1.01",
+          "backbone": "microsoft/deberta-v3-large",
+          "license": "MIT",
+          "training_data": "liamdugan/raid + Task 3 LoRA adaptation",
+          "auxiliary_signals": [
+            "gpt2-perplexity",
+            "sentence-burstiness-cov",
+            "stylometry",
+            "binoculars-small (opt-in)"
+          ]
+        },
+        "registry_entry_id": "__ABSENT__"
+      }
+    },
+    {
+      "timestamp": "2026-11-24T22:53:29.939130+00:00",
+      "action": "rollback",
+      "detector_name": "detector_text",
+      "from_entry_id": "detector_text@1.1.0-lora-finetuned",
+      "to_entry_id": "detector_text@1.0.0-asis",
+      "gate_passed": null,
+      "reason": "Task #5 demonstration: rollback fine-tuned Desklib to as-is baseline",
+      "gate_summary": null
+    }
+  ]
+}
