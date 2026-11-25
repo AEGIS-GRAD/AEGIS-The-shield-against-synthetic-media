@@ -1,0 +1,8 @@
+modality,detector,checkpoint,n_samples,nominal_accuracy,balanced_accuracy,auc,abstention_count,abstention_rate,decisive_samples,decisive_accuracy,decisive_false_authentics,decisive_false_synthetics,ece,brier_score,mean_latency_ms,p50_latency_ms,p95_latency_ms,peak_ram_mb,throughput_samples_per_sec
+video,EfficientNet-B0 (DF40 Fine-tuned),efficientnet_b0_df40_finetuned.pth,60,0.6167,0.5825,0.6447,12,0.2,48,0.6667,10,6,0.2903,0.3186,1188.48,1093.0,2458.95,850.0,0.84
+audio,AASIST Spectro-Temporal Graph Attention,weights/AASIST.pth,60,0.85,0.8816,0.9605,0,0.0,60,0.85,9,0,0.1505,0.15,63.62,63.0,78.0,420.0,15.72
+image,"ViT-Small (384x384, Community Forensics)",weights/model.safetensors (image@1.0.0-commfor),300,0.95,0.95,0.9879,19,0.0633,281,0.9502,7,7,0.0712,0.0493,39.89,40.03,46.73,850.0,25.07
+text,Desklib DeBERTa-v3 Large + Stylometry,desklib-base/model.safetensors (detector_text@1.0.0-asis),120,0.8667,0.8667,0.9958,11,0.0917,109,0.8991,0,11,0.1408,0.0834,147.2,147.2,147.2,1372.23,6.79
+multimodal_fused,AEGIS Tiered Multimodal Fusion (Video + rPPG + SyncNet + AASIST),C8 Complete System (Condition-Modulated Dynamic Reliability Weights),60,0.9167,0.9151,0.9462,21,0.35,39,0.9487,1,1,0.1658,0.1093,3735.53,3600.5,8352.95,1850.0,0.27
+bundles,Role 7 Forensic Evidence Bundle Verifier (HMAC-SHA256 + Merkle Manifest),aegis_verify.py (Self-Contained Offline Zero-Dep),11,1.0,1.0,1.0,0,0.0,11,1.0,0,0,0.0,0.0,1.71,1.13,3.93,45.0,585.9
+live_path,LiveSurveillancePipeline (MobileNetV3 INT8 Fused + Streaming rPPG + Feed-Integrity),mobilenetv3_small_int8.onnx (GraphOptimizationLevel.ORT_ENABLE_ALL),9,1.0,1.0,0.985,0,0.0,9,1.0,0,0,0.024,0.015,217.34,195.25,322.79,291.0,172.5
