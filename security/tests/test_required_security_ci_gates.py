@@ -5,6 +5,7 @@ remain configured, unconditional (no path filters), and backed by real suites.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -104,10 +105,25 @@ def test_referenced_scripts_and_suites_exist():
 
 
 def test_attack_generator_covers_all_expected_categories():
-    from security.attacks.generate_attack_streams import DESCRIPTIONS
+    # Parse DESCRIPTIONS statically so this policy test runs in lightweight CI
+    # jobs that do not install OpenCV (`cv2`).
+    generator_path = REPO_ROOT / "security" / "attacks" / "generate_attack_streams.py"
+    tree = ast.parse(generator_path.read_text(encoding="utf-8"))
+    descriptions = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "DESCRIPTIONS"
+            for target in node.targets
+        ):
+            descriptions = ast.literal_eval(node.value)
+            break
+
+    assert isinstance(descriptions, dict), (
+        "Could not locate literal DESCRIPTIONS mapping in generate_attack_streams.py"
+    )
 
     declared_scenarios = set()
-    for tamper_type, mode in DESCRIPTIONS:
+    for tamper_type, mode in descriptions:
         if tamper_type == "none":
             declared_scenarios.add("clean")
         elif tamper_type in {"prnu_splice", "auth_bypass"}:

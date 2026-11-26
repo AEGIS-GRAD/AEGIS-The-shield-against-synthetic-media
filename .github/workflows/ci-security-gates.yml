@@ -241,6 +241,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            orchestrator/requirements.txt
+            security/gateway/validator/requirements.txt
 
       - name: Install system OpenCV libraries
         run: |
@@ -252,21 +256,10 @@ jobs:
       - name: Install pinned mTLS & audit dependencies
         run: |
           python -m pip install --upgrade "pip==26.3"
+          pip install -r orchestrator/requirements.txt -r security/gateway/validator/requirements.txt
           pip install \
             "cryptography==50.0.2" \
             "asn1crypto==1.5.1" \
-            "fastapi==0.163.1" \
-            "uvicorn[standard]==0.54.0" \
-            "pydantic==2.14.3" \
-            "httpx==0.28.1" \
-            "requests==2.34.2" \
-            "prometheus-client==0.26.0" \
-            "pytest==9.2.0" \
-            "pytest-asyncio==1.5.0" \
-            "PyWavelets==1.9.0" \
-            "numpy==2.4.6" \
-            "scipy==1.17.1" \
-            "opencv-python-headless==4.14.0.94" \
             "pyyaml==6.0.3"
 
       - name: Generate mesh certificates and run mTLS connection audit
