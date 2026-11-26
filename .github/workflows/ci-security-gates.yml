@@ -1,0 +1,301 @@
+name: Required Security Gates
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same PR/branch while allowing parallel PR validation.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# NOTE: This workflow intentionally defines NO `paths:` or `paths-ignore:` filters.
+# GitHub Branch Protection / Rulesets treat path-skipped checks as permanently pending,
+# which freezes unrelated PRs from merging.
+
+jobs:
+  attack-harness:
+    name: Attack Harness Categories
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            security/requirements.txt
+
+      - name: Install system media libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg \
+            libsndfile1 \
+            libgl1 \
+            libglib2.0-0
+
+      - name: Install pinned security & gateway dependencies
+        run: |
+          python -m pip install --upgrade "pip==26.3"
+          pip install -r security/requirements.txt
+          pip install \
+            "numpy==2.4.6" \
+            "pytest==9.2.0" \
+            "pytest-asyncio==1.5.0" \
+            "fastapi==0.163.1" \
+            "uvicorn[standard]==0.54.0" \
+            "pydantic==2.14.3" \
+            "httpx==0.28.1" \
+            "prometheus-client==0.26.0" \
+            "psutil==7.2.2" \
+            "pyyaml==6.0.3"
+
+      - name: Generate mTLS test certificates and adversarial stream fixtures
+        run: |
+          python security/transport/generate_certs.py
+          python security/attacks/generate_attack_streams.py \
+            --output-dir security/fixtures/tampered_streams \
+            --fps 30
+          python -c "
+          import csv, pathlib
+          index = pathlib.Path('security/fixtures/tampered_streams/index.csv')
+          assert index.is_file(), f'Missing fixture index: {index}'
+          rows = list(csv.DictReader(index.open('r', encoding='utf-8')))
+          scenarios = {r['scenario'] for r in rows}
+          expected = {
+              'clean',
+              'splice_carried', 'splice_forged',
+              'replay_carried', 'replay_forged',
+              'reorder_carried', 'reorder_forged',
+              'prnu_splice',
+              'auth_bypass',
+          }
+          missing = sorted(expected - scenarios)
+          assert not missing, f'Missing attack-harness scenarios: {missing}'
+          print(f'Verified {len(rows)} attack-harness scenarios: {sorted(scenarios)}')
+          "
+
+      - name: Run attack-harness categories & stream integrity suites
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest \
+            security/fusion/tests/test_fusion.py \
+            security/fusion/tests/test_fusion_harness.py \
+            security/fusion/tests/test_fusion_limitations.py \
+            security/tests/test_harness_integration.py \
+            security/tests/test_prnu.py \
+            security/tests/test_hash_chain.py \
+            security/tests/test_stream_dos_hardening.py \
+            security/tests/test_cyber_fortress.py \
+            security/tests/test_dual_mode_gateway.py \
+            security/tests/test_device_lifecycle.py \
+            security/tests/test_live_ingestion.py \
+            -v -rs
+
+  injection-suite:
+    name: Prompt & Payload Injection Suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            orchestrator/requirements.txt
+            mcp/requirements.txt
+
+      - name: Install pinned prompt, MCP, and CI guard dependencies
+        run: |
+          python -m pip install --upgrade "pip==26.3"
+          pip install -r orchestrator/requirements.txt -r mcp/requirements.txt
+          pip install \
+            "cryptography==50.0.2" \
+            "asn1crypto==1.5.1" \
+            "pillow==13.0.0" \
+            "pyyaml==6.0.3"
+
+      - name: Run prompt, MCP payload injection, poisoning & CI gate guard suites
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest \
+            security/tests/test_llm_prompt_defenses.py \
+            mcp/tests/test_mcp_security_hardening.py \
+            eval/tests/test_poisoning_and_alignment_study_b.py \
+            security/tests/test_required_security_ci_gates.py \
+            -v -rs
+
+  validator-suite:
+    name: Gateway Validator Suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            security/gateway/validator/requirements.txt
+
+      - name: Install system OpenCV libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 \
+            libglib2.0-0
+
+      - name: Install pinned validator dependencies
+        run: |
+          python -m pip install --upgrade "pip==26.3"
+          pip install -r security/gateway/validator/requirements.txt
+
+      - name: Run Gateway Validator test suite
+        working-directory: ./security/gateway/validator
+        run: pytest tests/ -v -rs
+
+  robustness-smoke:
+    name: Adversarial Robustness Smoke Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            engine/requirements.txt
+
+      - name: Install system OpenCV libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 \
+            libglib2.0-0
+
+      - name: Install pinned robustness & CPU PyTorch dependencies
+        run: |
+          python -m pip install --upgrade "pip==26.3"
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            "torch==2.14.1" \
+            "torchvision==0.29.1"
+          pip install -r requirements.txt
+          grep -vE "^(torch|torchvision|#)" engine/requirements.txt > /tmp/engine-no-torch.txt
+          pip install -r /tmp/engine-no-torch.txt
+          pip install \
+            "httpx==0.28.1" \
+            "pillow==13.0.0" \
+            "pytest==9.2.0" \
+            "pyyaml==6.0.3"
+
+      - name: Run adversarial robustness smoke test suite
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest \
+            eval/tests/test_robustness_perturbations.py \
+            eval/tests/test_adaptive_robustness_v2.py \
+            -v -rs
+
+  mtls-connection-audit:
+    name: mTLS Connection Audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system OpenCV libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 \
+            libglib2.0-0
+
+      - name: Install pinned mTLS & audit dependencies
+        run: |
+          python -m pip install --upgrade "pip==26.3"
+          pip install \
+            "cryptography==50.0.2" \
+            "asn1crypto==1.5.1" \
+            "fastapi==0.163.1" \
+            "uvicorn[standard]==0.54.0" \
+            "pydantic==2.14.3" \
+            "httpx==0.28.1" \
+            "requests==2.34.2" \
+            "prometheus-client==0.26.0" \
+            "pytest==9.2.0" \
+            "pytest-asyncio==1.5.0" \
+            "PyWavelets==1.9.0" \
+            "numpy==2.4.6" \
+            "scipy==1.17.1" \
+            "opencv-python-headless==4.14.0.94" \
+            "pyyaml==6.0.3"
+
+      - name: Generate mesh certificates and run mTLS connection audit
+        env:
+          PYTHONPATH: .
+        run: |
+          python security/transport/generate_certs.py
+          mkdir -p "${{ runner.temp }}/mtls-audit"
+          python security/transport/audit_mesh_connections.py \
+            --self-test \
+            --markdown-out "${{ runner.temp }}/mtls-audit/mtls-audit-report.md" \
+            --json-out "${{ runner.temp }}/mtls-audit/mtls-audit-report.json"
+
+      - name: Run full mTLS verification test suite
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest \
+            security/tests/test_full_mtls_mesh.py \
+            security/tests/test_detector_mtls.py \
+            security/tests/test_inter_service_mtls.py \
+            security/tests/test_mtls.py \
+            -v -rs
+
+      - name: Upload mTLS connection audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtls-connection-audit-reports
+          path: ${{ runner.temp }}/mtls-audit/
+          if-no-files-found: warn
+          retention-days: 30
