@@ -6,6 +6,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from infer import gradcam_heatmap, gradcam_to_base64
 
 import psutil
 import torch
@@ -45,9 +46,19 @@ def get_model():
     return model_instance
 
 
+class FrameEvidence(BaseModel):
+    """Evidence for a single sampled frame."""
+    frame_index: int           # 0-based index among sampled frames
+    fake_score: float          # P(fake) for this frame, [0, 1]
+    heatmap_b64: Optional[str] = None   # Base64 PNG of Grad-CAM (224×224 colourmap)
+
+
 class Evidence(BaseModel):
     claim: str
     flags: List[str] = []
+    frame_scores: List[float] = []        # per-frame fake probabilities (same order as sampled)
+    frame_evidence: List[FrameEvidence] = []  # per-frame Grad-CAM heatmaps
+    flagged_range: Optional[str] = None   # e.g. "frames 120-180" (frame numbers in ORIGINAL video)
 
 
 class DetectorRequest(BaseModel):
@@ -65,6 +76,7 @@ class DetectorResponse(BaseModel):
     vram_usage_mb: Optional[float] = None
     model_version: str = MODEL_VERSION
     evidence: Evidence
+    frame_scores: List[float] = []
 
 
 class HealthResponse(BaseModel):
@@ -151,9 +163,31 @@ async def detect(
             )
 
         loaded_model = get_model()
-        frame_scores = [predict_frame(loaded_model, tensor) for tensor in frame_tensors]
 
-        raw_score = aggregate_scores(frame_scores)
+
+        per_frame_scores: List[float] = []
+        frame_evidence_list: List[dict] = []
+
+        for idx, tensor in enumerate(frame_tensors):
+            score = predict_frame(loaded_model, tensor)
+            per_frame_scores.append(score)
+
+            # Only compute Grad-CAM for frames above the borderline threshold (saves time)
+            heatmap_b64 = None
+            if score >= 0.35:
+                try:
+                    hmap = gradcam_heatmap(loaded_model, tensor)
+                    heatmap_b64 = gradcam_to_base64(hmap)
+                except Exception as gc_err:
+                    logger.warning(f"Grad-CAM failed for frame {idx}: {gc_err}")
+
+            frame_evidence_list.append({
+                "frame_index": idx,
+                "fake_score": round(score, 4),
+                "heatmap_b64": heatmap_b64,
+            })
+
+        raw_score = aggregate_scores(per_frame_scores)
         confidence = max(0.0, min(1.0, float(raw_score)))
 
         end_time = time.perf_counter()
@@ -163,8 +197,47 @@ async def detect(
         ram_usage_mb = round(process.memory_info().rss / (1024 * 1024), 2)
         vram_usage_mb = round(torch.cuda.max_memory_allocated() / (1024 * 1024), 2) if torch.cuda.is_available() else None
 
-        claim = f"Frame-level EfficientNet-B0 (DF40) analysis computed fake probability of {confidence:.2f} across sampled frames."
-        flags = ["high_fake_probability"] if confidence > 0.65 else (["authentic_frames"] if confidence < 0.35 else ["borderline_frames"])
+        # --- Build natural-language claim with frame range ---
+        # Find sampled frames whose fake score is above the SYNTHETIC threshold
+        FAKE_THRESHOLD = 0.65
+        flagged_indices = [i for i, s in enumerate(per_frame_scores) if s >= FAKE_THRESHOLD]
+
+        # Translate sampled-frame indices → approximate original video frame numbers
+        # (sample_n=10 means frame_tensors[i] corresponds to original frame i*10)
+        SAMPLE_N = 10
+        flagged_range_str: Optional[str] = None
+        if flagged_indices:
+            orig_start = min(flagged_indices) * SAMPLE_N
+            orig_end   = max(flagged_indices) * SAMPLE_N
+            flagged_range_str = f"frames {orig_start}-{orig_end}"
+
+        strength = "strong" if confidence >= 0.80 else ("moderate" if confidence >= 0.55 else "weak")
+        pct = f"{confidence:.0%}"
+
+        if confidence >= 0.65:
+            if flagged_range_str:
+                claim = (
+                    f"Blending artifacts detected around the face region in {flagged_range_str} "
+                    f"({strength} confidence, estimated {pct} probability of synthetic content)."
+                )
+            else:
+                claim = (
+                    f"Frame-level EfficientNet-B0 analysis found {strength} spatial evidence of face manipulation "
+                    f"(estimated {pct} probability of synthetic content across sampled frames)."
+                )
+            flags = ["high_fake_probability"]
+        elif confidence < 0.35:
+            claim = (
+                f"Frame-level analysis found no significant manipulation artifacts across the sampled frames "
+                f"(estimated {pct} probability of synthetic content)."
+            )
+            flags = ["authentic_frames"]
+        else:
+            claim = (
+                f"Frame-level analysis was borderline ({pct} probability of synthetic content): "
+                "the spatial evidence neither confirms nor rules out manipulation."
+            )
+            flags = ["borderline_frames"]
 
         return DetectorResponse(
             job_id=job_id,
@@ -174,7 +247,14 @@ async def detect(
             ram_usage_mb=ram_usage_mb,
             vram_usage_mb=vram_usage_mb,
             model_version=MODEL_VERSION,
-            evidence=Evidence(claim=claim, flags=flags),
+            evidence=Evidence(
+                claim=claim,
+                flags=flags,
+                frame_scores=per_frame_scores,
+                frame_evidence=[FrameEvidence(**fe) for fe in frame_evidence_list],
+                flagged_range=flagged_range_str,
+            ),
+            frame_scores=per_frame_scores,
         )
     finally:
         if cleanup_path and os.path.exists(cleanup_path):

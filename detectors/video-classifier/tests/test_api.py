@@ -80,3 +80,61 @@ def test_metrics_endpoint():
     assert "detector_inference_latency_seconds" in response.text
     assert "detector_inference_calls_total" in response.text
 
+
+@pytest.mark.slow
+def test_detect_returns_frame_scores():
+    """Task 4: /detect must return non-empty per-frame fake probabilities."""
+    video_path = create_dummy_video_file()
+    try:
+        with open(video_path, "rb") as f:
+            resp = client.post("/detect", files={"file": ("v.mp4", f, "video/mp4")})
+        assert resp.status_code == 200
+        data = resp.json()
+        evidence = data.get("evidence", {})
+        assert "frame_scores" in evidence, "Missing frame_scores in evidence"
+        fs = evidence["frame_scores"]
+        assert isinstance(fs, list) and len(fs) > 0
+        assert all(isinstance(x, float) and 0.0 <= x <= 1.0 for x in fs)
+        assert data.get("frame_scores") == fs
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+
+@pytest.mark.slow
+def test_detect_returns_frame_evidence_with_heatmaps():
+    """Task 4: /detect must return per-frame evidence entries with Grad-CAM field."""
+    video_path = create_dummy_video_file()
+    try:
+        with open(video_path, "rb") as f:
+            resp = client.post("/detect", files={"file": ("v.mp4", f, "video/mp4")})
+        assert resp.status_code == 200
+        data = resp.json()
+        fe = data["evidence"].get("frame_evidence", [])
+        assert isinstance(fe, list) and len(fe) > 0
+        for entry in fe:
+            assert "frame_index" in entry
+            assert "fake_score" in entry
+            assert 0.0 <= entry["fake_score"] <= 1.0
+            assert "heatmap_b64" in entry
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+
+@pytest.mark.slow
+def test_detect_evidence_claim_is_human_readable():
+    """Task 4: /detect evidence claim must be a full human-readable sentence."""
+    video_path = create_dummy_video_file()
+    try:
+        with open(video_path, "rb") as f:
+            resp = client.post("/detect", files={"file": ("v.mp4", f, "video/mp4")})
+        assert resp.status_code == 200
+        claim = resp.json()["evidence"]["claim"]
+        assert len(claim.split()) >= 8, f"Claim too short: {claim!r}"
+        assert claim.rstrip().endswith("."), f"Claim must end with '.': {claim!r}"
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+

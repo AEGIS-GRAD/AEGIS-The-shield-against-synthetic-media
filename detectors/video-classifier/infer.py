@@ -3,6 +3,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import cv2
+import numpy as np
+from typing import Tuple, Optional
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
@@ -174,6 +177,97 @@ def predict_frame(model: Any, frame_tensor: Any, device: Optional[str] = None) -
 
     return float(fake_prob)
 
+def gradcam_heatmap(
+    model: Any,
+    frame_tensor: Any,
+    device: Optional[str] = None,
+    target_layer_name: str = "features",
+) -> np.ndarray:
+    """
+    Computes a Grad-CAM heatmap for a single frame tensor.
+
+    Args:
+        model:             Pre-loaded EfficientNet-B0 in eval mode.
+        frame_tensor:      Pre-processed tensor of shape (3, 224, 224) or (1, 3, 224, 224).
+        device:            Inference device; defaults to model's device.
+        target_layer_name: Sub-module name whose gradients to hook.
+                           EfficientNet-B0's last conv block is 'features'.
+
+    Returns:
+        heatmap_uint8: np.ndarray of shape (224, 224), dtype uint8, values 0-255.
+                       High values = regions that most influenced the FAKE decision.
+    """
+    if not isinstance(frame_tensor, torch.Tensor):
+        frame_tensor = torch.tensor(frame_tensor, dtype=torch.float32)
+    if frame_tensor.ndim == 3:
+        frame_tensor = frame_tensor.unsqueeze(0)
+
+    target_device = device or next(model.parameters()).device
+    frame_tensor = frame_tensor.to(target_device).requires_grad_(False)
+
+    # Storage for forward activations and backward gradients
+    activations: list = []
+    gradients: list = []
+
+    target_layer = dict(model.named_modules()).get(target_layer_name)
+    if target_layer is None:
+        # Fallback: use the last Sequential child of features
+        target_layer = list(model.features.children())[-1]
+
+    def _save_activation(module, input, output):
+        activations.append(output.detach())
+
+    def _save_gradient(module, grad_in, grad_out):
+        gradients.append(grad_out[0].detach())
+
+    fwd_hook = target_layer.register_forward_hook(_save_activation)
+    bwd_hook = target_layer.register_full_backward_hook(_save_gradient)
+
+    try:
+        # Forward pass — need gradient tracking for the backward pass
+        frame_tensor.requires_grad_(True)
+        logits = model(frame_tensor)
+        # Target class: 1 = FAKE
+        score = logits[0, 1]
+        model.zero_grad()
+        score.backward()
+    finally:
+        fwd_hook.remove()
+        bwd_hook.remove()
+
+    if not activations or not gradients:
+        # Return blank heatmap if hooks failed
+        return np.zeros((224, 224), dtype=np.uint8)
+
+    # Grad-CAM formula: global-average-pool the gradients over H×W
+    act = activations[0].squeeze(0)       # (C, H, W)
+    grad = gradients[0].squeeze(0)        # (C, H, W)
+    weights = grad.mean(dim=(1, 2))       # (C,)
+    cam = (weights[:, None, None] * act).sum(dim=0)  # (H, W)
+    cam = torch.relu(cam).cpu().numpy()
+
+    # Resize to 224×224 and normalise to uint8
+    if cam.max() > 0:
+        cam = cam / cam.max()
+    cam_resized = cv2.resize(cam, (224, 224), interpolation=cv2.INTER_LINEAR)
+    return (cam_resized * 255).astype(np.uint8)
+
+
+def gradcam_to_base64(heatmap_uint8: np.ndarray) -> str:
+    """
+    Converts a uint8 Grad-CAM heatmap to a base64-encoded PNG string
+    suitable for embedding in JSON responses.
+
+    Args:
+        heatmap_uint8: np.ndarray of shape (224, 224), dtype uint8.
+
+    Returns:
+        Base64-encoded PNG string (no data-URI prefix).
+    """
+    import base64
+    coloured = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
+    _, buf = cv2.imencode(".png", coloured)
+    return base64.b64encode(buf.tobytes()).decode("utf-8")
 
 def aggregate_scores(frame_scores: List[float]) -> float:
     """Aggregates per-frame authenticity scores using mean pooling.

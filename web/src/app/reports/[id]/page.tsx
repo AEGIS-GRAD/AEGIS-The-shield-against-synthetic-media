@@ -10,6 +10,7 @@ import { Btn, Chip, ConfidenceMeter, ModalityIcon, Panel, VerdictBadge, SiemTier
 import { useDemoMode } from "@/lib/demoMode";
 import { ComingSoon } from "@/components/aegis/ComingSoon";
 import { FrameHeatmap } from "@/components/report/FrameHeatmap";
+import { VideoTimeline } from "@/components/report/VideoTimeline";
 import { PulseWave } from "@/components/report/PulseWave";
 import { DebateLog } from "@/components/report/DebateLog";
 import { AgreementMatrix } from "@/components/report/AgreementMatrix";
@@ -275,6 +276,24 @@ export default function ReportDetailPage() {
           <FrameHeatmap
             scores={a.frame_scores && a.frame_scores.length > 0 ? a.frame_scores : DEFAULT_FRAME_HEAT}
             isDemo={isDemo && !(a.frame_scores && a.frame_scores.length > 0)}
+          />
+          <VideoTimeline
+            frameScores={
+              customJob?.evidence?.frame_scores ??
+              customJob?.results?.video?.frame_scores ??
+              a.frame_scores ??
+              []
+            }
+            flaggedRange={
+              customJob?.evidence?.flagged_range ??
+              customJob?.results?.video?.flagged_range ??
+              null
+            }
+            claim={
+              customJob?.evidence?.claim ??
+              customJob?.results?.video?.claim ??
+              null
+            }
           />
           <p className="caption mb-1 mt-4">Audio waveform · suspicious segments highlighted</p>
           <div className="flex h-14 items-center gap-px">
