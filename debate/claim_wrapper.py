@@ -64,6 +64,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import statistics
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -172,15 +173,32 @@ def _evidence_hash(response: Dict[str, Any]) -> str:
 
 # ── video-classifier ─────────────────────────────────────────────────────────
 def _adapt_video_classifier(r: Dict[str, Any], flags: List[str]) -> _Adapted:
-    p = _clamp01(r["confidence"])  # already P(synthetic)
+    p = _clamp01(r["confidence"])           
     polarity = _polarity_from_p(p)
     pct = f"{p:.0%}"
 
+    evidence_block = r.get("evidence") or {}
+    frame_scores: List[float] = (
+        evidence_block.get("frame_scores")
+        or r.get("frame_scores")
+        or []
+    )
+    flagged_range: Optional[str] = evidence_block.get("flagged_range")
+
+    strength_word = _strength(p)
+    adverb = _ADVERB[strength_word]
+
     if polarity == ClaimPolarity.SYNTHETIC:
-        claim = (
-            f"Frame-level analysis found {_strength(p)} spatial evidence of face manipulation "
-            f"(estimated {pct} probability of synthetic content across the sampled frames)."
-        )
+        if flagged_range:
+            claim = (
+                f"Blending artifacts detected around the face region in {flagged_range} "
+                f"({strength_word} confidence, estimated {pct} probability of synthetic content)."
+            )
+        else:
+            claim = (
+                f"Frame-level analysis found {strength_word} spatial evidence of face manipulation "
+                f"(estimated {pct} probability of synthetic content across the sampled frames)."
+            )
     elif polarity == ClaimPolarity.AUTHENTIC:
         claim = (
             "Frame-level analysis found no significant manipulation artifacts across the sampled frames "
@@ -192,16 +210,28 @@ def _adapt_video_classifier(r: Dict[str, Any], flags: List[str]) -> _Adapted:
             "the spatial evidence neither confirms nor rules out manipulation."
         )
 
+    n_flagged = sum(1 for s in frame_scores if s >= SYNTHETIC_POLARITY_THRESHOLD)
+    suspicious_ratio = round(n_flagged / len(frame_scores), 4) if frame_scores else None
+    max_anomaly = round(max(frame_scores), 4) if frame_scores else None
+    frame_variance = (
+        round(statistics.pvariance(frame_scores), 4)
+        if frame_scores
+        else None
+    )
+
     return _Adapted(
         p_synthetic=p,
         polarity=polarity,
         claim=claim,
         metrics=ObservationalMetrics(
-            spatial=SpatialMetrics(sampled_frames=VIDEO_CLASSIFIER_SAMPLED_FRAMES)
+            spatial=SpatialMetrics(
+                sampled_frames=len(frame_scores) if frame_scores else VIDEO_CLASSIFIER_SAMPLED_FRAMES,
+                max_frame_anomaly=max_anomaly,
+                frame_variance=frame_variance,
+                suspicious_frame_ratio=suspicious_ratio,
+            )
         ),
     )
-
-
 # ── rPPG ─────────────────────────────────────────────────────────────────────
 def _bpm_text(bpm: Optional[float], reliable: bool = True) -> str:
     """A stable pulse yields a measured rate; without one the rate is only a best guess."""
