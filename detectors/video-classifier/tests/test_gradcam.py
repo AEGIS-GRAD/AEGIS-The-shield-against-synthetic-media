@@ -24,6 +24,7 @@ def dummy_model():
     model = models.efficientnet_b0(weights=None)
     in_f = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_f, 2)
+    
     model.eval()
     return model
 
