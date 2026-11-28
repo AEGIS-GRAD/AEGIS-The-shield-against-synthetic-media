@@ -3,11 +3,11 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import cv2
-import numpy as np
-from typing import Tuple, Optional
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    import numpy as np
 
 import torch
 import torch.nn as nn
@@ -197,6 +197,9 @@ def gradcam_heatmap(
         heatmap_uint8: np.ndarray of shape (224, 224), dtype uint8, values 0-255.
                        High values = regions that most influenced the FAKE decision.
     """
+    import cv2
+    import numpy as np
+
     if not isinstance(frame_tensor, torch.Tensor):
         frame_tensor = torch.tensor(frame_tensor, dtype=torch.float32)
     if frame_tensor.ndim == 3:
@@ -265,6 +268,7 @@ def gradcam_to_base64(heatmap_uint8: np.ndarray) -> str:
         Base64-encoded PNG string (no data-URI prefix).
     """
     import base64
+    import cv2
     coloured = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
     _, buf = cv2.imencode(".png", coloured)
     return base64.b64encode(buf.tobytes()).decode("utf-8")

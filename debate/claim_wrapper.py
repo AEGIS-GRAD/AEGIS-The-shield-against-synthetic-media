@@ -64,7 +64,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import numpy as np
+import statistics
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -213,9 +213,11 @@ def _adapt_video_classifier(r: Dict[str, Any], flags: List[str]) -> _Adapted:
     n_flagged = sum(1 for s in frame_scores if s >= SYNTHETIC_POLARITY_THRESHOLD)
     suspicious_ratio = round(n_flagged / len(frame_scores), 4) if frame_scores else None
     max_anomaly = round(max(frame_scores), 4) if frame_scores else None
-    frame_variance = round(
-        float(np.var(frame_scores)) if frame_scores else 0.0, 4
-    ) if frame_scores else None
+    frame_variance = (
+        round(statistics.pvariance(frame_scores), 4)
+        if frame_scores
+        else None
+    )
 
     return _Adapted(
         p_synthetic=p,
